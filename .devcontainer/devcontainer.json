@@ -1,0 +1,64 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/postgres
+{
+	"name": "SEC Filing RAG POC",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "app",
+	"workspaceFolder": "/workspaces/sec-filing-rag-poc",
+	"runServices": [
+		"app",
+		"db",
+		"kestra_postgres",
+		"kestra",
+		"grafana"
+	],
+	"shutdownAction": "stopCompose",
+
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "22"
+		},
+		"ghcr.io/devcontainers-extra/features/uv:1": {}
+	},
+
+	"remoteUser": "vscode",
+
+	// VS Code customizations
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.debugpy",
+				"ms-toolsai.datawrangler",
+				"ms-ossdata.vscode-pgsql",
+				"mechatroner.rainbow-csv",
+				"ms-vscode.makefile-tools",
+				"GitHub.vscode-github-actions"
+			],
+			"settings": {
+				"python.terminal.useEnvFile": true,
+				"python.envFile": "${workspaceFolder}/.env"
+			}
+		}
+	},
+
+	"postCreateCommand": ".devcontainer/post-create.sh",
+	"waitFor": "postCreateCommand"
+
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// This can be used to network with other containers or the host.
+	// "forwardPorts": [5000, 5432],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "pip install --user -r requirements.txt",
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
