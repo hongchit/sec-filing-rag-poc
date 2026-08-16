@@ -1,0 +1,7 @@
+companies:
+  - ticker: AAPL
+    enabled: true
+  - ticker: MSFT
+    enabled: true
+  - ticker: NVDA
+    enabled: true

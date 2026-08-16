@@ -1,78 +1,50 @@
 services:
   app:
-    build:
-      context: ..
-      dockerfile: .devcontainer/Dockerfile
-
+    build: {context: .., dockerfile: .devcontainer/Dockerfile}
     env_file:
-      - ../.env
-    depends_on:
-      db:
-        condition: service_healthy
+      - path: ../.env
+        required: true
+        format: raw
+    depends_on: {db: {condition: service_healthy}}
     volumes:
       - ..:/workspaces/sec-filing-rag-poc:cached
       - devcontainer-uv-cache:/home/vscode/.cache/uv
       - codex-home:/home/vscode/.codex
       - ${HOME}/.codex/skills/bootstrap-project:/home/vscode/.agents/skills/bootstrap-project:ro
-    environment:
-      UV_CACHE_DIR: /home/vscode/.cache/uv
-      UV_LINK_MODE: copy
-
-    # Overrides default command so things don't shut down after the process ends.
+    environment: {UV_CACHE_DIR: /home/vscode/.cache/uv, UV_LINK_MODE: copy}
+    ports: ["127.0.0.1:8000:8000", "127.0.0.1:5173:5173"]
     command: sleep infinity
-
-    # Use "forwardPorts" in **devcontainer.json** to forward an app port locally.
-    # (Adding the "ports" property to this file will not forward from a Codespace.)
-
   db:
-    platform: linux/arm64
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
+    build: {context: ./postgres, dockerfile: Dockerfile}
     image: sec-filing-rag-poc-dev-postgres:18.4-vector0.8.2-textsearch1.2.0
     restart: unless-stopped
     env_file:
-      - ../.env
-    command:
-      - postgres
-      - -c
-      - shared_preload_libraries=pg_textsearch
-    volumes:
-      - postgres-data:/var/lib/postgresql
-      - ./postgres/init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-    # Add "forwardPorts": [5432] to **devcontainer.json** to forward PostgreSQL locally.
-    # (Adding the "ports" property to this file will not forward from a Codespace.)
-
+      - path: ../.env
+        required: true
+        format: raw
+    command: [postgres, -c, shared_preload_libraries=pg_textsearch]
+    volumes: [postgres-data:/var/lib/postgresql, ./postgres/init:/docker-entrypoint-initdb.d:ro]
+    ports: ["127.0.0.1:5432:5432"]
+    healthcheck: {test: [CMD-SHELL, "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"], interval: 5s, timeout: 5s, retries: 10}
   kestra_postgres:
-    image: postgres:18
+    image: postgres:18.4-trixie@sha256:3a82e1f56c8f0f5616a11103ac3d47e632c3938698946a7ad26da0df1334744a
     restart: unless-stopped
     env_file:
-      - ../.env
-    volumes:
-      - kestra-postgres-data:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-
+      - path: ../.env
+        required: true
+        format: raw
+    volumes: [kestra-postgres-data:/var/lib/postgresql]
+    healthcheck: {test: [CMD-SHELL, "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"], interval: 10s, timeout: 5s, retries: 10}
   kestra:
-    image: kestra/kestra:v1.3.21
-    pull_policy: always
-    user: "root"
+    image: kestra/kestra:v1.3.29
+    pull_policy: if_not_present
+    user: root
     command: server standalone
     env_file:
-      - ../.env
-    volumes:
-      - kestra-data:/app/storage
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp/kestra-wd:/tmp/kestra-wd
+      - path: ../.env
+        required: true
+        format: raw
+    volumes: [kestra-data:/app/storage, /tmp/kestra-wd:/tmp/kestra-wd]
     environment:
       KESTRA_CONFIGURATION: |
         datasources:
@@ -83,49 +55,22 @@ services:
             password: $${POSTGRES_PASSWORD}
         kestra:
           server:
-            basicAuth:
+            basic-auth:
               username: $${KESTRA_BASIC_AUTH_USERNAME}
               password: $${KESTRA_BASIC_AUTH_PASSWORD}
-          repository:
-            type: postgres
-          storage:
-            type: local
-            local:
-              basePath: "/app/storage"
-          queue:
-            type: postgres
-          tasks:
-            tmpDir:
-              path: /tmp/kestra-wd/tmp
+          repository: {type: postgres}
+          storage: {type: local, local: {basePath: /app/storage}}
+          queue: {type: postgres}
+          tasks: {tmpDir: {path: /tmp/kestra-wd/tmp}}
           url: http://localhost:18082/
-          ai:
-            type: gemini
-            gemini:
-              model-name: gemini-2.5-flash
-              api-key: $${GEMINI_API_KEY}
-    ports:
-      - "127.0.0.1:18082:8080"
-      - "127.0.0.1:18083:8081"
-    depends_on:
-      kestra_postgres:
-        condition: service_healthy
-
-  grafana:
-    image: grafana/grafana
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:13001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=$${GRAFANA_USERNAME}
-      - GF_SECURITY_ADMIN_PASSWORD=$${GRAFANA_PASSWORD}
-    volumes:
-      - grafana-data:/var/lib/grafana
-
+          secrets: {type: env}
+    ports: ["127.0.0.1:18082:8080", "127.0.0.1:18083:8081"]
+    depends_on: {kestra_postgres: {condition: service_healthy}}
 volumes:
   devcontainer-uv-cache:
+    external: true
     name: devcontainer-uv-cache
   codex-home:
   postgres-data:
   kestra-postgres-data:
   kestra-data:
-  grafana-data:

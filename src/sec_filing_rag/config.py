@@ -1,0 +1,72 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+import yaml
+from pydantic import BaseModel, Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+TICKER_RE = re.compile(r"^[A-Z][A-Z0-9.-]{0,9}$")
+
+
+class CompanyEntry(BaseModel):
+    ticker: str
+    enabled: bool = True
+
+    @field_validator("ticker", mode="before")
+    @classmethod
+    def normalize_ticker(cls, value: object) -> str:
+        ticker = str(value).strip().upper()
+        if not TICKER_RE.fullmatch(ticker):
+            raise ValueError("ticker must contain 1-10 uppercase letters, digits, dot, or hyphen")
+        return ticker
+
+
+class CompanyConfiguration(BaseModel):
+    companies: list[CompanyEntry]
+
+    @field_validator("companies")
+    @classmethod
+    def unique_tickers(cls, value: list[CompanyEntry]) -> list[CompanyEntry]:
+        tickers = [entry.ticker for entry in value]
+        if len(tickers) != len(set(tickers)):
+            raise ValueError("duplicate ticker")
+        return sorted(value, key=lambda entry: entry.ticker)
+
+    def normalized(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+    def sha256(self) -> str:
+        raw = json.dumps(self.normalized(), sort_keys=True, separators=(",", ":")).encode()
+        return hashlib.sha256(raw).hexdigest()
+
+
+def load_companies(path: Path) -> CompanyConfiguration:
+    return CompanyConfiguration.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    database_url: str = "postgresql://postgres:postgres@db:5432/sec_filings"
+    app_host: str = "0.0.0.0"
+    app_port: int = 8000
+    app_internal_url: str = "http://app:8000"
+    ingestion_api_token: str = Field(min_length=16)
+    company_config_path: Path = Path("config/companies.yaml")
+    sec_user_agent: str = Field(min_length=8)
+    sec_request_interval_seconds: float = Field(default=0.12, ge=0.1)
+    sec_timeout_seconds: float = Field(default=20, gt=0, le=60)
+    sec_max_retries: int = Field(default=3, ge=0, le=5)
+    openai_api_key: str
+    openai_embedding_model: str = "text-embedding-3-small"
+    openai_embedding_dimensions: int = Field(default=1536, gt=0)
+    openai_timeout_seconds: float = Field(default=30, gt=0, le=120)
+    chunk_size_chars: int = Field(default=2400, ge=500, le=8000)
+    chunk_overlap_chars: int = Field(default=240, ge=0, le=1000)
+    parser_version: str = "item-heading-v1"
+    chunking_version: str = "character-v1"
+    index_version: str = "vector-v1"
