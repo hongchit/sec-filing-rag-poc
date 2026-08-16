@@ -31,39 +31,51 @@ def test_company_configuration_rejects_duplicates_and_invalid(companies: list[di
 
 
 def test_selects_latest_exact_original_10k() -> None:
-    recent = {"form": ["10-K/A", "10-K", "10-K"], "accessionNumber": ["a", "old", "new"],
-              "primaryDocument": ["a.htm", "old.htm", "new.htm"], "filingDate": ["2026-04-01", "2024-01-01", "2025-01-01"],
-              "reportDate": ["2025-12-31", "2023-12-31", "2024-12-31"]}
+    recent = {
+        "form": ["10-K/A", "10-K", "10-K"],
+        "accessionNumber": ["a", "old", "new"],
+        "primaryDocument": ["a.htm", "old.htm", "new.htm"],
+        "filingDate": ["2026-04-01", "2024-01-01", "2025-01-01"],
+        "reportDate": ["2025-12-31", "2023-12-31", "2024-12-31"],
+    }
     selected = latest_original_10k(recent)
     assert selected.accession == "new"
     assert selected.filing_date == date(2025, 1, 1)
 
 
 def test_item_1a_prefers_long_section_over_toc() -> None:
-    text = "Item 1A. Risk Factors\npage 12\nItem 1B.\n" + "intro\nItem 1A. Risk Factors\n" + ("Material risk disclosure. " * 30) + "\nItem 1B. Unresolved Staff Comments"
+    text = (
+        "Item 1A. Risk Factors\npage 12\nItem 1B.\n"
+        + "intro\nItem 1A. Risk Factors\n"
+        + ("Material risk disclosure. " * 30)
+        + "\nItem 1B. Unresolved Staff Comments"
+    )
     section = extract_item_1a(text)
     assert section.status == "present"
     assert section.text and "Material risk" in section.text
     normalized = text.replace("\r\n", "\n")
     assert section.start is not None and section.end is not None
-    assert normalized[section.start:section.end] == section.text
+    assert normalized[section.start : section.end] == section.text
 
 
 def test_explicit_coverage_outcomes() -> None:
     assert extract_item_1a("Item 1. Business").status == "failed"
-    assert extract_item_1a("Item 1A. Risk Factors\nno ending" ).status == "failed"
+    assert extract_item_1a("Item 1A. Risk Factors\nno ending").status == "failed"
 
 
 def test_all_six_items_are_extracted_in_required_order() -> None:
     titles = {
-        "1": "Business", "1A": "Risk Factors", "3": "Legal Proceedings",
+        "1": "Business",
+        "1A": "Risk Factors",
+        "3": "Legal Proceedings",
         "7": "Management's Discussion and Analysis",
         "7A": "Quantitative and Qualitative Disclosures About Market Risk",
         "8": "Financial Statements and Supplementary Data",
     }
     following = {"1": "1A", "1A": "2", "3": "4", "7": "7A", "7A": "8", "8": "9"}
     text = "\r\n".join(
-        f"Item {item}. {titles[item]}\r\n" + (f"Narrative disclosure for item {item}. " * 12)
+        f"Item {item}. {titles[item]}\r\n"
+        + (f"Narrative disclosure for item {item}. " * 12)
         + f"\r\nItem {following[item]}. Later heading"
         for item in REQUIRED_ITEMS
     )
@@ -98,9 +110,12 @@ def test_heading_allows_bounded_multiline_html_whitespace() -> None:
 
 def test_inline_xbrl_heading_fragments_and_short_bounded_item_3() -> None:
     text = (
-        "ITEM\n1.\nBUSINESS\n" + ("Business disclosure. " * 20)
-        + "\nITEM\n1A.\nRIS K\nFAC TORS\n" + ("Risk disclosure. " * 20)
-        + "\nITEM 2. PROPERTIES\n" + ("Property disclosure. " * 10)
+        "ITEM\n1.\nBUSINESS\n"
+        + ("Business disclosure. " * 20)
+        + "\nITEM\n1A.\nRIS K\nFAC TORS\n"
+        + ("Risk disclosure. " * 20)
+        + "\nITEM 2. PROPERTIES\n"
+        + ("Property disclosure. " * 10)
         + "\nITEM 3. LEGAL PROCEEDINGS\nSee Note 30 to the consolidated financial statements."
         + "\nITEM 4. MINE SAFETY"
     )
@@ -135,8 +150,12 @@ def test_malicious_html_is_reduced_to_bounded_inert_text() -> None:
 
 
 def test_deterministic_chunks_citations_and_checksums() -> None:
-    first = make_chunks("word " * 1000, accession="0001-26-000001", item="1A", version="v1", size=500, overlap=50)
-    second = make_chunks("word " * 1000, accession="0001-26-000001", item="1A", version="v1", size=500, overlap=50)
+    first = make_chunks(
+        "word " * 1000, accession="0001-26-000001", item="1A", version="v1", size=500, overlap=50
+    )
+    second = make_chunks(
+        "word " * 1000, accession="0001-26-000001", item="1A", version="v1", size=500, overlap=50
+    )
     assert first == second
     assert first[0].citation == "0001-26-000001:item-1a:0000"
     assert first[0].sha256 == sha256_bytes(first[0].text.encode())
@@ -166,7 +185,60 @@ def test_compatibility_key_is_canonical_and_redaction_is_safe() -> None:
 
 def test_chunk_offsets_are_document_relative() -> None:
     chunks = make_chunks(
-        "  alpha beta  ", accession="0001", item="7", version="v1", size=500, overlap=0,
+        "  alpha beta  ",
+        accession="0001",
+        item="7",
+        version="v1",
+        size=500,
+        overlap=0,
         base_offset=100,
     )
     assert (chunks[0].start, chunks[0].end) == (102, 112)
+
+
+def test_fiscal_selection_uses_report_year_and_inclusive_lookback() -> None:
+    from sec_filing_rag.domain import AnalysisPeriod, FilingCandidate, select_fiscal_year
+
+    candidates = [
+        FilingCandidate("2024", "a.htm", date(2025, 2, 1), date(2024, 12, 31)),
+        FilingCandidate("2023", "b.htm", date(2024, 2, 1), date(2023, 12, 31)),
+        FilingCandidate("2015", "c.htm", date(2016, 2, 1), date(2015, 12, 31)),
+    ]
+    selected = select_fiscal_year(candidates, AnalysisPeriod.year("2024"), 10)
+    assert selected.exact and selected.exact.accession == "2024"
+    assert (selected.lookback.earliest_year, selected.lookback.latest_year) == (2015, 2024)
+    assert select_fiscal_year(candidates, AnalysisPeriod.year("2015"), 10).exact is not None
+    with pytest.raises(ValueError, match="outside"):
+        select_fiscal_year(candidates, AnalysisPeriod.year("2014"), 10)
+
+
+def test_missing_year_neighbors_and_confirmation_are_deterministic() -> None:
+    from sec_filing_rag.domain import (
+        AnalysisPeriod,
+        FilingCandidate,
+        confirmed_candidate,
+        select_fiscal_year,
+    )
+
+    candidates = [
+        FilingCandidate("later", "l.htm", date(2025, 1, 2), date(2024, 12, 31)),
+        FilingCandidate("earlier", "e.htm", date(2023, 1, 2), date(2022, 12, 31)),
+        FilingCandidate("older", "o.htm", date(2022, 1, 2), date(2021, 12, 31)),
+    ]
+    selection = select_fiscal_year(candidates, AnalysisPeriod.year("2023"), 4)
+    assert selection.exact is None
+    assert selection.earlier and selection.earlier.accession == "earlier"
+    assert selection.later and selection.later.accession == "later"
+    with pytest.raises(ValueError, match="requires neighbor"):
+        confirmed_candidate(selection, None)
+    with pytest.raises(ValueError, match="current discovery neighbor"):
+        confirmed_candidate(selection, "arbitrary")
+    assert confirmed_candidate(selection, "earlier").accession == "earlier"
+
+
+def test_historical_promotion_decision_never_moves_default() -> None:
+    from sec_filing_rag.domain import should_promote_default
+
+    assert should_promote_default(historical=False, candidate_complete=True)
+    assert not should_promote_default(historical=True, candidate_complete=True)
+    assert not should_promote_default(historical=False, candidate_complete=False)

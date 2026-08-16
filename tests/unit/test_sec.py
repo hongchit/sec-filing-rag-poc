@@ -45,12 +45,9 @@ def test_latest_filing_falls_back_to_sanitized_historical_submission_name(monkey
 
 def test_latest_filing_uses_validated_atom_and_exact_10k_document(monkeypatch) -> None:
     current = {"filings": {"recent": _filings(["8-K"], ["recent"]), "files": []}}
-    atom_url = (
-        f"{BROWSE_ROOT}?action=getcompany&CIK=0000034088&type=10-K&owner=exclude&output=atom&count=40"
-    )
+    atom_url = f"{BROWSE_ROOT}?action=getcompany&CIK=0000034088&type=10-K&owner=exclude&output=atom&count=40"
     index_url = (
-        "https://www.sec.gov/Archives/edgar/data/34088/000003408826000045/"
-        "0000034088-26-000045-index.htm"
+        "https://www.sec.gov/Archives/edgar/data/34088/000003408826000045/0000034088-26-000045-index.htm"
     )
     atom = f"""<feed><entry><filing-type>10-K/A</filing-type></entry><entry>
       <filing-type>10-K</filing-type><filing-date>2026-02-18</filing-date><period>20251231</period>
@@ -102,9 +99,7 @@ def test_ticker_atom_recovers_legacy_filer_missing_from_ticker_metadata(monkeypa
         "0": {"ticker": "XOM", "cik_str": 2115436, "title": "ExxonMobil Holdings Corp"},
     }
     ticker_fetch = Fetched(TICKERS_URL, json.dumps(tickers).encode(), 200, {})
-    atom_url = (
-        f"{BROWSE_ROOT}?action=getcompany&CIK=XOM&type=10-K&owner=exclude&output=atom&count=40"
-    )
+    atom_url = f"{BROWSE_ROOT}?action=getcompany&CIK=XOM&type=10-K&owner=exclude&output=atom&count=40"
     atom = b"""<feed><company-info><conformed-name>EXXON MOBIL CORP</conformed-name></company-info>
       <entry><filing-type>10-K</filing-type><filing-date>2026-02-18</filing-date>
       <accession-number>0000034088-26-000045</accession-number>

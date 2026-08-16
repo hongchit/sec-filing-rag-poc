@@ -33,7 +33,9 @@ class SecClient:
         self.retries = retries
         self._last_request = 0.0
         self._filing_cache: dict[str, tuple[FilingCandidate, Fetched, dict[str, Any]]] = {}
-        self.client = httpx.Client(headers={"User-Agent": identity, "Accept-Encoding": "gzip, deflate"}, timeout=timeout)
+        self.client = httpx.Client(
+            headers={"User-Agent": identity, "Accept-Encoding": "gzip, deflate"}, timeout=timeout
+        )
 
     def fetch(self, url: str) -> Fetched:
         error: Exception | None = None
@@ -48,7 +50,13 @@ class SecClient:
                 return Fetched(url, response.content, response.status_code, dict(response.headers))
             except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as exc:
                 error = exc
-                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code not in {429, 500, 502, 503, 504}:
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code not in {
+                    429,
+                    500,
+                    502,
+                    503,
+                    504,
+                }:
                     raise
                 if attempt < self.retries:
                     time.sleep(min(2**attempt, 4))
@@ -101,10 +109,7 @@ class SecClient:
         for entry in root.iter():
             if entry.tag.rsplit("}", 1)[-1] != "entry":
                 continue
-            values = {
-                child.tag.rsplit("}", 1)[-1]: (child.text or "").strip()
-                for child in entry.iter()
-            }
+            values = {child.tag.rsplit("}", 1)[-1]: (child.text or "").strip() for child in entry.iter()}
             if values.get("filing-type") != "10-K":
                 continue
             accession = values.get("accession-number", "")
@@ -170,9 +175,7 @@ class SecClient:
     def _latest_atom_filing(
         self, cik: str, submission_fetch: Fetched, submission: dict[str, Any]
     ) -> tuple[FilingCandidate, Fetched, dict[str, Any]]:
-        atom_url = (
-            f"{BROWSE_ROOT}?action=getcompany&CIK={cik}&type=10-K&owner=exclude&output=atom&count=40"
-        )
+        atom_url = f"{BROWSE_ROOT}?action=getcompany&CIK={cik}&type=10-K&owner=exclude&output=atom&count=40"
         atom = self.fetch(atom_url)
         if len(atom.body) > 5_000_000:
             raise ValueError("SEC filing index response exceeds safe size limit")
@@ -184,10 +187,7 @@ class SecClient:
         for entry in root.iter():
             if entry.tag.rsplit("}", 1)[-1] != "entry":
                 continue
-            values = {
-                child.tag.rsplit("}", 1)[-1]: (child.text or "").strip()
-                for child in entry.iter()
-            }
+            values = {child.tag.rsplit("}", 1)[-1]: (child.text or "").strip() for child in entry.iter()}
             if values.get("filing-type") != "10-K":
                 continue
             accession = values.get("accession-number", "")
@@ -196,7 +196,11 @@ class SecClient:
                 continue
             parsed = urlparse(href)
             expected = f"/Archives/edgar/data/{int(cik)}/{accession.replace('-', '')}/"
-            if parsed.scheme != "https" or parsed.hostname != "www.sec.gov" or not parsed.path.startswith(expected):
+            if (
+                parsed.scheme != "https"
+                or parsed.hostname != "www.sec.gov"
+                or not parsed.path.startswith(expected)
+            ):
                 continue
             try:
                 filing_date = date.fromisoformat(values["filing-date"])
@@ -224,17 +228,18 @@ class SecClient:
             if not isinstance(row, Tag):
                 continue
             cells = row.find_all("td")
-            if not any(
-                isinstance(cell, Tag) and cell.get_text(" ", strip=True) == "10-K"
-                for cell in cells
-            ):
+            if not any(isinstance(cell, Tag) and cell.get_text(" ", strip=True) == "10-K" for cell in cells):
                 continue
             anchor = row.find("a", href=True)
             if not isinstance(anchor, Tag):
                 continue
             document_url = urljoin(index_url, str(anchor.get("href", "")))
             parsed = urlparse(document_url)
-            if parsed.scheme != "https" or parsed.hostname != "www.sec.gov" or not parsed.path.startswith(expected_path):
+            if (
+                parsed.scheme != "https"
+                or parsed.hostname != "www.sec.gov"
+                or not parsed.path.startswith(expected_path)
+            ):
                 continue
             name = parsed.path.rsplit("/", 1)[-1]
             if re.fullmatch(r"[A-Za-z0-9._-]+\.(?:htm|html)", name):
@@ -247,6 +252,68 @@ class SecClient:
             submission_fetch,
             submission,
         )
+
+    def discover_candidates(self, ticker: str) -> tuple[str, str, list[FilingCandidate]]:
+        """Enumerate deduplicated original 10-Ks for read-only fiscal discovery."""
+        cik, name, _ = self.resolve(ticker)
+        fetched = self.fetch(f"{SUBMISSIONS_ROOT}/CIK{cik}.json")
+        payload: dict[str, Any] = httpx.Response(200, content=fetched.body).json()
+        candidates = self._candidates_from_columns(payload.get("filings", {}).get("recent", {}))
+        for descriptor in payload.get("filings", {}).get("files", []):
+            filename = str(descriptor.get("name", ""))
+            if not re.fullmatch(r"CIK[0-9]{10}-submissions-[0-9]{3}\.json", filename):
+                continue
+            historical = self.fetch(f"{SUBMISSIONS_ROOT}/{filename}")
+            columns: dict[str, list[Any]] = httpx.Response(200, content=historical.body).json()
+            candidates.extend(self._candidates_from_columns(columns))
+        if not candidates:
+            candidate, _, _ = self._latest_atom_filing(cik, fetched, payload)
+            candidates.append(candidate)
+        deduplicated: dict[str, FilingCandidate] = {}
+        for candidate in candidates:
+            current = deduplicated.get(candidate.accession)
+            if current is None or (candidate.filing_date, candidate.primary_document) > (
+                current.filing_date,
+                current.primary_document,
+            ):
+                deduplicated[candidate.accession] = candidate
+        return (
+            cik,
+            name,
+            sorted(
+                deduplicated.values(),
+                key=lambda candidate: (
+                    candidate.report_date or date.min,
+                    candidate.filing_date,
+                    candidate.accession,
+                ),
+                reverse=True,
+            ),
+        )
+
+    @staticmethod
+    def _candidates_from_columns(columns: dict[str, list[Any]]) -> list[FilingCandidate]:
+        required = ("form", "accessionNumber", "primaryDocument", "filingDate")
+        if any(key not in columns for key in required):
+            return []
+        result: list[FilingCandidate] = []
+        for index, form in enumerate(columns["form"]):
+            if form != "10-K":
+                continue
+            try:
+                report_values = columns.get("reportDate", [])
+                report_raw = report_values[index] if index < len(report_values) else None
+                result.append(
+                    FilingCandidate(
+                        str(columns["accessionNumber"][index]),
+                        str(columns["primaryDocument"][index]),
+                        date.fromisoformat(str(columns["filingDate"][index])),
+                        date.fromisoformat(str(report_raw)) if report_raw else None,
+                    )
+                )
+            except (IndexError, ValueError):
+                continue
+        return result
 
     def document(self, cik: str, filing: FilingCandidate) -> Fetched:
         accession = filing.accession.replace("-", "")

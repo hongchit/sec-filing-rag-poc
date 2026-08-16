@@ -56,6 +56,107 @@ class FilingCandidate:
     filing_date: date
     report_date: date | None
 
+    @property
+    def fiscal_year(self) -> int | None:
+        """The SEC report date is the sole source of fiscal-year identity."""
+        return self.report_date.year if self.report_date is not None else None
+
+
+@dataclass(frozen=True)
+class AnalysisPeriod:
+    granularity: Literal["year"]
+    value: int
+
+    @classmethod
+    def year(cls, value: str | int) -> AnalysisPeriod:
+        raw = str(value)
+        if not re.fullmatch(r"[0-9]{4}", raw):
+            raise ValueError("period value must be a four-digit year")
+        return cls("year", int(raw))
+
+
+@dataclass(frozen=True)
+class Lookback:
+    earliest_year: int
+    latest_year: int
+
+    def contains(self, year: int) -> bool:
+        return self.earliest_year <= year <= self.latest_year
+
+
+@dataclass(frozen=True)
+class FilingSelection:
+    requested: AnalysisPeriod
+    lookback: Lookback
+    exact: FilingCandidate | None
+    earlier: FilingCandidate | None
+    later: FilingCandidate | None
+
+    @property
+    def neighbors(self) -> tuple[FilingCandidate, ...]:
+        return tuple(candidate for candidate in (self.earlier, self.later) if candidate is not None)
+
+
+def lookback_for(candidates: list[FilingCandidate], years: int) -> Lookback:
+    if years < 1:
+        raise ValueError("lookback years must be positive")
+    fiscal_years = [candidate.fiscal_year for candidate in candidates if candidate.fiscal_year is not None]
+    if not fiscal_years:
+        raise ValueError("no original 10-K filing with a report date found")
+    latest = max(fiscal_years)
+    return Lookback(latest - years + 1, latest)
+
+
+def select_fiscal_year(
+    candidates: list[FilingCandidate], requested: AnalysisPeriod, years: int
+) -> FilingSelection:
+    """Select exact/adjacent fiscal years deterministically from original 10-Ks."""
+    bounds = lookback_for(candidates, years)
+    if not bounds.contains(requested.value):
+        raise ValueError("requested year is outside the configured lookback")
+    eligible = [
+        candidate
+        for candidate in candidates
+        if candidate.fiscal_year is not None and bounds.contains(candidate.fiscal_year)
+    ]
+    per_year: dict[int, FilingCandidate] = {}
+    for candidate in eligible:
+        fiscal_year = candidate.fiscal_year
+        assert fiscal_year is not None
+        current = per_year.get(fiscal_year)
+        if current is None or (candidate.filing_date, candidate.accession) > (
+            current.filing_date,
+            current.accession,
+        ):
+            per_year[fiscal_year] = candidate
+    exact = per_year.get(requested.value)
+    earlier_years = [year for year in per_year if year < requested.value]
+    later_years = [year for year in per_year if year > requested.value]
+    return FilingSelection(
+        requested,
+        bounds,
+        exact,
+        per_year[max(earlier_years)] if earlier_years else None,
+        per_year[min(later_years)] if later_years else None,
+    )
+
+
+def confirmed_candidate(selection: FilingSelection, accession: str | None) -> FilingCandidate:
+    if selection.exact is not None:
+        if accession is not None and accession != selection.exact.accession:
+            raise ValueError("exact-year preparation does not accept a different accession")
+        return selection.exact
+    if accession is None:
+        raise ValueError("missing-year preparation requires neighbor confirmation")
+    for candidate in selection.neighbors:
+        if candidate.accession == accession:
+            return candidate
+    raise ValueError("confirmed accession is not a current discovery neighbor")
+
+
+def should_promote_default(*, historical: bool, candidate_complete: bool) -> bool:
+    return candidate_complete and not historical
+
 
 def latest_original_10k(recent: dict[str, list[Any]]) -> FilingCandidate:
     required = ("form", "accessionNumber", "primaryDocument", "filingDate")
@@ -97,22 +198,39 @@ ITEM_TITLE_WORDS = {
     "8": ("financial", "statements", "and", "supplementary", "data"),
 }
 _ORDERED_BOUNDARIES = (
-    "1", "1A", "1B", "1C", "2", "3", "4", "5", "6", "7", "7A", "8",
-    "9", "9A", "9B", "9C", "10", "11", "12", "13", "14", "15", "16",
+    "1",
+    "1A",
+    "1B",
+    "1C",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "7A",
+    "8",
+    "9",
+    "9A",
+    "9B",
+    "9C",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
 )
 _HEADING_SPACE = r"(?:[ \t]+|\n[ \t]*)"
 _HEADING_PREFIX = (
-    r"(?im)^[ \t]*(?:part" + _HEADING_SPACE + r"[ivx]+[ \t]*[-–—:]?[ \t]*)?item"
-    + _HEADING_SPACE
+    r"(?im)^[ \t]*(?:part" + _HEADING_SPACE + r"[ivx]+[ \t]*[-–—:]?[ \t]*)?item" + _HEADING_SPACE
 )
 _GENERIC_HEADING = re.compile(
-    _HEADING_PREFIX
-    + r"(?P<item>1[0-6]|[1-9])(?P<suffix>[A-C]?)(?:[ \t]*[.\-–—:])?(?:[ \t]+|[ \t]*$)"
+    _HEADING_PREFIX + r"(?P<item>1[0-6]|[1-9])(?P<suffix>[A-C]?)(?:[ \t]*[.\-–—:])?(?:[ \t]+|[ \t]*$)"
 )
 _PART_HEADING = re.compile(r"(?im)^[ \t]*part\s+[ivx]+\b")
-_ABSENCE = re.compile(
-    r"(?i)\b(?:not\s+applicable|none|no\s+(?:material\s+)?(?:legal\s+)?proceedings)\b"
-)
+_ABSENCE = re.compile(r"(?i)\b(?:not\s+applicable|none|no\s+(?:material\s+)?(?:legal\s+)?proceedings)\b")
 _MIN_BODY = {"1": 120, "1A": 120, "3": 40, "7": 120, "7A": 120, "8": 120}
 
 
@@ -157,11 +275,7 @@ def _heading_pattern(item: str) -> re.Pattern[str]:
             words.append(r"[ \t\n]*".join(re.escape(character) for character in word))
     title = _HEADING_SPACE.join(words)
     return re.compile(
-        _HEADING_PREFIX
-        + re.escape(item)
-        + r"(?:[ \t]*[.\-–—:])?[ \t]*(?:\n[ \t]*){0,3}"
-        + title
-        + r"\b"
+        _HEADING_PREFIX + re.escape(item) + r"(?:[ \t]*[.\-–—:])?[ \t]*(?:\n[ \t]*){0,3}" + title + r"\b"
     )
 
 
@@ -280,8 +394,13 @@ def make_chunks(
             identity = sha256_bytes(f"{accession}|{item}|{version}|{ordinal}|{digest}".encode())
             chunks.append(
                 Chunk(
-                    identity, ordinal, content, base_offset + start + left,
-                    base_offset + start + right, citation, digest,
+                    identity,
+                    ordinal,
+                    content,
+                    base_offset + start + left,
+                    base_offset + start + right,
+                    citation,
+                    digest,
                 )
             )
         if end == len(text):

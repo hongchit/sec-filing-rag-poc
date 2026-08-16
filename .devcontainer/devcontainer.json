@@ -12,6 +12,7 @@
   "remoteUser": "vscode",
   "customizations": {"vscode": {"extensions": ["ms-python.python", "ms-python.debugpy", "ms-ossdata.vscode-pgsql", "GitHub.vscode-github-actions"], "settings": {"python.terminal.useEnvFile": true, "python.envFile": "${workspaceFolder}/.env"}}},
   "postCreateCommand": ".devcontainer/post-create.sh",
+  "postStartCommand": ".devcontainer/post-start.sh",
   "waitFor": "postCreateCommand",
   "forwardPorts": [8000, 5173, 5432, 18082]
 }

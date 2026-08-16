@@ -54,7 +54,6 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:postgres@db:5432/sec_filings"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
-    app_internal_url: str = "http://app:8000"
     ingestion_api_token: str = Field(min_length=16)
     company_config_path: Path = Path("config/companies.yaml")
     sec_user_agent: str = Field(min_length=8)
@@ -63,6 +62,14 @@ class Settings(BaseSettings):
     sec_max_retries: int = Field(default=3, ge=0, le=5)
     sec_max_document_bytes: int = Field(default=50_000_000, ge=1_000_000, le=100_000_000)
     sec_max_narrative_chars: int = Field(default=20_000_000, ge=500_000, le=50_000_000)
+    historical_filing_lookback_years: int = Field(default=10, ge=1, le=50)
+    kestra_api_url: str = "http://kestra:8080/api/v1/main"
+    kestra_namespace: str = "sec_filings.ingestion"
+    kestra_historical_flow_id: str = "prepare_historical_filing"
+    kestra_basic_auth_username: str = "admin@example.com"
+    kestra_basic_auth_password: str = Field(default="ChangeMe1234", min_length=8)
+    kestra_timeout_seconds: float = Field(default=10, gt=0, le=60)
+    kestra_max_retries: int = Field(default=2, ge=0, le=5)
     openai_api_key: str
     openai_embedding_model: str = "text-embedding-3-small"
     openai_embedding_dimensions: int = Field(default=1536, gt=0)

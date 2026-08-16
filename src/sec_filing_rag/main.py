@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hmac
+import uuid
 from functools import lru_cache
 from typing import Annotated, Any, Literal
 
@@ -9,7 +10,13 @@ from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .config import TICKER_RE, Settings, load_companies
+from .domain import AnalysisPeriod
+from .kestra import KestraGateway
+from .models import DiscoveryRequest, PreparationAccepted, PreparationRequestBody
 from .pipeline import BatchResult, IngestionPipeline
+from .repositories import Database, FilingRepository, PreparationRepository
+from .sec import SecClient
+from .services import FilingDiscoveryService, HistoricalPreparationService
 from .store import Store
 
 
@@ -22,10 +29,57 @@ def store() -> Store:
     return Store(settings().database_url)
 
 
+def discovery_service() -> FilingDiscoveryService:
+    config = settings()
+    gateway = SecClient(
+        identity=config.sec_user_agent,
+        timeout=config.sec_timeout_seconds,
+        retries=config.sec_max_retries,
+        interval=config.sec_request_interval_seconds,
+    )
+    return FilingDiscoveryService(
+        gateway, FilingRepository(Database(config.database_url)), config.historical_filing_lookback_years
+    )
+
+
+def preparation_service() -> HistoricalPreparationService:
+    config = settings()
+    return HistoricalPreparationService(
+        discovery_service(),
+        PreparationRepository(Database(config.database_url)),
+        KestraGateway(
+            api_url=config.kestra_api_url,
+            namespace=config.kestra_namespace,
+            flow_id=config.kestra_historical_flow_id,
+            username=config.kestra_basic_auth_username,
+            password=config.kestra_basic_auth_password,
+            timeout=config.kestra_timeout_seconds,
+            retries=config.kestra_max_retries,
+        ),
+    )
+
+
+def _configured_ticker(ticker: str) -> str:
+    normalized = ticker.strip().upper()
+    if not TICKER_RE.fullmatch(normalized):
+        raise HTTPException(status_code=422, detail="invalid ticker")
+    configured = {entry.ticker: entry for entry in load_companies(settings().company_config_path).companies}
+    entry = configured.get(normalized)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="unknown configured ticker")
+    if not entry.enabled:
+        raise HTTPException(status_code=422, detail="configured ticker is disabled")
+    return normalized
+
+
 class IngestionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     target: str = "all"
-    trigger: Literal["manual", "schedule", "api"] = "api"
+    trigger: Literal["manual", "schedule", "api", "historical"] = "api"
+    preparation_request_id: uuid.UUID | None = None
+    requested_year: int | None = None
+    selected_accession: str | None = None
+    kestra_execution_id: str | None = None
 
     @field_validator("target", mode="before")
     @classmethod
@@ -68,9 +122,7 @@ def _response(result: BatchResult) -> IngestionResponse:
     return IngestionResponse(
         status=result.status,  # type: ignore[arg-type]
         results=[
-            CompanyIngestionResponse(
-                **{**entry.__dict__, "run_id": str(entry.run_id)}
-            )
+            CompanyIngestionResponse(**{**entry.__dict__, "run_id": str(entry.run_id)})
             for entry in result.results
         ],
     )
@@ -138,12 +190,52 @@ def create_app() -> FastAPI:
         result["enabled"] = configured[normalized].enabled
         return result
 
+    @app.post("/api/companies/{ticker}/filings/discover")
+    def discover_filing(
+        ticker: str,
+        request: DiscoveryRequest,
+        service: Annotated[FilingDiscoveryService, Depends(discovery_service)],
+    ) -> dict[str, Any]:
+        normalized = _configured_ticker(ticker)
+        try:
+            period = AnalysisPeriod.year(request.period.value)
+            return service.discover(normalized, period).response()
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+        except Exception:
+            raise HTTPException(
+                status_code=502, detail="SEC filing discovery is temporarily unavailable"
+            ) from None
+
+    @app.post(
+        "/api/companies/{ticker}/filings/prepare",
+        response_model=PreparationAccepted,
+        status_code=status.HTTP_202_ACCEPTED,
+    )
+    def prepare_filing(
+        ticker: str,
+        request: PreparationRequestBody,
+        service: Annotated[HistoricalPreparationService, Depends(preparation_service)],
+    ) -> PreparationAccepted:
+        normalized = _configured_ticker(ticker)
+        try:
+            request_id, execution_id = service.submit(
+                normalized, AnalysisPeriod.year(request.period.value), request.confirmed_accession
+            )
+            return PreparationAccepted(request_id=request_id, execution_id=execution_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+        except RuntimeError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from None
+
     @app.post(
         "/internal/ingestions",
         response_model=IngestionResponse,
         dependencies=[Depends(authorize)],
     )
     def ingest(request: IngestionRequest, db: Annotated[Store, Depends(store)]) -> IngestionResponse:
+        if not db.ready():
+            raise HTTPException(status_code=503, detail="application database schema is not ready")
         config = load_companies(settings().company_config_path)
         enabled = {entry.ticker for entry in config.companies if entry.enabled}
         if request.target != "all" and request.target not in enabled:
@@ -152,7 +244,25 @@ def create_app() -> FastAPI:
             )
         if request.target == "all" and not enabled:
             raise HTTPException(status_code=422, detail="company configuration has no enabled targets")
-        return _response(IngestionPipeline(settings(), db).run_batch(request.target, request.trigger))
+        pipeline = IngestionPipeline(settings(), db)
+        if request.trigger == "historical":
+            if (
+                request.target == "all"
+                or request.preparation_request_id is None
+                or request.requested_year is None
+                or request.selected_accession is None
+            ):
+                raise HTTPException(status_code=422, detail="historical callback inputs are incomplete")
+            return _response(
+                pipeline.run_historical(
+                    preparation_request_id=request.preparation_request_id,
+                    ticker=request.target,
+                    requested_year=request.requested_year,
+                    selected_accession=request.selected_accession,
+                    kestra_execution_id=request.kestra_execution_id,
+                )
+            )
+        return _response(pipeline.run_batch(request.target, request.trigger, request.kestra_execution_id))
 
     return app
 

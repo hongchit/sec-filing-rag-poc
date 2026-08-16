@@ -1,0 +1,25 @@
+id: prepare_historical_filing
+namespace: sec_filings.ingestion
+description: Prepare one explicitly selected historical original 10-K.
+inputs:
+  - id: preparation_request_id
+    type: STRING
+  - id: ticker
+    type: STRING
+  - id: requested_year
+    type: INT
+  - id: selected_accession
+    type: STRING
+tasks:
+  - id: ingest
+    type: io.kestra.plugin.core.http.Request
+    uri: http://app:8000/internal/ingestions
+    method: POST
+    contentType: application/json
+    headers:
+      Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+    body: |
+      {{ {"target": inputs.ticker, "trigger": "historical", "preparation_request_id": inputs.preparation_request_id, "requested_year": inputs.requested_year, "selected_accession": inputs.selected_accession, "kestra_execution_id": execution.id} | toJson }}
+    options:
+      connectTimeout: PT10S
+      readTimeout: PT30M

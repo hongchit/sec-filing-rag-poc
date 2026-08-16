@@ -14,7 +14,7 @@ tasks:
     headers:
       Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
     body: |
-      {{ {"target": trigger is defined ? "all" : inputs.target, "trigger": trigger is defined ? "schedule" : "manual"} | json }}
+      {{ {"target": trigger is defined ? "all" : inputs.target, "trigger": trigger is defined ? "schedule" : "manual", "kestra_execution_id": execution.id} | toJson }}
     options:
       connectTimeout: PT10S
       readTimeout: PT30M

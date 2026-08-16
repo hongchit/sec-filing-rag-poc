@@ -52,7 +52,9 @@ class IngestionPipeline:
         self.settings = settings
         self.store = store
 
-    def run_batch(self, target: str, trigger: str = "api") -> BatchResult:
+    def run_batch(
+        self, target: str, trigger: str = "api", kestra_execution_id: str | None = None
+    ) -> BatchResult:
         config = load_companies(self.settings.company_config_path)
         self.store.load_configuration(config, self.settings.company_config_path)
         enabled = [entry.ticker for entry in config.companies if entry.enabled]
@@ -60,16 +62,29 @@ class IngestionPipeline:
         results: list[CompanyResult] = []
         for ticker in tickers:
             try:
-                results.append(self.run_company(ticker, trigger))
+                results.append(self.run_company(ticker, trigger, kestra_execution_id=kestra_execution_id))
             except Exception as exc:
                 error = safe_error(
                     exc,
-                    (self.settings.openai_api_key, self.settings.ingestion_api_token, self.settings.sec_user_agent),
+                    (
+                        self.settings.openai_api_key,
+                        self.settings.ingestion_api_token,
+                        self.settings.sec_user_agent,
+                    ),
                 )
                 results.append(
                     CompanyResult(
-                        ticker, uuid.uuid4(), "failed", None, {}, 0, 0, 0,
-                        "failed", "previous_preserved", error,
+                        ticker,
+                        uuid.uuid4(),
+                        "failed",
+                        None,
+                        {},
+                        0,
+                        0,
+                        0,
+                        "failed",
+                        "previous_preserved",
+                        error,
                     )
                 )
         failures = sum(result.outcome == "failed" for result in results)
@@ -82,7 +97,36 @@ class IngestionPipeline:
         self.store.load_configuration(config, self.settings.company_config_path)
         return self.run_company(ticker, trigger)
 
-    def run_company(self, ticker: str, trigger: str) -> CompanyResult:
+    def run_historical(
+        self,
+        *,
+        preparation_request_id: uuid.UUID,
+        ticker: str,
+        requested_year: int,
+        selected_accession: str,
+        kestra_execution_id: str | None,
+    ) -> BatchResult:
+        self.store.validate_preparation_callback(
+            preparation_request_id, ticker, requested_year, selected_accession
+        )
+        result = self.run_company(
+            ticker,
+            "historical",
+            selected_accession=selected_accession,
+            preparation_request_id=preparation_request_id,
+            kestra_execution_id=kestra_execution_id,
+        )
+        return BatchResult("failed" if result.outcome == "failed" else "succeeded", [result])
+
+    def run_company(
+        self,
+        ticker: str,
+        trigger: str,
+        *,
+        selected_accession: str | None = None,
+        preparation_request_id: uuid.UUID | None = None,
+        kestra_execution_id: str | None = None,
+    ) -> CompanyResult:
         provisional_key = compatibility_key(
             parser=self.settings.parser_version,
             chunker=self.settings.chunking_version,
@@ -90,7 +134,14 @@ class IngestionPipeline:
             dimensions=self.settings.openai_embedding_dimensions,
             index=self.settings.index_version,
         )
-        run_id, company_id = self.store.start_run(ticker, "corpus", trigger, provisional_key)
+        run_id, company_id = self.store.start_run(
+            ticker,
+            "corpus",
+            trigger,
+            provisional_key,
+            preparation_request_id,
+            kestra_execution_id,
+        )
         accession: str | None = None
         stage = "resolve"
         try:
@@ -106,6 +157,17 @@ class IngestionPipeline:
             stage = "select-filing"
             self.store.stage(run_id, stage, "running")
             filing, submission_fetch, submission = sec.latest_filing(cik)
+            if selected_accession is not None:
+                discovered_cik, _, candidates = sec.discover_candidates(ticker)
+                if discovered_cik != cik:
+                    raise ValueError("selected filing issuer changed during callback revalidation")
+                selected = next(
+                    (candidate for candidate in candidates if candidate.accession == selected_accession),
+                    None,
+                )
+                if selected is None:
+                    raise ValueError("selected accession is no longer an original 10-K candidate")
+                filing = selected
             accession = filing.accession
             self.store.stage(run_id, stage, "succeeded", output_count=1)
             stage = "download"
@@ -127,17 +189,25 @@ class IngestionPipeline:
             existing = self.store.ready_corpus(company_id, accession, key)
             if existing is not None:
                 self.store.skip_run(run_id)
+                if preparation_request_id is not None:
+                    self.store.complete_preparation(preparation_request_id, existing["corpus_version_id"])
                 return CompanyResult(
-                    ticker, run_id, "skipped", accession, existing["coverage"],
-                    existing["section_count"], existing["chunk_count"], existing["search_document_count"],
-                    existing["embedding_usage_status"], "unchanged", None,
+                    ticker,
+                    run_id,
+                    "skipped",
+                    accession,
+                    existing["coverage"],
+                    existing["section_count"],
+                    existing["chunk_count"],
+                    existing["search_document_count"],
+                    existing["embedding_usage_status"],
+                    "unchanged",
+                    None,
                 )
 
             stage = "extract"
             self.store.stage(run_id, stage, "running")
-            narrative = sanitize_filing_html(
-                document.body, max_chars=self.settings.sec_max_narrative_chars
-            )
+            narrative = sanitize_filing_html(document.body, max_chars=self.settings.sec_max_narrative_chars)
             sections = extract_sections(narrative)
             chunks: dict[str, list[Chunk]] = {
                 item: make_chunks(
@@ -148,11 +218,15 @@ class IngestionPipeline:
                     size=self.settings.chunk_size_chars,
                     overlap=self.settings.chunk_overlap_chars,
                     base_offset=section.start or 0,
-                ) if section.status == "present" else []
+                )
+                if section.status == "present"
+                else []
                 for item, section in sections.items()
             }
             self.store.stage(run_id, stage, "succeeded", input_count=1, output_count=len(sections))
-            unusable = [item for item in REQUIRED_ITEMS if sections[item].status in {"failed", "not_assessed"}]
+            unusable = [
+                item for item in REQUIRED_ITEMS if sections[item].status in {"failed", "not_assessed"}
+            ]
             if unusable:
                 raise ValueError("corpus extraction incomplete for required items: " + ", ".join(unusable))
 
@@ -184,7 +258,9 @@ class IngestionPipeline:
             prompt_tokens = getattr(usage_object, "prompt_tokens", None)
             total_tokens = getattr(usage_object, "total_tokens", None)
             usage = (
-                prompt_tokens, None, total_tokens,
+                prompt_tokens,
+                None,
+                total_tokens,
                 "reported" if total_tokens is not None else "unavailable",
                 int((time.monotonic() - started) * 1000),
             )
@@ -193,27 +269,68 @@ class IngestionPipeline:
             stage = "persist-promote"
             self.store.stage(run_id, stage, "running", input_count=len(flat_chunks))
             self.store.persist(
-                run_id=run_id, company_id=company_id, ticker=ticker, cik=cik, name=name,
-                ticker_fetch=ticker_fetch, submission_fetch=submission_fetch, submission=submission,
-                document=document, filing=filing, sections=sections, chunks=chunks, embeddings=embeddings,
-                key=key, parser=self.settings.parser_version, chunker=self.settings.chunking_version,
+                run_id=run_id,
+                company_id=company_id,
+                ticker=ticker,
+                cik=cik,
+                name=name,
+                ticker_fetch=ticker_fetch,
+                submission_fetch=submission_fetch,
+                submission=submission,
+                document=document,
+                filing=filing,
+                sections=sections,
+                chunks=chunks,
+                embeddings=embeddings,
+                key=key,
+                parser=self.settings.parser_version,
+                chunker=self.settings.chunking_version,
                 model=self.settings.openai_embedding_model,
-                dimensions=self.settings.openai_embedding_dimensions, index=self.settings.index_version,
-                usage=usage, user_agent_hash=hashlib.sha256(self.settings.sec_user_agent.encode()).hexdigest(),
+                dimensions=self.settings.openai_embedding_dimensions,
+                index=self.settings.index_version,
+                usage=usage,
+                user_agent_hash=hashlib.sha256(self.settings.sec_user_agent.encode()).hexdigest(),
+                promote_default=preparation_request_id is None,
+                preparation_request_id=preparation_request_id,
             )
             coverage: dict[str, str] = {item: sections[item].status for item in REQUIRED_ITEMS}
             return CompanyResult(
-                ticker, run_id, "succeeded", accession, coverage, len(sections), len(flat_chunks),
-                len(flat_chunks), usage[3], "activated", None,
+                ticker,
+                run_id,
+                "succeeded",
+                accession,
+                coverage,
+                len(sections),
+                len(flat_chunks),
+                len(flat_chunks),
+                usage[3],
+                "activated" if preparation_request_id is None else "historical_ready",
+                None,
             )
         except Exception as exc:
             error = safe_error(
                 exc,
-                (self.settings.openai_api_key, self.settings.ingestion_api_token, self.settings.sec_user_agent),
+                (
+                    self.settings.openai_api_key,
+                    self.settings.ingestion_api_token,
+                    self.settings.sec_user_agent,
+                ),
             )
             self.store.fail_run(run_id, stage, error)
+            if preparation_request_id is not None:
+                self.store.fail_preparation(preparation_request_id, error)
             return CompanyResult(
-                ticker, run_id, "failed", accession, {}, 0, 0, 0, "failed", "previous_preserved", error,
+                ticker,
+                run_id,
+                "failed",
+                accession,
+                {},
+                0,
+                0,
+                0,
+                "failed",
+                "previous_preserved",
+                error,
             )
 
     @staticmethod

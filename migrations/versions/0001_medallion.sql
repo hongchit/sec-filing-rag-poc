@@ -10,6 +10,8 @@ CREATE TYPE public.stage_status AS ENUM ('pending','running','succeeded','failed
 CREATE TYPE public.coverage_status AS ENUM ('present','legitimately_absent','failed','not_assessed');
 CREATE TYPE public.corpus_lifecycle AS ENUM ('building','ready','failed','retired');
 CREATE TYPE public.usage_status AS ENUM ('reported','unavailable','failed');
+CREATE TYPE public.preparation_status AS ENUM ('pending','submitted','running','succeeded','submission_failed','failed');
+CREATE TYPE public.confirmation_state AS ENUM ('not_required','confirmed');
 
 CREATE TABLE public.configuration_version (
   id uuid PRIMARY KEY, kind text NOT NULL, path text NOT NULL, normalized_json jsonb NOT NULL,
@@ -21,12 +23,26 @@ CREATE TABLE public.company (
   resolution_status public.resolution_status NOT NULL DEFAULT 'pending', safe_error text,
   configuration_version_id uuid NOT NULL REFERENCES public.configuration_version(id), updated_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE TABLE public.preparation_request (
+  id uuid PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id),
+  requested_year integer NOT NULL CHECK (requested_year BETWEEN 1900 AND 9999),
+  selected_accession text NOT NULL CHECK (selected_accession ~ '^[0-9]{10}-[0-9]{2}-[0-9]{6}$'), selected_fiscal_year integer NOT NULL CHECK (selected_fiscal_year BETWEEN 1900 AND 9999),
+  confirmation_required boolean NOT NULL, confirmation_state public.confirmation_state NOT NULL,
+  status public.preparation_status NOT NULL DEFAULT 'pending', kestra_execution_id text,
+  corpus_version_id uuid, safe_error text, submitted_at timestamptz, finished_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+  CHECK ((confirmation_required AND confirmation_state = 'confirmed') OR
+         (NOT confirmation_required AND confirmation_state = 'not_required')),
+  UNIQUE (id, company_id)
+);
 CREATE TABLE public.ingestion_run (
   id uuid PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id), requested_item text NOT NULL,
-  trigger text NOT NULL CHECK (trigger IN ('manual','schedule','api','test')), compatibility_key char(64) NOT NULL,
+  trigger text NOT NULL CHECK (trigger IN ('manual','schedule','api','historical','test')), compatibility_key char(64) NOT NULL,
+  preparation_request_id uuid, kestra_execution_id text,
   status public.run_status NOT NULL DEFAULT 'pending', stage text NOT NULL DEFAULT 'created',
   section_count integer NOT NULL DEFAULT 0 CHECK (section_count >= 0), chunk_count integer NOT NULL DEFAULT 0 CHECK (chunk_count >= 0),
-  started_at timestamptz, finished_at timestamptz, safe_error text, created_at timestamptz NOT NULL DEFAULT now()
+  started_at timestamptz, finished_at timestamptz, safe_error text, created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (preparation_request_id,company_id) REFERENCES public.preparation_request(id,company_id)
 );
 CREATE TABLE public.ingestion_stage (
   id bigserial PRIMARY KEY, ingestion_run_id uuid NOT NULL REFERENCES public.ingestion_run(id), stage text NOT NULL,
@@ -61,7 +77,7 @@ CREATE TABLE silver.filing (
   id uuid PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id), ticker_snapshot_id uuid NOT NULL REFERENCES bronze.sec_ticker_snapshot(id),
   submission_id uuid NOT NULL REFERENCES bronze.sec_submission(id), document_id uuid NOT NULL REFERENCES bronze.sec_document(id),
   cik text NOT NULL, accession text NOT NULL, form text NOT NULL CHECK (form = '10-K'), primary_document text NOT NULL,
-  filing_date date NOT NULL, report_date date, source_url text NOT NULL, UNIQUE (cik, accession)
+  filing_date date NOT NULL, report_date date NOT NULL, source_url text NOT NULL, UNIQUE (cik, accession)
 );
 CREATE TABLE silver.corpus_version (
   id uuid PRIMARY KEY, filing_id uuid NOT NULL REFERENCES silver.filing(id), ingestion_run_id uuid NOT NULL REFERENCES public.ingestion_run(id),
@@ -70,6 +86,8 @@ CREATE TABLE silver.corpus_version (
   status public.corpus_lifecycle NOT NULL DEFAULT 'building', created_at timestamptz NOT NULL DEFAULT now(), ready_at timestamptz,
   UNIQUE (filing_id, compatibility_key)
 );
+ALTER TABLE public.preparation_request ADD CONSTRAINT preparation_corpus_fk
+  FOREIGN KEY (corpus_version_id) REFERENCES silver.corpus_version(id);
 CREATE TABLE silver.section (
   id uuid PRIMARY KEY, corpus_version_id uuid NOT NULL REFERENCES silver.corpus_version(id), filing_id uuid NOT NULL REFERENCES silver.filing(id),
   item text NOT NULL, coverage_status public.coverage_status NOT NULL, text_content text, source_start integer, source_end integer,
@@ -93,11 +111,11 @@ CREATE TABLE gold.search_document (
 );
 CREATE TABLE public.corpus_activation (
   id bigserial PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id), corpus_version_id uuid NOT NULL REFERENCES silver.corpus_version(id),
-  ingestion_run_id uuid NOT NULL REFERENCES public.ingestion_run(id), active boolean NOT NULL DEFAULT true,
+  ingestion_run_id uuid NOT NULL REFERENCES public.ingestion_run(id), is_default boolean NOT NULL DEFAULT true,
   activated_at timestamptz NOT NULL DEFAULT now(), deactivated_at timestamptz,
-  CHECK ((active AND deactivated_at IS NULL) OR (NOT active AND deactivated_at IS NOT NULL))
+  CHECK ((is_default AND deactivated_at IS NULL) OR (NOT is_default AND deactivated_at IS NOT NULL))
 );
-CREATE UNIQUE INDEX one_active_corpus_per_company ON public.corpus_activation(company_id) WHERE active;
+CREATE UNIQUE INDEX one_default_corpus_per_company ON public.corpus_activation(company_id) WHERE is_default;
 
 CREATE FUNCTION bronze.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'bronze tables are insert-only'; END $$;
 CREATE TRIGGER sec_ticker_snapshot_immutable BEFORE UPDATE OR DELETE ON bronze.sec_ticker_snapshot FOR EACH ROW EXECUTE FUNCTION bronze.reject_mutation();
@@ -113,7 +131,7 @@ SELECT c.ticker, cv.id AS corpus_version_id, f.accession, f.filing_date, s.item,
 FROM public.corpus_activation ca JOIN public.company c ON c.id = ca.company_id
 JOIN silver.corpus_version cv ON cv.id = ca.corpus_version_id JOIN silver.filing f ON f.id = cv.filing_id
 JOIN silver.section s ON s.corpus_version_id = cv.id LEFT JOIN silver.chunk ch ON ch.section_id = s.id
-LEFT JOIN gold.search_document gd ON gd.chunk_id = ch.id WHERE ca.active
+LEFT JOIN gold.search_document gd ON gd.chunk_id = ch.id WHERE ca.is_default
 GROUP BY c.id, c.ticker, cv.id, f.accession, f.filing_date, s.item, s.coverage_status, ca.activated_at;
 
 COMMIT;
