@@ -1,9 +1,10 @@
-id: ingest_item_1a
+id: ingest_corpus
 namespace: sec_filings.ingestion
-description: Ingest one configured company's latest original 10-K Item 1A.
+description: Ingest the complete six-item corpus for all enabled companies or one selected ticker.
 inputs:
-  - {id: ticker, type: STRING, defaults: AAPL}
-  - {id: item, type: STRING, defaults: 1A}
+  - id: target
+    type: STRING
+    defaults: all
 tasks:
   - id: ingest
     type: io.kestra.plugin.core.http.Request
@@ -13,8 +14,10 @@ tasks:
     headers:
       Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
     body: |
-      {{ {"ticker": inputs.ticker, "item": inputs.item, "trigger": trigger is defined ? "schedule" : "manual"} | json }}
-    options: {connectTimeout: PT10S, readTimeout: PT10M}
+      {{ {"target": trigger is defined ? "all" : inputs.target, "trigger": trigger is defined ? "schedule" : "manual"} | json }}
+    options:
+      connectTimeout: PT10S
+      readTimeout: PT30M
 triggers:
   - id: weekly
     type: io.kestra.plugin.core.trigger.Schedule

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -12,7 +12,7 @@ from psycopg import sql
 from psycopg.rows import dict_row
 
 from .config import CompanyConfiguration
-from .domain import Chunk, ExtractedSection, FilingCandidate, sha256_bytes
+from .domain import REQUIRED_ITEMS, Chunk, ExtractedSection, FilingCandidate, sha256_bytes
 from .sec import Fetched
 
 
@@ -37,65 +37,387 @@ class Store:
         version_id = uuid.uuid5(uuid.NAMESPACE_URL, config.sha256())
         with self.connect() as connection:
             connection.execute(
-                "INSERT INTO public.configuration_version(id,kind,path,normalized_json,sha256) VALUES (%s,'companies',%s,%s,%s) ON CONFLICT (sha256) DO NOTHING",
+                "INSERT INTO public.configuration_version(id,kind,path,normalized_json,sha256) "
+                "VALUES (%s,'companies',%s,%s,%s) ON CONFLICT (sha256) DO NOTHING",
                 (version_id, str(path), json.dumps(config.normalized()), config.sha256()),
             )
             for company in config.companies:
                 connection.execute(
-                    "INSERT INTO public.company(id,ticker,enabled,configuration_version_id) VALUES (%s,%s,%s,%s) ON CONFLICT (ticker) DO UPDATE SET enabled=excluded.enabled, configuration_version_id=excluded.configuration_version_id, updated_at=now()",
+                    "INSERT INTO public.company(id,ticker,enabled,configuration_version_id) VALUES (%s,%s,%s,%s) "
+                    "ON CONFLICT (ticker) DO UPDATE SET enabled=excluded.enabled, "
+                    "configuration_version_id=excluded.configuration_version_id, updated_at=now()",
                     (uuid.uuid5(uuid.NAMESPACE_DNS, company.ticker), company.ticker, company.enabled, version_id),
                 )
 
     def start_run(self, ticker: str, item: str, trigger: str, key: str) -> tuple[uuid.UUID, uuid.UUID]:
         with self.connect() as connection:
-            company = connection.execute("SELECT id FROM public.company WHERE ticker=%s AND enabled", (ticker,)).fetchone()
+            company = connection.execute(
+                "SELECT id FROM public.company WHERE ticker=%s AND enabled", (ticker,)
+            ).fetchone()
             if not company:
                 raise ValueError("ticker is not enabled in company configuration")
             run_id = uuid.uuid4()
-            connection.execute("INSERT INTO public.ingestion_run(id,company_id,requested_item,trigger,compatibility_key,status,stage,started_at) VALUES (%s,%s,%s,%s,%s,'running','resolve',now())", (run_id, company["id"], item, trigger, key))
+            connection.execute(
+                "INSERT INTO public.ingestion_run"
+                "(id,company_id,requested_item,trigger,compatibility_key,status,stage,started_at) "
+                "VALUES (%s,%s,%s,%s,%s,'running','resolve',now())",
+                (run_id, company["id"], item, trigger, key),
+            )
             return run_id, company["id"]
+
+    def update_run_key(self, run_id: uuid.UUID, key: str) -> None:
+        with self.connect() as connection:
+            connection.execute(
+                "UPDATE public.ingestion_run SET compatibility_key=%s WHERE id=%s", (key, run_id)
+            )
+
+    def stage(
+        self,
+        run_id: uuid.UUID,
+        stage: str,
+        status: str,
+        *,
+        input_count: int | None = None,
+        output_count: int | None = None,
+        error: str | None = None,
+    ) -> None:
+        with self.connect() as connection:
+            connection.execute(
+                "INSERT INTO public.ingestion_stage"
+                "(ingestion_run_id,stage,status,input_count,output_count,started_at,finished_at,safe_error) "
+                "VALUES (%s,%s,%s,%s,%s,CASE WHEN %s='running' THEN now() END,"
+                "CASE WHEN %s<>'running' THEN now() END,%s) "
+                "ON CONFLICT (ingestion_run_id,stage,attempt) DO UPDATE SET status=excluded.status,"
+                "input_count=COALESCE(excluded.input_count,public.ingestion_stage.input_count),"
+                "output_count=COALESCE(excluded.output_count,public.ingestion_stage.output_count),"
+                "finished_at=excluded.finished_at,safe_error=excluded.safe_error",
+                (run_id, stage, status, input_count, output_count, status, status, error),
+            )
+            connection.execute("UPDATE public.ingestion_run SET stage=%s WHERE id=%s", (stage, run_id))
 
     def fail_run(self, run_id: uuid.UUID, stage: str, error: str) -> None:
         with self.connect() as connection:
-            connection.execute("UPDATE public.ingestion_run SET status='failed',stage=%s,safe_error=%s,finished_at=now() WHERE id=%s", (stage, error, run_id))
+            connection.execute(
+                "INSERT INTO public.ingestion_stage(ingestion_run_id,stage,status,finished_at,safe_error) "
+                "VALUES (%s,%s,'failed',now(),%s) ON CONFLICT (ingestion_run_id,stage,attempt) "
+                "DO UPDATE SET status='failed',finished_at=now(),safe_error=excluded.safe_error",
+                (run_id, stage, error),
+            )
+            connection.execute(
+                "UPDATE public.ingestion_run SET status='failed',stage=%s,safe_error=%s,finished_at=now() "
+                "WHERE id=%s",
+                (stage, error, run_id),
+            )
+            if stage == "resolve":
+                connection.execute(
+                    "UPDATE public.company c SET resolution_status='failed',safe_error=%s,updated_at=now() "
+                    "FROM public.ingestion_run ir WHERE ir.id=%s AND c.id=ir.company_id",
+                    (error, run_id),
+                )
 
-    def persist(self, *, run_id: uuid.UUID, company_id: uuid.UUID, ticker: str, cik: str, name: str,
-                ticker_fetch: Fetched, submission_fetch: Fetched, submission: dict[str, Any], document: Fetched,
-                filing: FilingCandidate, section: ExtractedSection, chunks: Sequence[Chunk], embeddings: Sequence[Sequence[float]],
-                key: str, parser: str, chunker: str, model: str, dimensions: int, index: str,
-                usage: tuple[int | None, int | None, int | None, str], user_agent_hash: str) -> uuid.UUID:
-        ids = [uuid.uuid4() for _ in range(6)]
-        ticker_id, submission_id, document_id, filing_id, corpus_id, section_id = ids
+    def skip_run(self, run_id: uuid.UUID) -> None:
         with self.connect() as connection:
-            connection.execute("UPDATE public.company SET cik=%s,name=%s,resolution_status='resolved',safe_error=NULL,updated_at=now() WHERE id=%s", (cik, name, company_id))
-            common = (user_agent_hash,)
-            connection.execute("INSERT INTO bronze.sec_ticker_snapshot(id,payload,source_url,user_agent_hash,fetched_at,http_status,etag,last_modified,sha256) VALUES (%s,%s,%s,%s,now(),%s,%s,%s,%s) ON CONFLICT (sha256) DO NOTHING", (ticker_id, ticker_fetch.body.decode(), ticker_fetch.url, *common, ticker_fetch.status, ticker_fetch.headers.get("etag"), ticker_fetch.headers.get("last-modified"), sha256_bytes(ticker_fetch.body)))
-            row = connection.execute("SELECT id FROM bronze.sec_ticker_snapshot WHERE sha256=%s", (sha256_bytes(ticker_fetch.body),)).fetchone(); ticker_id = row["id"]
-            connection.execute("INSERT INTO bronze.sec_submission(id,cik,payload,source_url,user_agent_hash,fetched_at,http_status,etag,last_modified,sha256) VALUES (%s,%s,%s,%s,%s,now(),%s,%s,%s,%s) ON CONFLICT (sha256) DO NOTHING", (submission_id,cik,json.dumps(submission),submission_fetch.url,*common,submission_fetch.status,submission_fetch.headers.get("etag"),submission_fetch.headers.get("last-modified"),sha256_bytes(submission_fetch.body)))
-            row = connection.execute("SELECT id FROM bronze.sec_submission WHERE sha256=%s", (sha256_bytes(submission_fetch.body),)).fetchone(); submission_id = row["id"]
-            connection.execute("INSERT INTO bronze.sec_document(id,cik,accession,document_name,source_url,content,media_type,content_length,user_agent_hash,fetched_at,http_status,etag,last_modified,sha256) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,now(),%s,%s,%s,%s) ON CONFLICT (sha256) DO NOTHING", (document_id,cik,filing.accession,filing.primary_document,document.url,document.body,document.headers.get("content-type","text/html"),len(document.body),*common,document.status,document.headers.get("etag"),document.headers.get("last-modified"),sha256_bytes(document.body)))
-            row = connection.execute("SELECT id FROM bronze.sec_document WHERE sha256=%s", (sha256_bytes(document.body),)).fetchone(); document_id = row["id"]
-            connection.execute("INSERT INTO silver.filing(id,company_id,ticker_snapshot_id,submission_id,document_id,cik,accession,form,primary_document,filing_date,report_date,source_url) VALUES (%s,%s,%s,%s,%s,%s,%s,'10-K',%s,%s,%s,%s) ON CONFLICT (cik,accession) DO NOTHING", (filing_id,company_id,ticker_id,submission_id,document_id,cik,filing.accession,filing.primary_document,filing.filing_date,filing.report_date,document.url))
-            row = connection.execute("SELECT id FROM silver.filing WHERE cik=%s AND accession=%s", (cik,filing.accession)).fetchone(); filing_id = row["id"]
-            existing = connection.execute("SELECT id,status FROM silver.corpus_version WHERE filing_id=%s AND compatibility_key=%s", (filing_id,key)).fetchone()
-            if existing and existing["status"] == "ready":
-                connection.execute("UPDATE public.ingestion_run SET status='skipped',stage='unchanged',finished_at=now() WHERE id=%s", (run_id,))
-                return uuid.UUID(str(existing["id"]))
-            connection.execute("INSERT INTO silver.corpus_version(id,filing_id,ingestion_run_id,compatibility_key,parser_version,chunking_version,embedding_model,embedding_dimensions,index_version) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", (corpus_id,filing_id,run_id,key,parser,chunker,model,dimensions,index))
-            connection.execute("INSERT INTO silver.section(id,corpus_version_id,filing_id,item,coverage_status,text_content,source_start,source_end,source_anchor,sha256,parser_version,safe_error) VALUES (%s,%s,%s,'1A',%s,%s,%s,%s,%s,%s,%s,%s)", (section_id,corpus_id,filing_id,section.status,section.text,section.start,section.end,f"{filing.accession}:item-1a",sha256_bytes(section.text.encode()) if section.text else None,parser,section.error))
-            for chunk, embedding in zip(chunks, embeddings, strict=True):
-                connection.execute("INSERT INTO silver.chunk(id,section_id,corpus_version_id,ordinal,text_content,source_start,source_end,citation_handle,chunking_version,sha256) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", (chunk.id,section_id,corpus_id,chunk.ordinal,chunk.text,chunk.start,chunk.end,chunk.citation,chunker,chunk.sha256))
-                connection.execute("INSERT INTO gold.search_document(chunk_id,corpus_version_id,company_id,filing_id,item,text_content,citation_handle,provenance,embedding,embedding_model,embedding_dimensions) VALUES (%s,%s,%s,%s,'1A',%s,%s,%s,%s,%s,%s)", (chunk.id,corpus_id,company_id,filing_id,chunk.text,chunk.citation,json.dumps({"ticker":ticker,"accession":filing.accession,"url":document.url}),list(embedding),model,dimensions))
-            connection.execute("INSERT INTO public.llm_usage(ingestion_run_id,operation,model,input_tokens,output_tokens,total_tokens,usage_status,normalized_status) VALUES (%s,'embedding',%s,%s,%s,%s,%s,'succeeded')", (run_id,model,*usage))
-            count = connection.execute("SELECT count(*) AS n FROM gold.search_document WHERE corpus_version_id=%s AND embedding_dimensions=%s", (corpus_id,dimensions)).fetchone()["n"]
-            if section.status != "present" or count != len(chunks) or count == 0:
-                raise ValueError("corpus promotion validation failed")
+            connection.execute(
+                "UPDATE public.ingestion_run SET status='skipped',stage='unchanged',finished_at=now() WHERE id=%s",
+                (run_id,),
+            )
+            connection.execute(
+                "INSERT INTO public.ingestion_stage(ingestion_run_id,stage,status,finished_at) "
+                "VALUES (%s,'unchanged','skipped',now())",
+                (run_id,),
+            )
+
+    def ready_corpus(self, company_id: uuid.UUID, accession: str, key: str) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            corpus = connection.execute(
+                "SELECT cv.id,COALESCE(max(lu.usage_status::text),'unavailable') AS usage "
+                "FROM silver.corpus_version cv JOIN silver.filing f ON f.id=cv.filing_id "
+                "LEFT JOIN public.llm_usage lu ON lu.ingestion_run_id=cv.ingestion_run_id "
+                "WHERE f.company_id=%s AND f.accession=%s AND cv.compatibility_key=%s AND cv.status='ready' "
+                "GROUP BY cv.id",
+                (company_id, accession, key),
+            ).fetchone()
+            if not corpus:
+                return None
+            rows = connection.execute(
+                "SELECT s.item,s.coverage_status::text AS coverage_status,count(DISTINCT ch.id)::integer AS chunks,"
+                "count(DISTINCT gd.chunk_id)::integer AS documents FROM silver.section s "
+                "LEFT JOIN silver.chunk ch ON ch.section_id=s.id "
+                "LEFT JOIN gold.search_document gd ON gd.chunk_id=ch.id WHERE s.corpus_version_id=%s "
+                "GROUP BY s.item,s.coverage_status",
+                (corpus["id"],),
+            ).fetchall()
+            return {
+                "coverage": {row["item"]: row["coverage_status"] for row in rows},
+                "section_count": len(rows),
+                "chunk_count": sum(row["chunks"] for row in rows),
+                "search_document_count": sum(row["documents"] for row in rows),
+                "embedding_usage_status": corpus["usage"],
+            }
+
+    def persist(
+        self,
+        *,
+        run_id: uuid.UUID,
+        company_id: uuid.UUID,
+        ticker: str,
+        cik: str,
+        name: str,
+        ticker_fetch: Fetched,
+        submission_fetch: Fetched,
+        submission: dict[str, Any],
+        document: Fetched,
+        filing: FilingCandidate,
+        sections: Mapping[str, ExtractedSection],
+        chunks: Mapping[str, Sequence[Chunk]],
+        embeddings: Mapping[str, Sequence[Sequence[float]]],
+        key: str,
+        parser: str,
+        chunker: str,
+        model: str,
+        dimensions: int,
+        index: str,
+        usage: tuple[int | None, int | None, int | None, str, int],
+        user_agent_hash: str,
+    ) -> uuid.UUID:
+        corpus_id = uuid.uuid4()
+        with self.connect() as connection:
+            connection.execute(
+                "UPDATE public.company SET cik=%s,name=%s,resolution_status='resolved',safe_error=NULL,"
+                "updated_at=now() WHERE id=%s",
+                (cik, name, company_id),
+            )
+            ticker_id = self._ticker_snapshot(connection, ticker_fetch, user_agent_hash)
+            submission_id = self._submission(connection, cik, submission_fetch, submission, user_agent_hash)
+            document_id = self._document(connection, cik, filing, document, user_agent_hash)
+            filing_id = uuid.uuid4()
+            connection.execute(
+                "INSERT INTO silver.filing"
+                "(id,company_id,ticker_snapshot_id,submission_id,document_id,cik,accession,form,primary_document,"
+                "filing_date,report_date,source_url) VALUES (%s,%s,%s,%s,%s,%s,%s,'10-K',%s,%s,%s,%s) "
+                "ON CONFLICT (cik,accession) DO NOTHING",
+                (filing_id, company_id, ticker_id, submission_id, document_id, cik, filing.accession,
+                 filing.primary_document, filing.filing_date, filing.report_date, document.url),
+            )
+            filing_row = connection.execute(
+                "SELECT id FROM silver.filing WHERE cik=%s AND accession=%s", (cik, filing.accession)
+            ).fetchone()
+            filing_id = filing_row["id"]
+            connection.execute(
+                "INSERT INTO silver.corpus_version"
+                "(id,filing_id,ingestion_run_id,compatibility_key,parser_version,chunking_version,"
+                "embedding_model,embedding_dimensions,index_version) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (corpus_id, filing_id, run_id, key, parser, chunker, model, dimensions, index),
+            )
+            source_checksum = sha256_bytes(document.body)
+            for item in REQUIRED_ITEMS:
+                section = sections[item]
+                section_id = uuid.uuid4()
+                connection.execute(
+                    "INSERT INTO silver.section"
+                    "(id,corpus_version_id,filing_id,item,coverage_status,text_content,source_start,source_end,"
+                    "source_anchor,sha256,parser_version,safe_error) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    (section_id, corpus_id, filing_id, item, section.status, section.text, section.start,
+                     section.end, f"{filing.accession}:item-{item.lower()}",
+                     sha256_bytes(section.text.encode()) if section.text else None, parser, section.error),
+                )
+                item_vectors = embeddings[item]
+                if len(chunks[item]) != len(item_vectors):
+                    raise ValueError(f"Item {item} embedding count mismatch")
+                for chunk, embedding in zip(chunks[item], item_vectors, strict=True):
+                    provenance = {
+                        "ticker": ticker, "cik": cik, "accession": filing.accession, "item": item,
+                        "source_document": filing.primary_document, "source_url": document.url,
+                        "source_checksum": source_checksum, "source_start": chunk.start,
+                        "source_end": chunk.end, "anchor": chunk.citation, "ordinal": chunk.ordinal,
+                    }
+                    connection.execute(
+                        "INSERT INTO silver.chunk"
+                        "(id,section_id,corpus_version_id,ordinal,text_content,source_start,source_end,"
+                        "citation_handle,chunking_version,sha256) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                        (chunk.id, section_id, corpus_id, chunk.ordinal, chunk.text, chunk.start, chunk.end,
+                         chunk.citation, chunker, chunk.sha256),
+                    )
+                    connection.execute(
+                        "INSERT INTO gold.search_document"
+                        "(chunk_id,corpus_version_id,company_id,filing_id,item,text_content,citation_handle,"
+                        "provenance,embedding,embedding_model,embedding_dimensions,lexical_document) "
+                        "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                        (chunk.id, corpus_id, company_id, filing_id, item, chunk.text, chunk.citation,
+                         json.dumps(provenance), list(embedding), model, dimensions, chunk.text),
+                    )
+            connection.execute(
+                "INSERT INTO public.llm_usage"
+                "(ingestion_run_id,operation,model,input_tokens,output_tokens,total_tokens,usage_status,"
+                "normalized_status,latency_ms) VALUES (%s,'embedding',%s,%s,%s,%s,%s,'succeeded',%s)",
+                (run_id, model, *usage),
+            )
+            self._validate_candidate(connection, corpus_id, model, dimensions)
             connection.execute("SELECT id FROM public.company WHERE id=%s FOR UPDATE", (company_id,))
-            connection.execute("UPDATE silver.corpus_version SET status='ready',ready_at=now() WHERE id=%s", (corpus_id,))
-            connection.execute("UPDATE public.corpus_activation SET active=false,deactivated_at=now() WHERE company_id=%s AND active", (company_id,))
-            connection.execute("INSERT INTO public.corpus_activation(company_id,corpus_version_id,ingestion_run_id) VALUES (%s,%s,%s)", (company_id,corpus_id,run_id))
-            connection.execute("UPDATE public.ingestion_run SET status='succeeded',stage='promoted',section_count=1,chunk_count=%s,finished_at=now() WHERE id=%s", (len(chunks),run_id))
+            connection.execute(
+                "UPDATE silver.corpus_version SET status='ready',ready_at=now() WHERE id=%s", (corpus_id,)
+            )
+            connection.execute(
+                "UPDATE public.corpus_activation SET active=false,deactivated_at=now() "
+                "WHERE company_id=%s AND active",
+                (company_id,),
+            )
+            connection.execute(
+                "INSERT INTO public.corpus_activation(company_id,corpus_version_id,ingestion_run_id) "
+                "VALUES (%s,%s,%s)",
+                (company_id, corpus_id, run_id),
+            )
+            total_chunks = sum(len(chunks[item]) for item in REQUIRED_ITEMS)
+            connection.execute(
+                "UPDATE public.ingestion_run SET status='succeeded',stage='promoted',section_count=%s,"
+                "chunk_count=%s,finished_at=now() WHERE id=%s",
+                (len(REQUIRED_ITEMS), total_chunks, run_id),
+            )
+            connection.execute(
+                "UPDATE public.ingestion_stage SET status='succeeded',output_count=%s,finished_at=now() "
+                "WHERE ingestion_run_id=%s AND stage='persist-promote'",
+                (total_chunks, run_id),
+            )
         return corpus_id
+
+    def _validate_candidate(self, connection: Any, corpus_id: uuid.UUID, model: str, dimensions: int) -> None:
+        rows = connection.execute(
+            "SELECT s.item,s.coverage_status::text AS status,s.safe_error,count(DISTINCT ch.id)::integer AS chunks,"
+            "count(DISTINCT gd.chunk_id)::integer AS documents,"
+            "count(DISTINCT ch.id) FILTER (WHERE ch.source_end>ch.source_start "
+            "AND ch.citation_handle<>'' AND ch.text_content<>'')::integer AS valid_chunks,"
+            "count(DISTINCT gd.chunk_id) FILTER (WHERE gd.lexical_document IS NOT NULL "
+            "AND gd.lexical_document=gd.text_content AND gd.text_content=ch.text_content "
+            "AND gd.citation_handle=ch.citation_handle AND gd.embedding_model=%s "
+            "AND gd.embedding_dimensions=%s AND gd.provenance ?& "
+            "ARRAY['ticker','cik','accession','item','source_document','source_url','source_checksum',"
+            "'source_start','source_end','anchor','ordinal'] "
+            "AND gd.provenance->>'anchor'=ch.citation_handle "
+            "AND (gd.provenance->>'source_start')::integer=ch.source_start "
+            "AND (gd.provenance->>'source_end')::integer=ch.source_end)::integer AS valid_gold "
+            "FROM silver.section s LEFT JOIN silver.chunk ch ON ch.section_id=s.id "
+            "LEFT JOIN gold.search_document gd ON gd.chunk_id=ch.id WHERE s.corpus_version_id=%s "
+            "GROUP BY s.item,s.coverage_status,s.safe_error",
+            (model, dimensions, corpus_id),
+        ).fetchall()
+        if len(rows) != len(REQUIRED_ITEMS) or {row["item"] for row in rows} != set(REQUIRED_ITEMS):
+            raise ValueError("corpus promotion requires exactly one coverage row per required item")
+        for row in rows:
+            if row["status"] in {"failed", "not_assessed"}:
+                raise ValueError(f"Item {row['item']} has incomplete coverage")
+            if row["status"] == "present" and (
+                row["chunks"] <= 0
+                or row["chunks"] != row["documents"]
+                or row["chunks"] != row["valid_chunks"]
+                or row["chunks"] != row["valid_gold"]
+            ):
+                raise ValueError(f"Item {row['item']} has inconsistent retrieval records")
+            if row["status"] == "legitimately_absent" and (row["chunks"] or not row["safe_error"]):
+                raise ValueError(f"Item {row['item']} has invalid absent coverage")
+
+    def _ticker_snapshot(self, connection: Any, fetched: Fetched, user_agent_hash: str) -> uuid.UUID:
+        digest = sha256_bytes(fetched.body)
+        row_id = uuid.uuid4()
+        connection.execute(
+            "INSERT INTO bronze.sec_ticker_snapshot"
+            "(id,payload,source_url,user_agent_hash,fetched_at,http_status,etag,last_modified,sha256) "
+            "VALUES (%s,%s,%s,%s,now(),%s,%s,%s,%s) ON CONFLICT (sha256) DO NOTHING",
+            (row_id, fetched.body.decode(), fetched.url, user_agent_hash, fetched.status,
+             fetched.headers.get("etag"), fetched.headers.get("last-modified"), digest),
+        )
+        result = connection.execute(
+            "SELECT id FROM bronze.sec_ticker_snapshot WHERE sha256=%s", (digest,)
+        ).fetchone()["id"]
+        return uuid.UUID(str(result))
+
+    def _submission(
+        self, connection: Any, cik: str, fetched: Fetched, payload: dict[str, Any], user_agent_hash: str
+    ) -> uuid.UUID:
+        digest = sha256_bytes(fetched.body)
+        row_id = uuid.uuid4()
+        connection.execute(
+            "INSERT INTO bronze.sec_submission"
+            "(id,cik,payload,source_url,user_agent_hash,fetched_at,http_status,etag,last_modified,sha256) "
+            "VALUES (%s,%s,%s,%s,%s,now(),%s,%s,%s,%s) ON CONFLICT (sha256) DO NOTHING",
+            (row_id, cik, json.dumps(payload), fetched.url, user_agent_hash, fetched.status,
+             fetched.headers.get("etag"), fetched.headers.get("last-modified"), digest),
+        )
+        result = connection.execute(
+            "SELECT id FROM bronze.sec_submission WHERE sha256=%s", (digest,)
+        ).fetchone()["id"]
+        return uuid.UUID(str(result))
+
+    def _document(
+        self, connection: Any, cik: str, filing: FilingCandidate, fetched: Fetched, user_agent_hash: str
+    ) -> uuid.UUID:
+        digest = sha256_bytes(fetched.body)
+        row_id = uuid.uuid4()
+        connection.execute(
+            "INSERT INTO bronze.sec_document"
+            "(id,cik,accession,document_name,source_url,content,media_type,content_length,user_agent_hash,"
+            "fetched_at,http_status,etag,last_modified,sha256) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,now(),"
+            "%s,%s,%s,%s) ON CONFLICT (sha256) DO NOTHING",
+            (row_id, cik, filing.accession, filing.primary_document, fetched.url, fetched.body,
+             fetched.headers.get("content-type", "text/html"), len(fetched.body), user_agent_hash,
+             fetched.status, fetched.headers.get("etag"), fetched.headers.get("last-modified"), digest),
+        )
+        result = connection.execute(
+            "SELECT id FROM bronze.sec_document WHERE sha256=%s", (digest,)
+        ).fetchone()["id"]
+        return uuid.UUID(str(result))
+
+    def companies(self) -> list[dict[str, Any]]:
+        with self.connect() as connection:
+            return list(connection.execute(
+                "SELECT c.ticker,c.enabled,c.cik,c.name,c.resolution_status::text AS resolution_status,"
+                "c.safe_error,f.accession,f.filing_date,cv.status::text AS corpus_status,cv.ready_at,"
+                "COALESCE(ir.status::text,'pending') AS latest_run_status "
+                "FROM public.company c LEFT JOIN LATERAL (SELECT * FROM public.ingestion_run r "
+                "WHERE r.company_id=c.id ORDER BY r.created_at DESC LIMIT 1) ir ON true "
+                "LEFT JOIN public.corpus_activation ca ON ca.company_id=c.id AND ca.active "
+                "LEFT JOIN silver.corpus_version cv ON cv.id=ca.corpus_version_id "
+                "LEFT JOIN silver.filing f ON f.id=cv.filing_id ORDER BY c.ticker"
+            ).fetchall())
+
+    def company_status(self, ticker: str) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            company = connection.execute(
+                "SELECT c.id,c.ticker,c.enabled,c.cik,c.name,c.resolution_status::text AS resolution_status,"
+                "c.safe_error FROM public.company c WHERE c.ticker=%s", (ticker,)
+            ).fetchone()
+            if not company:
+                return None
+            active = connection.execute(
+                "SELECT cv.id AS corpus_version_id,cv.ready_at,cv.embedding_model,cv.embedding_dimensions,"
+                "f.accession,f.filing_date,f.report_date,f.source_url,lu.usage_status::text AS embedding_usage_status "
+                "FROM public.corpus_activation ca JOIN silver.corpus_version cv ON cv.id=ca.corpus_version_id "
+                "JOIN silver.filing f ON f.id=cv.filing_id LEFT JOIN public.llm_usage lu "
+                "ON lu.ingestion_run_id=cv.ingestion_run_id AND lu.operation='embedding' "
+                "WHERE ca.company_id=%s AND ca.active", (company["id"],)
+            ).fetchone()
+            coverage: list[dict[str, Any]] = []
+            if active:
+                rows = connection.execute(
+                    "SELECT s.item,s.coverage_status::text AS status,s.safe_error,"
+                    "count(DISTINCT ch.id)::integer AS chunk_count,"
+                    "count(DISTINCT gd.chunk_id)::integer AS search_document_count "
+                    "FROM silver.section s LEFT JOIN silver.chunk ch ON ch.section_id=s.id "
+                    "LEFT JOIN gold.search_document gd ON gd.chunk_id=ch.id WHERE s.corpus_version_id=%s "
+                    "GROUP BY s.item,s.coverage_status,s.safe_error", (active["corpus_version_id"],)
+                ).fetchall()
+                by_item = {row["item"]: dict(row) for row in rows}
+                coverage = [by_item[item] for item in REQUIRED_ITEMS if item in by_item]
+            latest = connection.execute(
+                "SELECT id AS run_id,status::text AS status,stage,section_count,chunk_count,safe_error,"
+                "started_at,finished_at FROM public.ingestion_run WHERE company_id=%s "
+                "ORDER BY created_at DESC LIMIT 1", (company["id"],)
+            ).fetchone()
+            result = dict(company)
+            result.pop("id")
+            result["active_corpus"] = dict(active) if active else None
+            result["coverage"] = coverage
+            result["latest_run"] = dict(latest) if latest else None
+            return result
 
 
 def apply_migrations(database_url: str, directory: Path = Path("migrations/versions")) -> None:

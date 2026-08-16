@@ -35,7 +35,7 @@ class CompanyConfiguration(BaseModel):
         tickers = [entry.ticker for entry in value]
         if len(tickers) != len(set(tickers)):
             raise ValueError("duplicate ticker")
-        return sorted(value, key=lambda entry: entry.ticker)
+        return value
 
     def normalized(self) -> dict[str, Any]:
         return self.model_dump(mode="json")
@@ -61,12 +61,14 @@ class Settings(BaseSettings):
     sec_request_interval_seconds: float = Field(default=0.12, ge=0.1)
     sec_timeout_seconds: float = Field(default=20, gt=0, le=60)
     sec_max_retries: int = Field(default=3, ge=0, le=5)
+    sec_max_document_bytes: int = Field(default=50_000_000, ge=1_000_000, le=100_000_000)
+    sec_max_narrative_chars: int = Field(default=20_000_000, ge=500_000, le=50_000_000)
     openai_api_key: str
     openai_embedding_model: str = "text-embedding-3-small"
     openai_embedding_dimensions: int = Field(default=1536, gt=0)
     openai_timeout_seconds: float = Field(default=30, gt=0, le=120)
     chunk_size_chars: int = Field(default=2400, ge=500, le=8000)
     chunk_overlap_chars: int = Field(default=240, ge=0, le=1000)
-    parser_version: str = "item-heading-v1"
+    parser_version: str = "corpus-heading-sanitized-v2"
     chunking_version: str = "character-v1"
     index_version: str = "vector-v1"

@@ -25,6 +25,7 @@ build/
 dist/
 frontend/node_modules/
 frontend/dist/
+frontend/tsconfig.tsbuildinfo
 *.egg-info/
 
 # Local configuration and secrets

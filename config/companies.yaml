@@ -5,3 +5,17 @@ companies:
     enabled: true
   - ticker: NVDA
     enabled: true
+  - ticker: AMZN
+    enabled: true
+  - ticker: GOOGL
+    enabled: true
+  - ticker: META
+    enabled: true
+  - ticker: TSLA
+    enabled: true
+  - ticker: JPM
+    enabled: true
+  - ticker: XOM
+    enabled: true
+  - ticker: JNJ
+    enabled: true
