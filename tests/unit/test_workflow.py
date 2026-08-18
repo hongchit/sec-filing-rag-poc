@@ -68,4 +68,6 @@ def test_environment_example_has_one_kestra_credential_pair_and_no_unused_aliase
         assert removed not in text
 
     compose = Path(".devcontainer/docker-compose.yml").read_text()
-    assert "kestra/kestra:${KESTRA_VERSION:?KESTRA_VERSION is required}" in compose
+    # Keep this literal: Compose interpolation prevented the Dev Container from starting.
+    assert "image: kestra/kestra:v1.3.29" in compose
+    assert "KESTRA_VERSION" not in compose

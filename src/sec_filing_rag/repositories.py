@@ -95,17 +95,3 @@ class PreparationRepository:
                 "safe_error=%s,finished_at=now(),updated_at=now() WHERE id=%s",
                 (error, request_id),
             )
-
-
-class IngestionRunRepository:
-    """Focused run boundary used by ingestion coordination; Store remains a compatibility facade."""
-
-    def __init__(self, database: Database) -> None:
-        self.database = database
-
-
-class CorpusRepository:
-    """Focused corpus promotion boundary used while the staged pipeline is retained."""
-
-    def __init__(self, database: Database) -> None:
-        self.database = database

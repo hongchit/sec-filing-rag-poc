@@ -16,9 +16,8 @@ from .domain import (
     make_chunks,
     safe_error,
     sanitize_filing_html,
-    sha256_bytes,
 )
-from .sec import SecClient
+from .sec import EdgarGateway, configure_edgartools
 from .store import Store
 
 
@@ -69,7 +68,7 @@ class IngestionPipeline:
                     (
                         self.settings.openai_api_key,
                         self.settings.ingestion_api_token,
-                        self.settings.sec_user_agent,
+                        self.settings.edgar_identity,
                     ),
                 )
                 results.append(
@@ -127,6 +126,7 @@ class IngestionPipeline:
         preparation_request_id: uuid.UUID | None = None,
         kestra_execution_id: str | None = None,
     ) -> CompanyResult:
+        # The provisional run key becomes checksum-bound once the exact source is acquired.
         provisional_key = compatibility_key(
             parser=self.settings.parser_version,
             chunker=self.settings.chunking_version,
@@ -146,36 +146,30 @@ class IngestionPipeline:
         stage = "resolve"
         try:
             self.store.stage(run_id, stage, "running")
-            sec = SecClient(
-                identity=self.settings.sec_user_agent,
-                timeout=self.settings.sec_timeout_seconds,
-                retries=self.settings.sec_max_retries,
-                interval=self.settings.sec_request_interval_seconds,
+            gateway = EdgarGateway(
+                facade=configure_edgartools(
+                    self.settings.edgar_identity,
+                    self.settings.edgar_rate_limit_per_sec,
+                    self.settings.edgar_access_mode,
+                )
             )
-            cik, name, ticker_fetch = sec.resolve(ticker)
+            company = gateway.resolve(ticker)
+            cik, name = company.cik, company.name
             self.store.stage(run_id, stage, "succeeded", output_count=1)
             stage = "select-filing"
             self.store.stage(run_id, stage, "running")
-            filing, submission_fetch, submission = sec.latest_filing(cik)
-            if selected_accession is not None:
-                discovered_cik, _, candidates = sec.discover_candidates(ticker)
-                if discovered_cik != cik:
-                    raise ValueError("selected filing issuer changed during callback revalidation")
-                selected = next(
-                    (candidate for candidate in candidates if candidate.accession == selected_accession),
-                    None,
-                )
-                if selected is None:
-                    raise ValueError("selected accession is no longer an original 10-K candidate")
-                filing = selected
+            acquired = gateway.acquire(
+                ticker,
+                accession=selected_accession,
+                max_bytes=self.settings.max_filing_document_bytes,
+            )
+            filing = acquired.filing
+            document = acquired.document
             accession = filing.accession
             self.store.stage(run_id, stage, "succeeded", output_count=1)
             stage = "download"
             self.store.stage(run_id, stage, "running")
-            document = sec.document(cik, filing)
-            if len(document.body) > self.settings.sec_max_document_bytes:
-                raise ValueError("SEC filing document exceeds configured size limit")
-            checksum = sha256_bytes(document.body)
+            checksum = document.sha256
             key = compatibility_key(
                 parser=self.settings.parser_version,
                 chunker=self.settings.chunking_version,
@@ -207,7 +201,9 @@ class IngestionPipeline:
 
             stage = "extract"
             self.store.stage(run_id, stage, "running")
-            narrative = sanitize_filing_html(document.body, max_chars=self.settings.sec_max_narrative_chars)
+            narrative = sanitize_filing_html(
+                document.content, max_chars=self.settings.max_filing_narrative_chars
+            )
             sections = extract_sections(narrative)
             chunks: dict[str, list[Chunk]] = {
                 item: make_chunks(
@@ -251,6 +247,7 @@ class IngestionPipeline:
                 raise ValueError("embedding response dimension or count mismatch")
             embeddings: dict[str, list[list[float]]] = {}
             cursor = 0
+            # Regroup in the exact order used to flatten inputs; embeddings are positional.
             for item in REQUIRED_ITEMS:
                 embeddings[item] = vectors[cursor : cursor + len(chunks[item])]
                 cursor += len(chunks[item])
@@ -274,11 +271,7 @@ class IngestionPipeline:
                 ticker=ticker,
                 cik=cik,
                 name=name,
-                ticker_fetch=ticker_fetch,
-                submission_fetch=submission_fetch,
-                submission=submission,
-                document=document,
-                filing=filing,
+                acquired=acquired,
                 sections=sections,
                 chunks=chunks,
                 embeddings=embeddings,
@@ -289,7 +282,8 @@ class IngestionPipeline:
                 dimensions=self.settings.openai_embedding_dimensions,
                 index=self.settings.index_version,
                 usage=usage,
-                user_agent_hash=hashlib.sha256(self.settings.sec_user_agent.encode()).hexdigest(),
+                identity_hash=hashlib.sha256(self.settings.edgar_identity.encode()).hexdigest(),
+                # Historical preparation creates a ready corpus without moving the default.
                 promote_default=preparation_request_id is None,
                 preparation_request_id=preparation_request_id,
             )
@@ -313,7 +307,7 @@ class IngestionPipeline:
                 (
                     self.settings.openai_api_key,
                     self.settings.ingestion_api_token,
-                    self.settings.sec_user_agent,
+                    self.settings.edgar_identity,
                 ),
             )
             self.store.fail_run(run_id, stage, error)

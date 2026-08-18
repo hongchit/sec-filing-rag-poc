@@ -1,0 +1,1 @@
+{"version":"ground-truth-generation-v1","model":"gpt-5.4-mini","prompt_version":"investor-questions-v1","sampling_seed":20260817,"workers":6,"chunks_per_stratum":2,"questions_per_chunk":3,"max_candidates_per_stratum":5}

@@ -34,7 +34,7 @@ def test_health_and_authentication(monkeypatch, tmp_path: Path) -> None:
     )
     fake_settings = Settings(
         ingestion_api_token="0123456789abcdef",
-        sec_user_agent="Test test@example.com",
+        edgar_identity="Test test@example.com",
         openai_api_key="key",
         company_config_path=company_file,
     )
@@ -82,7 +82,7 @@ def test_ingestion_rejects_unready_schema_before_pipeline(monkeypatch, tmp_path:
     company_file.write_text("companies:\n  - ticker: AAPL\n    enabled: true\n")
     fake_settings = Settings(
         ingestion_api_token="0123456789abcdef",
-        sec_user_agent="Test test@example.com",
+        edgar_identity="Test test@example.com",
         openai_api_key="key",
         company_config_path=company_file,
     )
@@ -111,7 +111,7 @@ def test_fiscal_routes_are_thin_and_return_accepted(monkeypatch, tmp_path: Path)
     company_file.write_text("companies:\n  - ticker: XOM\n    enabled: true\n")
     fake_settings = Settings(
         ingestion_api_token="0123456789abcdef",
-        sec_user_agent="Test test@example.com",
+        edgar_identity="Test test@example.com",
         openai_api_key="key",
         company_config_path=company_file,
     )

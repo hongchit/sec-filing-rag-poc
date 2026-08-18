@@ -11,14 +11,14 @@ def test_devcontainer_runs_migrations_after_each_start() -> None:
 
 
 def test_corpus_status_groups_correlated_company_key() -> None:
-    migration = Path("migrations/versions/0001_medallion.sql").read_text(encoding="utf-8")
+    migration = Path("migrations/versions/0001_schema.sql").read_text(encoding="utf-8")
     view = migration.split("CREATE VIEW gold.corpus_status AS", 1)[1]
     assert "ir.company_id = c.id" in view
     assert "GROUP BY c.id, c.ticker" in view
 
 
 def test_clean_schema_has_historical_state_default_pointer_and_no_cross_database_fk() -> None:
-    migration = Path("migrations/versions/0001_medallion.sql").read_text(encoding="utf-8")
+    migration = Path("migrations/versions/0001_schema.sql").read_text(encoding="utf-8")
     assert "CREATE TABLE public.preparation_request" in migration
     assert "preparation_request_id uuid" in migration
     assert "kestra_execution_id text" in migration

@@ -6,7 +6,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Literal
+from typing import Literal
 
 from bs4 import BeautifulSoup, Comment, Tag
 
@@ -22,6 +22,7 @@ def sha256_bytes(value: bytes) -> str:
 def compatibility_key(
     *, parser: str, chunker: str, model: str, dimensions: int, index: str, source_checksum: str = ""
 ) -> str:
+    """Identify every compatibility-sensitive input to a stored corpus."""
     payload = {
         "chunker": chunker,
         "dimensions": dimensions,
@@ -158,27 +159,6 @@ def should_promote_default(*, historical: bool, candidate_complete: bool) -> boo
     return candidate_complete and not historical
 
 
-def latest_original_10k(recent: dict[str, list[Any]]) -> FilingCandidate:
-    required = ("form", "accessionNumber", "primaryDocument", "filingDate")
-    if any(key not in recent for key in required):
-        raise ValueError("SEC submissions response lacks required filing columns")
-    candidates: list[FilingCandidate] = []
-    for index, form in enumerate(recent["form"]):
-        if form != "10-K":
-            continue
-        report_raw = recent.get("reportDate", [None] * len(recent["form"]))[index]
-        candidates.append(
-            FilingCandidate(
-                str(recent["accessionNumber"][index]),
-                str(recent["primaryDocument"][index]),
-                date.fromisoformat(str(recent["filingDate"][index])),
-                date.fromisoformat(str(report_raw)) if report_raw else None,
-            )
-        )
-    if not candidates:
-        raise ValueError("no original 10-K filing found")
-    return max(candidates, key=lambda candidate: candidate.filing_date)
-
 
 @dataclass(frozen=True)
 class ExtractedSection:
@@ -235,7 +215,8 @@ _MIN_BODY = {"1": 120, "1A": 120, "3": 40, "7": 120, "7A": 120, "8": 120}
 
 
 def sanitize_filing_html(body: bytes, *, max_chars: int) -> str:
-    """Return inert narrative text; raw bytes remain a bronze-layer concern only."""
+    """Return inert narrative text whose offsets are safe to use for citations."""
+    # Remove active, hidden, and control content before calculating visible-text offsets.
     soup = BeautifulSoup(body, "html.parser")
     for tag in soup.find_all(("script", "style", "noscript", "template", "svg", "iframe", "object", "embed")):
         tag.decompose()
@@ -266,6 +247,7 @@ def normalize_narrative(text: str) -> str:
 
 
 def _heading_pattern(item: str) -> re.Pattern[str]:
+    # Inline-XBRL markup often fragments heading words into rendered characters.
     words: list[str] = []
     for word in ITEM_TITLE_WORDS[item]:
         if word == "managements":
@@ -280,6 +262,7 @@ def _heading_pattern(item: str) -> re.Pattern[str]:
 
 
 def _next_boundary(text: str, start: int, item: str) -> re.Match[str] | None:
+    # Only a later Item or Part can bound a candidate; repeated earlier headings cannot.
     current = _ORDERED_BOUNDARIES.index(item)
     generic = next(
         (
@@ -299,6 +282,7 @@ def _next_boundary(text: str, start: int, item: str) -> re.Match[str] | None:
 
 
 def extract_item(text: str, item: str, *, normalized: bool = False) -> ExtractedSection:
+    """Extract one Item, failing closed on missing or ambiguous boundaries."""
     if item not in SUPPORTED_ITEMS:
         raise ValueError("unsupported filing item")
     narrative = text if normalized else normalize_narrative(text)
@@ -313,6 +297,7 @@ def extract_item(text: str, item: str, *, normalized: bool = False) -> Extracted
         raw = narrative[heading.start() : boundary.start()]
         body = raw.strip()
         section_body = narrative[heading.end() : boundary.start()].strip()
+        # Short explicit absence is valid; minimum lengths reject TOC-like fragments.
         if _ABSENCE.search(section_body) and len(section_body) < _MIN_BODY[item]:
             explicit_absence = True
             continue
@@ -346,10 +331,6 @@ def extract_sections(text: str) -> dict[str, ExtractedSection]:
         except Exception as exc:
             results[item] = ExtractedSection("not_assessed", error=safe_error(exc))
     return results
-
-
-def extract_item_1a(text: str) -> ExtractedSection:
-    return extract_item(text, "1A")
 
 
 @dataclass(frozen=True)
@@ -391,6 +372,7 @@ def make_chunks(
             ordinal = len(chunks)
             citation = f"{accession}:item-{item.lower()}:{ordinal:04d}"
             digest = sha256_bytes(content.encode())
+            # Include the compatibility version so identical text cannot alias an older corpus.
             identity = sha256_bytes(f"{accession}|{item}|{version}|{ordinal}|{digest}".encode())
             chunks.append(
                 Chunk(

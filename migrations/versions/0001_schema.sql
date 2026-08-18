@@ -1,5 +1,6 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_textsearch;
 CREATE SCHEMA IF NOT EXISTS bronze;
 CREATE SCHEMA IF NOT EXISTS silver;
 CREATE SCHEMA IF NOT EXISTS gold;
@@ -58,24 +59,34 @@ CREATE TABLE public.llm_usage (
   normalized_status text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE bronze.sec_ticker_snapshot (
-  id uuid PRIMARY KEY, payload jsonb NOT NULL, source_url text NOT NULL, user_agent_hash char(64) NOT NULL,
-  fetched_at timestamptz NOT NULL, http_status integer NOT NULL, etag text, last_modified text, sha256 char(64) NOT NULL UNIQUE
+CREATE TABLE bronze.edgar_company_snapshot (
+  id uuid PRIMARY KEY, requested_ticker text NOT NULL, cik text NOT NULL CHECK (cik ~ '^[0-9]{10}$'), legal_name text NOT NULL,
+  tickers text[] NOT NULL, exchanges text[] NOT NULL, sic text, industry text, fiscal_year_end text, filer_type text, is_company boolean,
+  edgartools_version text NOT NULL, edgar_identity_hash char(64) NOT NULL, acquired_at timestamptz NOT NULL DEFAULT now(),
+  canonical_metadata_sha256 char(64) NOT NULL UNIQUE
 );
-CREATE TABLE bronze.sec_submission (
-  id uuid PRIMARY KEY, cik text NOT NULL, payload jsonb NOT NULL, source_url text NOT NULL, user_agent_hash char(64) NOT NULL,
-  fetched_at timestamptz NOT NULL, http_status integer NOT NULL, etag text, last_modified text, sha256 char(64) NOT NULL UNIQUE
+CREATE TABLE bronze.edgar_filing_snapshot (
+  id uuid PRIMARY KEY, company_snapshot_id uuid NOT NULL REFERENCES bronze.edgar_company_snapshot(id),
+  accession text NOT NULL CHECK (accession ~ '^[0-9]{10}-[0-9]{2}-[0-9]{6}$'), form text NOT NULL CHECK (form = '10-K'),
+  filing_date date NOT NULL, report_date date NOT NULL, acceptance_datetime timestamptz, act text, file_number text,
+  submission_size bigint CHECK (submission_size IS NULL OR submission_size >= 0), is_xbrl boolean, is_inline_xbrl boolean,
+  primary_document text NOT NULL, primary_document_description text, homepage_url text NOT NULL, filing_url text NOT NULL, text_url text NOT NULL,
+  edgartools_version text NOT NULL, acquired_at timestamptz NOT NULL DEFAULT now(), canonical_metadata_sha256 char(64) NOT NULL UNIQUE
 );
-CREATE TABLE bronze.sec_document (
-  id uuid PRIMARY KEY, cik text NOT NULL, accession text NOT NULL, document_name text NOT NULL, source_url text NOT NULL,
-  content bytea NOT NULL, media_type text NOT NULL, content_length bigint NOT NULL CHECK (content_length >= 0),
-  user_agent_hash char(64) NOT NULL, fetched_at timestamptz NOT NULL, http_status integer NOT NULL,
-  etag text, last_modified text, sha256 char(64) NOT NULL UNIQUE
+CREATE TABLE bronze.edgar_filing_document (
+  id uuid PRIMARY KEY, filing_snapshot_id uuid NOT NULL REFERENCES bronze.edgar_filing_snapshot(id), document_name text NOT NULL,
+  document_type text NOT NULL CHECK (document_type = '10-K'), sequence_number text, description text, source_url text NOT NULL,
+  content bytea NOT NULL, media_type text NOT NULL DEFAULT 'text/html' CHECK (media_type = 'text/html'),
+  content_encoding text NOT NULL DEFAULT 'utf-8' CHECK (content_encoding = 'utf-8'),
+  content_length bigint NOT NULL CHECK (content_length = octet_length(content)), content_sha256 char(64) NOT NULL UNIQUE,
+  edgartools_version text NOT NULL, acquired_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE silver.filing (
-  id uuid PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id), ticker_snapshot_id uuid NOT NULL REFERENCES bronze.sec_ticker_snapshot(id),
-  submission_id uuid NOT NULL REFERENCES bronze.sec_submission(id), document_id uuid NOT NULL REFERENCES bronze.sec_document(id),
+  id uuid PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id),
+  edgar_company_snapshot_id uuid NOT NULL REFERENCES bronze.edgar_company_snapshot(id),
+  edgar_filing_snapshot_id uuid NOT NULL REFERENCES bronze.edgar_filing_snapshot(id),
+  edgar_filing_document_id uuid NOT NULL REFERENCES bronze.edgar_filing_document(id),
   cik text NOT NULL, accession text NOT NULL, form text NOT NULL CHECK (form = '10-K'), primary_document text NOT NULL,
   filing_date date NOT NULL, report_date date NOT NULL, source_url text NOT NULL, UNIQUE (cik, accession)
 );
@@ -83,6 +94,7 @@ CREATE TABLE silver.corpus_version (
   id uuid PRIMARY KEY, filing_id uuid NOT NULL REFERENCES silver.filing(id), ingestion_run_id uuid NOT NULL REFERENCES public.ingestion_run(id),
   compatibility_key char(64) NOT NULL, parser_version text NOT NULL, chunking_version text NOT NULL,
   embedding_model text NOT NULL, embedding_dimensions integer NOT NULL CHECK (embedding_dimensions > 0), index_version text NOT NULL,
+  source_document_sha256 char(64) NOT NULL, edgartools_version text NOT NULL,
   status public.corpus_lifecycle NOT NULL DEFAULT 'building', created_at timestamptz NOT NULL DEFAULT now(), ready_at timestamptz,
   UNIQUE (filing_id, compatibility_key)
 );
@@ -118,10 +130,9 @@ CREATE TABLE public.corpus_activation (
 CREATE UNIQUE INDEX one_default_corpus_per_company ON public.corpus_activation(company_id) WHERE is_default;
 
 CREATE FUNCTION bronze.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'bronze tables are insert-only'; END $$;
-CREATE TRIGGER sec_ticker_snapshot_immutable BEFORE UPDATE OR DELETE ON bronze.sec_ticker_snapshot FOR EACH ROW EXECUTE FUNCTION bronze.reject_mutation();
-CREATE TRIGGER sec_submission_immutable BEFORE UPDATE OR DELETE ON bronze.sec_submission FOR EACH ROW EXECUTE FUNCTION bronze.reject_mutation();
-CREATE TRIGGER sec_document_immutable BEFORE UPDATE OR DELETE ON bronze.sec_document FOR EACH ROW EXECUTE FUNCTION bronze.reject_mutation();
-
+CREATE TRIGGER edgar_company_snapshot_immutable BEFORE UPDATE OR DELETE ON bronze.edgar_company_snapshot FOR EACH ROW EXECUTE FUNCTION bronze.reject_mutation();
+CREATE TRIGGER edgar_filing_snapshot_immutable BEFORE UPDATE OR DELETE ON bronze.edgar_filing_snapshot FOR EACH ROW EXECUTE FUNCTION bronze.reject_mutation();
+CREATE TRIGGER edgar_filing_document_immutable BEFORE UPDATE OR DELETE ON bronze.edgar_filing_document FOR EACH ROW EXECUTE FUNCTION bronze.reject_mutation();
 CREATE VIEW gold.corpus_status AS
 SELECT c.ticker, cv.id AS corpus_version_id, f.accession, f.filing_date, s.item, s.coverage_status,
        count(DISTINCT ch.id)::integer AS chunk_count, count(DISTINCT gd.chunk_id)::integer AS search_document_count,
@@ -133,5 +144,33 @@ JOIN silver.corpus_version cv ON cv.id = ca.corpus_version_id JOIN silver.filing
 JOIN silver.section s ON s.corpus_version_id = cv.id LEFT JOIN silver.chunk ch ON ch.section_id = s.id
 LEFT JOIN gold.search_document gd ON gd.chunk_id = ch.id WHERE ca.is_default
 GROUP BY c.id, c.ticker, cv.id, f.accession, f.filing_date, s.item, s.coverage_status, ca.activated_at;
+
+CREATE INDEX search_document_lexical_bm25 ON gold.search_document USING bm25 (lexical_document) WITH (text_config='english');
+CREATE INDEX search_document_company_corpus_filing ON gold.search_document (company_id, corpus_version_id, filing_id);
+CREATE INDEX search_document_company_corpus_filing_item ON gold.search_document (company_id, corpus_version_id, filing_id, item);
+CREATE TYPE public.evaluation_status AS ENUM ('running','succeeded','failed');
+CREATE TABLE public.retrieval_evaluation_run (
+  id uuid PRIMARY KEY, dataset_sha256 char(64) NOT NULL, configuration_sha256 char(64) NOT NULL,
+  status public.evaluation_status NOT NULL DEFAULT 'running', selected_configuration jsonb, safe_error text,
+  started_at timestamptz NOT NULL DEFAULT now(), finished_at timestamptz
+);
+ALTER TABLE public.llm_usage ADD COLUMN evaluation_run_id uuid REFERENCES public.retrieval_evaluation_run(id);
+ALTER TABLE public.llm_usage ALTER COLUMN ingestion_run_id DROP NOT NULL;
+ALTER TABLE public.llm_usage ADD CONSTRAINT llm_usage_single_owner CHECK (
+  (ingestion_run_id IS NOT NULL)::integer + (evaluation_run_id IS NOT NULL)::integer <= 1
+);
+CREATE TYPE public.ground_truth_generation_status AS ENUM ('running','succeeded','failed');
+CREATE TABLE public.ground_truth_generation_run (
+ id uuid PRIMARY KEY, status public.ground_truth_generation_status NOT NULL DEFAULT 'running', model text NOT NULL,
+ prompt_version text NOT NULL, sampling_seed bigint NOT NULL, configuration jsonb NOT NULL,
+ configuration_sha256 char(64) NOT NULL, prompt_sha256 char(64) NOT NULL, corpus_snapshot_sha256 char(64),
+ review_bundle_sha256 char(64), safe_error text, started_at timestamptz NOT NULL DEFAULT now(), finished_at timestamptz
+);
+ALTER TABLE public.llm_usage ADD COLUMN ground_truth_generation_run_id uuid REFERENCES public.ground_truth_generation_run(id);
+ALTER TABLE public.llm_usage DROP CONSTRAINT llm_usage_single_owner;
+ALTER TABLE public.llm_usage ADD CONSTRAINT llm_usage_single_owner CHECK (
+ (ingestion_run_id IS NOT NULL)::integer + (evaluation_run_id IS NOT NULL)::integer +
+ (ground_truth_generation_run_id IS NOT NULL)::integer <= 1);
+ALTER TABLE public.llm_usage ADD COLUMN retry_count integer NOT NULL DEFAULT 0 CHECK (retry_count >= 0);
 
 COMMIT;

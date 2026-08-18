@@ -1,320 +1,371 @@
 from __future__ import annotations
 
+import importlib
+import os
 import re
-import time
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import date
-from typing import Any
-from urllib.parse import quote, urljoin, urlparse
-from xml.etree import ElementTree
+from datetime import date, datetime
+from typing import Any, Protocol
 
-import httpx
-from bs4 import BeautifulSoup, Tag
+from .domain import FilingCandidate, sha256_bytes
 
-from .domain import FilingCandidate, latest_original_10k
-
-TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
-SUBMISSIONS_ROOT = "https://data.sec.gov/submissions"
-ARCHIVES_ROOT = "https://www.sec.gov/Archives/edgar/data"
-BROWSE_ROOT = "https://www.sec.gov/cgi-bin/browse-edgar"
+EDGARTOOLS_VERSION = "5.41.0"
+_ACCESSION = re.compile(r"^[0-9]{10}-[0-9]{2}-[0-9]{6}$")
 
 
 @dataclass(frozen=True)
-class Fetched:
-    url: str
-    body: bytes
-    status: int
-    headers: dict[str, str]
+class EdgarCompanySnapshot:
+    requested_ticker: str
+    cik: str
+    name: str
+    tickers: tuple[str, ...]
+    exchanges: tuple[str, ...]
+    sic: str | None = None
+    industry: str | None = None
+    fiscal_year_end: str | None = None
+    filer_type: str | None = None
+    is_company: bool | None = None
+    edgartools_version: str = EDGARTOOLS_VERSION
 
 
-class SecClient:
-    def __init__(self, *, identity: str, timeout: float, retries: int, interval: float) -> None:
-        self.interval = interval
-        self.retries = retries
-        self._last_request = 0.0
-        self._filing_cache: dict[str, tuple[FilingCandidate, Fetched, dict[str, Any]]] = {}
-        self.client = httpx.Client(
-            headers={"User-Agent": identity, "Accept-Encoding": "gzip, deflate"}, timeout=timeout
-        )
+@dataclass(frozen=True)
+class EdgarFilingMetadata:
+    accession: str
+    form: str
+    filing_date: date
+    report_date: date
+    acceptance_datetime: datetime | None
+    act: str | None
+    file_number: str | None
+    size: int | None
+    is_xbrl: bool | None
+    is_inline_xbrl: bool | None
+    primary_document: str
+    primary_document_description: str | None
+    homepage_url: str
+    filing_url: str
+    text_url: str
 
-    def fetch(self, url: str) -> Fetched:
-        error: Exception | None = None
-        for attempt in range(self.retries + 1):
-            wait = self.interval - (time.monotonic() - self._last_request)
-            if wait > 0:
-                time.sleep(wait)
-            try:
-                response = self.client.get(url)
-                self._last_request = time.monotonic()
-                response.raise_for_status()
-                return Fetched(url, response.content, response.status_code, dict(response.headers))
-            except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as exc:
-                error = exc
-                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code not in {
-                    429,
-                    500,
-                    502,
-                    503,
-                    504,
-                }:
-                    raise
-                if attempt < self.retries:
-                    time.sleep(min(2**attempt, 4))
-        assert error is not None
-        raise error
+    def candidate(self) -> FilingCandidate:
+        return FilingCandidate(self.accession, self.primary_document, self.filing_date, self.report_date)
 
-    def resolve(self, ticker: str) -> tuple[str, str, Fetched]:
-        fetched = self.fetch(TICKERS_URL)
-        payload: dict[str, dict[str, Any]] = httpx.Response(200, content=fetched.body).json()
-        matches = [company for company in payload.values() if str(company["ticker"]).upper() == ticker]
-        if matches:
-            issuers: list[tuple[FilingCandidate, str, str]] = []
-            for company in matches[:20]:
-                cik = f"{int(company['cik_str']):010d}"
-                try:
-                    filing, submission_fetch, submission = self.latest_filing(cik)
-                except ValueError as exc:
-                    if str(exc) == "no original 10-K filing found":
-                        continue
-                    raise
-                self._filing_cache[cik] = (filing, submission_fetch, submission)
-                issuers.append((filing, cik, str(company["title"])))
-            if issuers:
-                _, cik, name = max(issuers, key=lambda entry: entry[0].filing_date)
-                return cik, name, fetched
-            return self._resolve_ticker_atom(ticker, fetched)
-        raise ValueError("configured ticker is absent from SEC metadata")
 
-    def _resolve_ticker_atom(self, ticker: str, ticker_fetch: Fetched) -> tuple[str, str, Fetched]:
-        atom_url = (
-            f"{BROWSE_ROOT}?action=getcompany&CIK={quote(ticker, safe='')}&type=10-K&owner=exclude&"
-            "output=atom&count=40"
-        )
-        atom = self.fetch(atom_url)
-        if len(atom.body) > 5_000_000:
-            raise ValueError("SEC ticker filing index exceeds safe size limit")
-        try:
-            root = ElementTree.fromstring(atom.body)
-        except ElementTree.ParseError as exc:
-            raise ValueError("SEC ticker filing index response is invalid") from exc
-        company_name = next(
-            (
-                (element.text or "").strip()
-                for element in root.iter()
-                if element.tag.rsplit("}", 1)[-1] == "conformed-name" and (element.text or "").strip()
-            ),
-            ticker,
-        )
-        candidates: list[tuple[date, str]] = []
-        for entry in root.iter():
-            if entry.tag.rsplit("}", 1)[-1] != "entry":
-                continue
-            values = {child.tag.rsplit("}", 1)[-1]: (child.text or "").strip() for child in entry.iter()}
-            if values.get("filing-type") != "10-K":
-                continue
-            accession = values.get("accession-number", "")
-            parsed = urlparse(values.get("filing-href", ""))
-            path = re.fullmatch(
-                r"/Archives/edgar/data/(?P<cik>[0-9]+)/(?P<directory>[0-9]+)/[^/]+-index\.htm",
-                parsed.path,
-            )
-            if (
-                parsed.scheme != "https"
-                or parsed.hostname != "www.sec.gov"
-                or path is None
-                or not re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession)
-                or path.group("directory") != accession.replace("-", "")
-            ):
-                continue
-            try:
-                filing_date = date.fromisoformat(values["filing-date"])
-            except (KeyError, ValueError):
-                continue
-            candidates.append((filing_date, f"{int(path.group('cik')):010d}"))
-        if not candidates:
-            raise ValueError("ticker matches SEC metadata but no matching issuer has an original 10-K")
-        _, cik = max(candidates, key=lambda entry: entry[0])
-        filing, submission_fetch, submission = self.latest_filing(cik)
-        self._filing_cache[cik] = (filing, submission_fetch, submission)
-        return cik, company_name, ticker_fetch
+@dataclass(frozen=True)
+class EdgarFilingDocument:
+    name: str
+    document_type: str
+    sequence: str | None
+    description: str | None
+    source_url: str
+    content: bytes
+    media_type: str = "text/html"
+    content_encoding: str = "utf-8"
 
-    def latest_filing(self, cik: str) -> tuple[FilingCandidate, Fetched, dict[str, Any]]:
-        cached = self._filing_cache.get(cik)
-        if cached is not None:
-            return cached
-        fetched = self.fetch(f"{SUBMISSIONS_ROOT}/CIK{cik}.json")
-        payload: dict[str, Any] = httpx.Response(200, content=fetched.body).json()
-        try:
-            result = (latest_original_10k(payload["filings"]["recent"]), fetched, payload)
-            self._filing_cache[cik] = result
-            return result
-        except ValueError as exc:
-            if str(exc) != "no original 10-K filing found":
-                raise
-        historical: list[tuple[FilingCandidate, Fetched, dict[str, Any]]] = []
-        for descriptor in payload.get("filings", {}).get("files", []):
-            name = str(descriptor.get("name", ""))
-            if not re.fullmatch(r"CIK[0-9]{10}-submissions-[0-9]{3}\.json", name):
-                continue
-            history_fetch = self.fetch(f"{SUBMISSIONS_ROOT}/{name}")
-            history_payload: dict[str, Any] = httpx.Response(200, content=history_fetch.body).json()
-            try:
-                candidate = latest_original_10k(history_payload)
-            except ValueError as exc:
-                if str(exc) == "no original 10-K filing found":
-                    continue
-                raise
-            historical.append((candidate, history_fetch, history_payload))
-        if not historical:
-            result = self._latest_atom_filing(cik, fetched, payload)
-        else:
-            result = max(historical, key=lambda entry: entry[0].filing_date)
-        self._filing_cache[cik] = result
-        return result
+    @property
+    def sha256(self) -> str:
+        return sha256_bytes(self.content)
 
-    def _latest_atom_filing(
-        self, cik: str, submission_fetch: Fetched, submission: dict[str, Any]
-    ) -> tuple[FilingCandidate, Fetched, dict[str, Any]]:
-        atom_url = f"{BROWSE_ROOT}?action=getcompany&CIK={cik}&type=10-K&owner=exclude&output=atom&count=40"
-        atom = self.fetch(atom_url)
-        if len(atom.body) > 5_000_000:
-            raise ValueError("SEC filing index response exceeds safe size limit")
-        try:
-            root = ElementTree.fromstring(atom.body)
-        except ElementTree.ParseError as exc:
-            raise ValueError("SEC filing index response is invalid") from exc
-        entries: list[tuple[date, date | None, str, str]] = []
-        for entry in root.iter():
-            if entry.tag.rsplit("}", 1)[-1] != "entry":
-                continue
-            values = {child.tag.rsplit("}", 1)[-1]: (child.text or "").strip() for child in entry.iter()}
-            if values.get("filing-type") != "10-K":
-                continue
-            accession = values.get("accession-number", "")
-            href = values.get("filing-href", "")
-            if not re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession):
-                continue
-            parsed = urlparse(href)
-            expected = f"/Archives/edgar/data/{int(cik)}/{accession.replace('-', '')}/"
-            if (
-                parsed.scheme != "https"
-                or parsed.hostname != "www.sec.gov"
-                or not parsed.path.startswith(expected)
-            ):
-                continue
-            try:
-                filing_date = date.fromisoformat(values["filing-date"])
-                period_raw = values.get("period", "")
-                report_date = (
-                    date.fromisoformat(period_raw)
-                    if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", period_raw)
-                    else date.fromisoformat(f"{period_raw[:4]}-{period_raw[4:6]}-{period_raw[6:]}")
-                    if re.fullmatch(r"[0-9]{8}", period_raw)
-                    else None
-                )
-            except (KeyError, ValueError):
-                continue
-            entries.append((filing_date, report_date, accession, href))
-        if not entries:
-            raise ValueError("no original 10-K filing found")
-        filing_date, report_date, accession, index_url = max(entries, key=lambda value: value[0])
-        index = self.fetch(index_url)
-        if len(index.body) > 5_000_000:
-            raise ValueError("SEC filing document index exceeds safe size limit")
-        soup = BeautifulSoup(index.body, "html.parser")
-        primary_document: str | None = None
-        expected_path = f"/Archives/edgar/data/{int(cik)}/{accession.replace('-', '')}/"
-        for row in soup.find_all("tr"):
-            if not isinstance(row, Tag):
-                continue
-            cells = row.find_all("td")
-            if not any(isinstance(cell, Tag) and cell.get_text(" ", strip=True) == "10-K" for cell in cells):
-                continue
-            anchor = row.find("a", href=True)
-            if not isinstance(anchor, Tag):
-                continue
-            document_url = urljoin(index_url, str(anchor.get("href", "")))
-            parsed = urlparse(document_url)
-            if (
-                parsed.scheme != "https"
-                or parsed.hostname != "www.sec.gov"
-                or not parsed.path.startswith(expected_path)
-            ):
-                continue
-            name = parsed.path.rsplit("/", 1)[-1]
-            if re.fullmatch(r"[A-Za-z0-9._-]+\.(?:htm|html)", name):
-                primary_document = name
-                break
-        if primary_document is None:
-            raise ValueError("original 10-K primary document not found in SEC filing index")
+
+@dataclass(frozen=True)
+class AcquiredFiling:
+    company: EdgarCompanySnapshot
+    filing: EdgarFilingMetadata
+    document: EdgarFilingDocument
+
+
+class EdgarFacade(Protocol):
+    def ticker_rows(self) -> Iterable[Mapping[str, Any]]: ...
+    def company(self, cik: int) -> Any: ...
+    def filings(self, company: Any, *, full: bool) -> Iterable[Any]: ...
+
+
+class _SdkFacade:
+    """The sole boundary at which EdgarTools SDK objects are exposed."""
+
+    def __init__(self) -> None:
+        from edgar import Company, get_company_tickers  # type: ignore[import-untyped]
+
+        self._company = Company
+        self._tickers = get_company_tickers
+
+    def ticker_rows(self) -> Iterable[Mapping[str, Any]]:
+        value = self._tickers()
+        if hasattr(value, "to_dict"):
+            rows: list[dict[str, Any]] = value.to_dict(orient="records")
+            return rows
+        if isinstance(value, Mapping):
+            return (row for row in value.values() if isinstance(row, Mapping))
+        return list(value)
+
+    def company(self, cik: int) -> Any:
+        return self._company(cik)
+
+    def filings(self, company: Any, *, full: bool) -> Iterable[Any]:
+        filings = company.get_filings(form="10-K", amendments=False, trigger_full_load=full)
+        # to_pandas() yields primitive metadata without fetching every filing document.
+        rows = filings.to_pandas().to_dict(orient="records")
+        accessions = {_text(row.get("accession_number") or row.get("accession")) for row in rows}
         return (
-            FilingCandidate(accession, primary_document, filing_date, report_date),
-            submission_fetch,
-            submission,
+            filing for filing in filings if _text(getattr(filing, "accession_number", None)) in accessions
         )
+
+
+def configure_edgartools(identity: str, rate_limit: int = 6, access_mode: str = "CAUTION") -> EdgarFacade:
+    """Set provider controls before the first SDK import, when EdgarTools reads its environment."""
+    os.environ["EDGAR_IDENTITY"] = identity
+    os.environ["EDGAR_RATE_LIMIT_PER_SEC"] = str(rate_limit)
+    os.environ["EDGAR_ACCESS_MODE"] = access_mode
+    from edgar import set_identity
+
+    set_identity(identity)
+    httpclient = importlib.import_module("edgar.httpclient")
+    if httpclient.get_edgar_rate_limit_per_sec() != rate_limit:
+        raise RuntimeError("EdgarTools rate limiter configuration was not applied")
+    core = importlib.import_module("edgar.core")
+    if access_mode != "CAUTION" or core.edgar_mode is not core.CAUTION:
+        raise RuntimeError("EdgarTools CAUTION access mode was not applied")
+    return _SdkFacade()
+
+
+class EdgarGateway:
+    def __init__(self, *, facade: EdgarFacade) -> None:
+        self._facade = facade
+        # Operation-local caches prevent duplicate provider resolution and discovery work.
+        self._companies: dict[str, tuple[EdgarCompanySnapshot, Any]] = {}
+        self._filings: dict[tuple[str, bool, str | None], list[tuple[EdgarFilingMetadata, Any]]] = {}
+
+    def resolve(self, ticker: str) -> EdgarCompanySnapshot:
+        normalized = ticker.strip().upper()
+        matches: dict[str, Mapping[str, Any]] = {}
+        try:
+            for row in self._facade.ticker_rows():
+                if _text(row.get("ticker")).upper() == normalized:
+                    value = row.get("cik") if "cik" in row else row.get("cik_str")
+                    matches[_cik(value)] = row
+        except Exception as exc:
+            raise ValueError("EdgarTools ticker resolution failed") from exc
+        if not matches:
+            raise ValueError("ticker is absent from EdgarTools metadata")
+        if len(matches) != 1:
+            raise ValueError("ticker maps to multiple distinct CIKs")
+        cik, row = next(iter(matches.items()))
+        if cik in self._companies:
+            return self._companies[cik][0]
+        try:
+            company = self._facade.company(int(cik))
+            snapshot = EdgarCompanySnapshot(
+                normalized,
+                cik,
+                _required(
+                    getattr(company, "name", None) or row.get("company") or row.get("title"), "company name"
+                ),
+                _strings(getattr(company, "tickers", None) or [normalized]),
+                _strings(getattr(company, "exchanges", None)),
+                _optional(getattr(company, "sic", None)),
+                _optional(getattr(company, "industry", None)),
+                _optional(getattr(company, "fiscal_year_end", None)),
+                _optional(getattr(company, "filer_category", None) or getattr(company, "filer_type", None)),
+                _boolean(getattr(company, "is_company", None)),
+            )
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise ValueError("EdgarTools company lookup failed") from exc
+        self._companies[cik] = (snapshot, company)
+        return snapshot
 
     def discover_candidates(self, ticker: str) -> tuple[str, str, list[FilingCandidate]]:
-        """Enumerate deduplicated original 10-Ks for read-only fiscal discovery."""
-        cik, name, _ = self.resolve(ticker)
-        fetched = self.fetch(f"{SUBMISSIONS_ROOT}/CIK{cik}.json")
-        payload: dict[str, Any] = httpx.Response(200, content=fetched.body).json()
-        candidates = self._candidates_from_columns(payload.get("filings", {}).get("recent", {}))
-        for descriptor in payload.get("filings", {}).get("files", []):
-            filename = str(descriptor.get("name", ""))
-            if not re.fullmatch(r"CIK[0-9]{10}-submissions-[0-9]{3}\.json", filename):
-                continue
-            historical = self.fetch(f"{SUBMISSIONS_ROOT}/{filename}")
-            columns: dict[str, list[Any]] = httpx.Response(200, content=historical.body).json()
-            candidates.extend(self._candidates_from_columns(columns))
-        if not candidates:
-            candidate, _, _ = self._latest_atom_filing(cik, fetched, payload)
-            candidates.append(candidate)
-        deduplicated: dict[str, FilingCandidate] = {}
-        for candidate in candidates:
-            current = deduplicated.get(candidate.accession)
-            if current is None or (candidate.filing_date, candidate.primary_document) > (
-                current.filing_date,
-                current.primary_document,
-            ):
-                deduplicated[candidate.accession] = candidate
-        return (
-            cik,
-            name,
-            sorted(
-                deduplicated.values(),
-                key=lambda candidate: (
-                    candidate.report_date or date.min,
-                    candidate.filing_date,
-                    candidate.accession,
+        company = self.resolve(ticker)
+        filings = [metadata.candidate() for metadata, _ in self._load(company, full=True, accession=None)]
+        if not filings:
+            raise ValueError("company has no original 10-K filing")
+        return company.cik, company.name, filings
+
+    def acquire(self, ticker: str, *, accession: str | None = None, max_bytes: int) -> AcquiredFiling:
+        company = self.resolve(ticker)
+        pairs = self._load(company, full=accession is not None, accession=accession)
+        if accession is None:
+            if not pairs:
+                raise ValueError("company has no original 10-K filing")
+            metadata, sdk = max(pairs, key=lambda pair: (pair[0].filing_date, pair[0].accession))
+        else:
+            if not _ACCESSION.fullmatch(accession):
+                raise ValueError("requested accession is malformed")
+            selected = [pair for pair in pairs if pair[0].accession == accession]
+            if not selected:
+                raise ValueError("requested accession is not an original 10-K")
+            metadata, sdk = selected[0]
+        try:
+            html = sdk.html()
+        except Exception as exc:
+            raise ValueError("EdgarTools filing HTML retrieval failed") from exc
+        if not isinstance(html, str) or not html.strip():
+            raise ValueError("EdgarTools returned missing filing HTML")
+        content = html.encode("utf-8")
+        if len(content) > max_bytes:
+            raise ValueError("filing document exceeds configured size limit")
+        lowered = metadata.primary_document.lower()
+        html_start = html.lstrip().lower()
+        # Inline-XBRL primary documents may validly begin with an XML declaration.
+        if not lowered.endswith((".htm", ".html")) or not html_start.startswith(
+            ("<!doctype html", "<html", "<xhtml", "<?xml")
+        ):
+            raise ValueError("EdgarTools primary document is not HTML")
+        return AcquiredFiling(
+            company,
+            metadata,
+            EdgarFilingDocument(
+                metadata.primary_document,
+                metadata.form,
+                _optional(
+                    getattr(getattr(sdk, "document", None), "sequence_number", None)
+                    or getattr(sdk, "sequence", None)
                 ),
-                reverse=True,
+                metadata.primary_document_description,
+                metadata.filing_url,
+                content,
             ),
         )
 
-    @staticmethod
-    def _candidates_from_columns(columns: dict[str, list[Any]]) -> list[FilingCandidate]:
-        required = ("form", "accessionNumber", "primaryDocument", "filingDate")
-        if any(key not in columns for key in required):
-            return []
-        result: list[FilingCandidate] = []
-        for index, form in enumerate(columns["form"]):
-            if form != "10-K":
-                continue
-            try:
-                report_values = columns.get("reportDate", [])
-                report_raw = report_values[index] if index < len(report_values) else None
-                result.append(
-                    FilingCandidate(
-                        str(columns["accessionNumber"][index]),
-                        str(columns["primaryDocument"][index]),
-                        date.fromisoformat(str(columns["filingDate"][index])),
-                        date.fromisoformat(str(report_raw)) if report_raw else None,
-                    )
-                )
-            except (IndexError, ValueError):
-                continue
+    def _load(
+        self, company: EdgarCompanySnapshot, *, full: bool, accession: str | None
+    ) -> list[tuple[EdgarFilingMetadata, Any]]:
+        key = (company.cik, full, accession)
+        if key in self._filings:
+            return self._filings[key]
+        try:
+            values = self._facade.filings(self._companies[company.cik][1], full=full)
+            # Filter a requested accession before enrichment so malformed unrelated history
+            # cannot prevent acquisition of the explicitly selected filing.
+            normalized = [
+                (self._metadata(value), value)
+                for value in values
+                if _text(getattr(value, "form", None)) == "10-K"
+                and (accession is None or _text(getattr(value, "accession_number", None)) == accession)
+            ]
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise ValueError("EdgarTools filing discovery failed") from exc
+        deduplicated: dict[str, tuple[EdgarFilingMetadata, Any]] = {}
+        for pair in normalized:
+            current = deduplicated.get(pair[0].accession)
+            if current is None or pair[0].filing_date > current[0].filing_date:
+                deduplicated[pair[0].accession] = pair
+        result = sorted(
+            deduplicated.values(),
+            key=lambda pair: (pair[0].report_date, pair[0].filing_date, pair[0].accession),
+            reverse=True,
+        )
+        self._filings[key] = result
         return result
 
-    def document(self, cik: str, filing: FilingCandidate) -> Fetched:
-        accession = filing.accession.replace("-", "")
-        return self.fetch(f"{ARCHIVES_ROOT}/{int(cik)}/{accession}/{filing.primary_document}")
+    @staticmethod
+    def _metadata(filing: Any) -> EdgarFilingMetadata:
+        accession = _required(
+            getattr(filing, "accession_number", None) or getattr(filing, "accession", None),
+            "accession",
+        )
+        if not _ACCESSION.fullmatch(accession):
+            raise ValueError("EdgarTools returned malformed accession")
+        # Filing.document is an EdgarTools attachment object, not merely a filename.
+        attachment = getattr(filing, "document", None)
+        document_name = getattr(attachment, "document", attachment)
+        document_description = getattr(attachment, "description", None) or getattr(
+            filing, "primary_document_description", None
+        )
+        return EdgarFilingMetadata(
+            accession,
+            _required(getattr(filing, "form", None), "form"),
+            _date(getattr(filing, "filing_date", None), "filing date"),
+            _date(getattr(filing, "period_of_report", None), "report date"),
+            _datetime(getattr(filing, "acceptance_datetime", None)),
+            _optional(getattr(filing, "act", None)),
+            _optional(getattr(filing, "file_number", None)),
+            _integer(getattr(filing, "size", None)),
+            _boolean(getattr(filing, "is_xbrl", None)),
+            _boolean(getattr(filing, "is_inline_xbrl", None)),
+            _required(document_name, "primary document"),
+            _optional(document_description),
+            _required(getattr(filing, "homepage_url", None), "filing homepage URL"),
+            _required(getattr(filing, "filing_url", None), "primary filing URL"),
+            _required(getattr(filing, "text_url", None), "full-text submission URL"),
+        )
+
+
+def _text(value: Any) -> str:
+    return "" if value is None else str(value).strip()
+
+
+def _required(value: Any, name: str) -> str:
+    result = _text(value)
+    if not result:
+        raise ValueError(f"EdgarTools returned missing {name}")
+    return result
+
+
+def _optional(value: Any) -> str | None:
+    return _text(value) or None
+
+
+def _strings(value: Any) -> tuple[str, ...]:
+    values = value.split(",") if isinstance(value, str) else value or ()
+    return tuple(dict.fromkeys(_text(item) for item in values if _text(item)))
+
+
+def _cik(value: Any) -> str:
+    try:
+        number = int(str(value).strip())
+    except (TypeError, ValueError) as exc:
+        raise ValueError("EdgarTools returned malformed CIK") from exc
+    if not 0 < number <= 9_999_999_999:
+        raise ValueError("EdgarTools returned malformed CIK")
+    return f"{number:010d}"
+
+
+def _date(value: Any, name: str) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(_required(value, name)[:10])
+    except ValueError as exc:
+        raise ValueError(f"EdgarTools returned malformed {name}") from exc
+
+
+def _datetime(value: Any) -> datetime | None:
+    if value is None or not _text(value):
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(_text(value).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("EdgarTools returned malformed acceptance timestamp") from exc
+
+
+def _integer(value: Any) -> int | None:
+    if value is None or not _text(value):
+        return None
+    try:
+        result = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("EdgarTools returned malformed filing size") from exc
+    if result < 0:
+        raise ValueError("EdgarTools returned malformed filing size")
+    return result
+
+
+def _boolean(value: Any) -> bool | None:
+    if value is None or not _text(value):
+        return None
+    if isinstance(value, bool):
+        return value
+    normalized = _text(value).lower()
+    if normalized in {"1", "true", "yes"}:
+        return True
+    if normalized in {"0", "false", "no"}:
+        return False
+    raise ValueError("EdgarTools returned malformed boolean metadata")

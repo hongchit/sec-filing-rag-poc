@@ -8,9 +8,7 @@ from sec_filing_rag.domain import (
     REQUIRED_ITEMS,
     compatibility_key,
     extract_item,
-    extract_item_1a,
     extract_sections,
-    latest_original_10k,
     make_chunks,
     safe_error,
     sanitize_filing_html,
@@ -29,20 +27,6 @@ def test_company_configuration_rejects_duplicates_and_invalid(companies: list[di
     with pytest.raises(ValidationError):
         CompanyConfiguration.model_validate({"companies": companies})
 
-
-def test_selects_latest_exact_original_10k() -> None:
-    recent = {
-        "form": ["10-K/A", "10-K", "10-K"],
-        "accessionNumber": ["a", "old", "new"],
-        "primaryDocument": ["a.htm", "old.htm", "new.htm"],
-        "filingDate": ["2026-04-01", "2024-01-01", "2025-01-01"],
-        "reportDate": ["2025-12-31", "2023-12-31", "2024-12-31"],
-    }
-    selected = latest_original_10k(recent)
-    assert selected.accession == "new"
-    assert selected.filing_date == date(2025, 1, 1)
-
-
 def test_item_1a_prefers_long_section_over_toc() -> None:
     text = (
         "Item 1A. Risk Factors\npage 12\nItem 1B.\n"
@@ -50,7 +34,7 @@ def test_item_1a_prefers_long_section_over_toc() -> None:
         + ("Material risk disclosure. " * 30)
         + "\nItem 1B. Unresolved Staff Comments"
     )
-    section = extract_item_1a(text)
+    section = extract_item(text, "1A")
     assert section.status == "present"
     assert section.text and "Material risk" in section.text
     normalized = text.replace("\r\n", "\n")
@@ -59,8 +43,8 @@ def test_item_1a_prefers_long_section_over_toc() -> None:
 
 
 def test_explicit_coverage_outcomes() -> None:
-    assert extract_item_1a("Item 1. Business").status == "failed"
-    assert extract_item_1a("Item 1A. Risk Factors\nno ending").status == "failed"
+    assert extract_item("Item 1. Business", "1A").status == "failed"
+    assert extract_item("Item 1A. Risk Factors\nno ending", "1A").status == "failed"
 
 
 def test_all_six_items_are_extracted_in_required_order() -> None:

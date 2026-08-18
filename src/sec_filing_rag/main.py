@@ -15,7 +15,7 @@ from .kestra import KestraGateway
 from .models import DiscoveryRequest, PreparationAccepted, PreparationRequestBody
 from .pipeline import BatchResult, IngestionPipeline
 from .repositories import Database, FilingRepository, PreparationRepository
-from .sec import SecClient
+from .sec import EdgarGateway, configure_edgartools
 from .services import FilingDiscoveryService, HistoricalPreparationService
 from .store import Store
 
@@ -31,11 +31,10 @@ def store() -> Store:
 
 def discovery_service() -> FilingDiscoveryService:
     config = settings()
-    gateway = SecClient(
-        identity=config.sec_user_agent,
-        timeout=config.sec_timeout_seconds,
-        retries=config.sec_max_retries,
-        interval=config.sec_request_interval_seconds,
+    gateway = EdgarGateway(
+        facade=configure_edgartools(
+            config.edgar_identity, config.edgar_rate_limit_per_sec, config.edgar_access_mode
+        )
     )
     return FilingDiscoveryService(
         gateway, FilingRepository(Database(config.database_url)), config.historical_filing_lookback_years

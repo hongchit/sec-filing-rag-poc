@@ -56,12 +56,11 @@ class Settings(BaseSettings):
     app_port: int = 8000
     ingestion_api_token: str = Field(min_length=16)
     company_config_path: Path = Path("config/companies.yaml")
-    sec_user_agent: str = Field(min_length=8)
-    sec_request_interval_seconds: float = Field(default=0.12, ge=0.1)
-    sec_timeout_seconds: float = Field(default=20, gt=0, le=60)
-    sec_max_retries: int = Field(default=3, ge=0, le=5)
-    sec_max_document_bytes: int = Field(default=50_000_000, ge=1_000_000, le=100_000_000)
-    sec_max_narrative_chars: int = Field(default=20_000_000, ge=500_000, le=50_000_000)
+    edgar_identity: str = Field(min_length=8)
+    edgar_rate_limit_per_sec: int = Field(default=6, ge=1, le=10)
+    edgar_access_mode: str = Field(default="CAUTION", pattern="^CAUTION$")
+    max_filing_document_bytes: int = Field(default=50_000_000, ge=1_000_000, le=100_000_000)
+    max_filing_narrative_chars: int = Field(default=20_000_000, ge=500_000, le=50_000_000)
     historical_filing_lookback_years: int = Field(default=10, ge=1, le=50)
     kestra_api_url: str = "http://kestra:8080/api/v1/main"
     kestra_namespace: str = "sec_filings.ingestion"
@@ -79,3 +78,4 @@ class Settings(BaseSettings):
     parser_version: str = "corpus-heading-sanitized-v2"
     chunking_version: str = "character-v1"
     index_version: str = "vector-v1"
+    retrieval_config_path: Path = Path("config/retrieval.json")
