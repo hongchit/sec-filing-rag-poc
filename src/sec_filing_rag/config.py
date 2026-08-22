@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:postgres@db:5432/sec_filings"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
+    log_level: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
     ingestion_api_token: str = Field(min_length=16)
     company_config_path: Path = Path("config/companies.yaml")
     edgar_identity: str = Field(min_length=8)
@@ -64,7 +65,7 @@ class Settings(BaseSettings):
     historical_filing_lookback_years: int = Field(default=10, ge=1, le=50)
     kestra_api_url: str = "http://kestra:8080/api/v1/main"
     kestra_namespace: str = "sec_filings.ingestion"
-    kestra_historical_flow_id: str = "prepare_historical_filing"
+    kestra_batch_flow_id: str = "filing_batch"
     kestra_basic_auth_username: str = "admin@example.com"
     kestra_basic_auth_password: str = Field(default="ChangeMe1234", min_length=8)
     kestra_timeout_seconds: float = Field(default=10, gt=0, le=60)

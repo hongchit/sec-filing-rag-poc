@@ -1,268 +1,111 @@
 from __future__ import annotations
 
-import hmac
+import json
+import logging
+import os
+import re
+import time
+import traceback
 import uuid
-from functools import lru_cache
-from typing import Annotated, Any, Literal
+from datetime import UTC, datetime
+from http import HTTPStatus
+from typing import Any, cast
 
 import uvicorn
-from fastapi import Depends, FastAPI, Header, HTTPException, status
-from pydantic import BaseModel, ConfigDict, field_validator
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.responses import Response
 
-from .config import TICKER_RE, Settings, load_companies
-from .domain import AnalysisPeriod
-from .kestra import KestraGateway
-from .models import DiscoveryRequest, PreparationAccepted, PreparationRequestBody
-from .pipeline import BatchResult, IngestionPipeline
-from .repositories import Database, FilingRepository, PreparationRepository
-from .sec import EdgarGateway, configure_edgartools
-from .services import FilingDiscoveryService, HistoricalPreparationService
-from .store import Store
+from .dependencies import settings
+from .errors import UpstreamServiceError
+from .internal_api import router as internal_router
+from .public_api import router as public_router
 
-
-@lru_cache
-def settings() -> Settings:
-    return Settings()  # type: ignore[call-arg]
-
-
-def store() -> Store:
-    return Store(settings().database_url)
+_REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+_LOGGER = logging.getLogger("sec_filing_rag.api")
+if not _LOGGER.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    _LOGGER.addHandler(handler)
+_LOGGER.propagate = False
+_LOGGER.setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
 
 
-def discovery_service() -> FilingDiscoveryService:
-    config = settings()
-    gateway = EdgarGateway(
-        facade=configure_edgartools(
-            config.edgar_identity, config.edgar_rate_limit_per_sec, config.edgar_access_mode
-        )
-    )
-    return FilingDiscoveryService(
-        gateway, FilingRepository(Database(config.database_url)), config.historical_filing_lookback_years
-    )
+def _mark_error(request: Request, *, code: str, exc: BaseException, include_traceback: bool) -> None:
+    request.state.error_code = code
+    request.state.error = exc
+    request.state.log_traceback = include_traceback
 
 
-def preparation_service() -> HistoricalPreparationService:
-    config = settings()
-    return HistoricalPreparationService(
-        discovery_service(),
-        PreparationRepository(Database(config.database_url)),
-        KestraGateway(
-            api_url=config.kestra_api_url,
-            namespace=config.kestra_namespace,
-            flow_id=config.kestra_historical_flow_id,
-            username=config.kestra_basic_auth_username,
-            password=config.kestra_basic_auth_password,
-            timeout=config.kestra_timeout_seconds,
-            retries=config.kestra_max_retries,
-        ),
-    )
-
-
-def _configured_ticker(ticker: str) -> str:
-    normalized = ticker.strip().upper()
-    if not TICKER_RE.fullmatch(normalized):
-        raise HTTPException(status_code=422, detail="invalid ticker")
-    configured = {entry.ticker: entry for entry in load_companies(settings().company_config_path).companies}
-    entry = configured.get(normalized)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="unknown configured ticker")
-    if not entry.enabled:
-        raise HTTPException(status_code=422, detail="configured ticker is disabled")
-    return normalized
-
-
-class IngestionRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    target: str = "all"
-    trigger: Literal["manual", "schedule", "api", "historical"] = "api"
-    preparation_request_id: uuid.UUID | None = None
-    requested_year: int | None = None
-    selected_accession: str | None = None
-    kestra_execution_id: str | None = None
-
-    @field_validator("target", mode="before")
-    @classmethod
-    def normalize(cls, value: object) -> str:
-        target = str(value).strip()
-        if target.lower() == "all":
-            return "all"
-        ticker = target.upper()
-        if not TICKER_RE.fullmatch(ticker):
-            raise ValueError("target must be 'all' or a valid 1-10 character ticker")
-        return ticker
-
-
-class CompanyIngestionResponse(BaseModel):
-    ticker: str
-    run_id: str
-    outcome: Literal["succeeded", "skipped", "failed"]
-    accession: str | None
-    coverage: dict[str, str]
-    section_count: int
-    chunk_count: int
-    search_document_count: int
-    embedding_usage_status: str
-    corpus_disposition: str
-    error: str | None = None
-
-
-class IngestionResponse(BaseModel):
-    status: Literal["succeeded", "partial_failure", "failed"]
-    results: list[CompanyIngestionResponse]
-
-
-def authorize(authorization: Annotated[str | None, Header()] = None) -> None:
-    expected = f"Bearer {settings().ingestion_api_token}"
-    if authorization is None or not hmac.compare_digest(authorization, expected):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid ingestion token")
-
-
-def _response(result: BatchResult) -> IngestionResponse:
-    return IngestionResponse(
-        status=result.status,  # type: ignore[arg-type]
-        results=[
-            CompanyIngestionResponse(**{**entry.__dict__, "run_id": str(entry.run_id)})
-            for entry in result.results
-        ],
+def _log_request(request: Request, status_code: int, duration_ms: float) -> None:
+    route = request.scope.get("route")
+    fields: dict[str, Any] = {
+        "timestamp": datetime.now(UTC).isoformat(),
+        "severity": "ERROR" if status_code >= 500 else "WARNING" if status_code >= 400 else "INFO",
+        "event": "api_request",
+        "request_id": request.state.request_id,
+        "method": request.method,
+        "route": getattr(route, "path", request.url.path),
+        "status": status_code,
+        "error_code": getattr(request.state, "error_code", "request_succeeded"),
+        "context": {
+            "ticker": request.path_params.get("ticker"),
+            "batch_id": request.path_params.get("batch_id"),
+            "item_id": request.path_params.get("item_id"),
+        },
+        "duration_ms": round(duration_ms, 3),
+    }
+    error = getattr(request.state, "error", None)
+    if error is not None and getattr(request.state, "log_traceback", False):
+        fields["exception_types"] = [type(error).__name__]
+        fields["stack"] = [
+            {"file": frame.filename, "line": frame.lineno, "function": frame.name}
+            for frame in traceback.extract_tb(error.__traceback__)
+        ]
+    _LOGGER.log(
+        logging.ERROR if status_code >= 500 else logging.WARNING if status_code >= 400 else logging.INFO,
+        json.dumps(fields, separators=(",", ":"), default=str),
     )
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="SEC Filing RAG", version="0.1.0")
+    app = FastAPI(title="SEC Filing RAG", version="0.2.0")
 
-    @app.get("/api/health")
-    def health(db: Annotated[Store, Depends(store)]) -> dict[str, str]:
-        ready = db.ready()
-        if not ready:
-            raise HTTPException(
-                status_code=503, detail={"process": "ok", "application_database": "unavailable"}
-            )
-        return {"process": "ok", "application_database": "ready"}
-
-    @app.get("/api/companies")
-    def companies(db: Annotated[Store, Depends(store)]) -> list[dict[str, Any]]:
-        config = load_companies(settings().company_config_path)
-        stored = {entry["ticker"]: entry for entry in db.companies()}
-        result: list[dict[str, Any]] = []
-        for entry in config.companies:
-            row = stored.get(
-                entry.ticker,
-                {
-                    "ticker": entry.ticker,
-                    "cik": None,
-                    "name": None,
-                    "resolution_status": "pending",
-                    "safe_error": None,
-                    "accession": None,
-                    "filing_date": None,
-                    "corpus_status": None,
-                    "ready_at": None,
-                    "latest_run_status": "pending",
-                },
-            )
-            result.append({**row, "enabled": entry.enabled})
-        return result
-
-    @app.get("/api/companies/{ticker}/status")
-    def company_status(ticker: str, db: Annotated[Store, Depends(store)]) -> dict[str, Any]:
-        normalized = ticker.strip().upper()
-        if not TICKER_RE.fullmatch(normalized):
-            raise HTTPException(status_code=422, detail="invalid ticker")
-        config = load_companies(settings().company_config_path)
-        configured = {entry.ticker: entry for entry in config.companies}
-        if normalized not in configured:
-            raise HTTPException(status_code=404, detail="unknown configured ticker")
-        result = db.company_status(normalized)
-        if result is None:
-            entry = configured[normalized]
-            return {
-                "ticker": entry.ticker,
-                "enabled": entry.enabled,
-                "cik": None,
-                "name": None,
-                "resolution_status": "pending",
-                "safe_error": None,
-                "active_corpus": None,
-                "coverage": [],
-                "latest_run": None,
-            }
-        result["enabled"] = configured[normalized].enabled
-        return result
-
-    @app.post("/api/companies/{ticker}/filings/discover")
-    def discover_filing(
-        ticker: str,
-        request: DiscoveryRequest,
-        service: Annotated[FilingDiscoveryService, Depends(discovery_service)],
-    ) -> dict[str, Any]:
-        normalized = _configured_ticker(ticker)
+    @app.middleware("http")
+    async def correlate_and_log(request: Request, call_next: Any) -> Response:
+        started = time.perf_counter()
+        incoming = request.headers.get("X-Request-ID", "")
+        request.state.request_id = incoming if _REQUEST_ID_RE.fullmatch(incoming) else str(uuid.uuid4())
         try:
-            period = AnalysisPeriod.year(request.period.value)
-            return service.discover(normalized, period).response()
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from None
-        except Exception:
-            raise HTTPException(
-                status_code=502, detail="SEC filing discovery is temporarily unavailable"
-            ) from None
-
-    @app.post(
-        "/api/companies/{ticker}/filings/prepare",
-        response_model=PreparationAccepted,
-        status_code=status.HTTP_202_ACCEPTED,
-    )
-    def prepare_filing(
-        ticker: str,
-        request: PreparationRequestBody,
-        service: Annotated[HistoricalPreparationService, Depends(preparation_service)],
-    ) -> PreparationAccepted:
-        normalized = _configured_ticker(ticker)
-        try:
-            request_id, execution_id = service.submit(
-                normalized, AnalysisPeriod.year(request.period.value), request.confirmed_accession
+            response: Response = await call_next(request)
+        except Exception as exc:
+            _mark_error(request, code="unexpected_server_error", exc=exc, include_traceback=True)
+            response = JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR, content={"detail": "Internal server error"}
             )
-            return PreparationAccepted(request_id=request_id, execution_id=execution_id)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from None
-        except RuntimeError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from None
+        response.headers["X-Request-ID"] = request.state.request_id
+        _log_request(request, response.status_code, (time.perf_counter() - started) * 1000)
+        return response
 
-    @app.post(
-        "/internal/ingestions",
-        response_model=IngestionResponse,
-        dependencies=[Depends(authorize)],
-    )
-    def ingest(request: IngestionRequest, db: Annotated[Store, Depends(store)]) -> IngestionResponse:
-        if not db.ready():
-            raise HTTPException(status_code=503, detail="application database schema is not ready")
-        config = load_companies(settings().company_config_path)
-        enabled = {entry.ticker for entry in config.companies if entry.enabled}
-        if request.target != "all" and request.target not in enabled:
-            raise HTTPException(
-                status_code=422, detail="target is unknown or disabled in company configuration"
-            )
-        if request.target == "all" and not enabled:
-            raise HTTPException(status_code=422, detail="company configuration has no enabled targets")
-        pipeline = IngestionPipeline(settings(), db)
-        if request.trigger == "historical":
-            if (
-                request.target == "all"
-                or request.preparation_request_id is None
-                or request.requested_year is None
-                or request.selected_accession is None
-            ):
-                raise HTTPException(status_code=422, detail="historical callback inputs are incomplete")
-            return _response(
-                pipeline.run_historical(
-                    preparation_request_id=request.preparation_request_id,
-                    ticker=request.target,
-                    requested_year=request.requested_year,
-                    selected_accession=request.selected_accession,
-                    kestra_execution_id=request.kestra_execution_id,
-                )
-            )
-        return _response(pipeline.run_batch(request.target, request.trigger, request.kestra_execution_id))
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(request: Request, exc: RequestValidationError) -> Response:
+        _mark_error(request, code="request_validation_error", exc=exc, include_traceback=False)
+        return cast(Response, await request_validation_exception_handler(request, exc))
 
+    @app.exception_handler(HTTPException)
+    async def http_error(request: Request, exc: HTTPException) -> Response:
+        _mark_error(request, code=f"http_{exc.status_code}", exc=exc, include_traceback=False)
+        return await http_exception_handler(request, exc)
+
+    @app.exception_handler(UpstreamServiceError)
+    async def upstream_error(request: Request, exc: UpstreamServiceError) -> Response:
+        _mark_error(request, code=exc.code, exc=exc, include_traceback=True)
+        return JSONResponse(status_code=HTTPStatus.BAD_GATEWAY, content={"detail": exc.public_detail})
+
+    app.include_router(public_router)
+    app.include_router(internal_router)
     return app
 
 
@@ -271,4 +114,5 @@ app = create_app()
 
 def run() -> None:
     config = settings()
+    _LOGGER.setLevel(config.log_level)
     uvicorn.run("sec_filing_rag.main:app", host=config.app_host, port=config.app_port)

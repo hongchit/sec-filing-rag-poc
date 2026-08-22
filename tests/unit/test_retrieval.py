@@ -169,26 +169,28 @@ def test_partial_dataset_loads_and_manifest_matches_exact_corpus(tmp_path: Path)
     dataset.write_text(__import__("json").dumps(case_data) + "\n", encoding="utf-8")
     cases = load_cases(dataset)
     config = load_retrieval_configuration(Path("config/retrieval.json"))
-    manifest = CorpusManifest.model_validate({
-        "version": "retrieval-ground-truth-v2",
-        "review_status": "reviewed",
-        "parser_version": "p",
-        "chunking_version": "c",
-        "embedding_model": config.embedding_model,
-        "embedding_dimensions": config.embedding_dimensions,
-        "dataset_sha256": __import__("hashlib").sha256(dataset.read_bytes()).hexdigest(),
-        "review_bundle_sha256": "b" * 64,
-        "prompt_sha256": "c" * 64,
-        "generation_config_sha256": "d" * 64,
-        "corpus_snapshot_sha256": "e" * 64,
-        "generation_run_id": str(uuid.uuid4()),
-        "corpora": [
-            {"ticker": "AAPL", "accession": "old-accession", "corpus_version_id": first_version},
-            {"ticker": "AAPL", "accession": "new-accession", "corpus_version_id": second_version},
-        ],
-        "coverage": {"accepted_questions": 1},
-        "warnings": [{"code": "question_count"}],
-    })
+    manifest = CorpusManifest.model_validate(
+        {
+            "version": "retrieval-ground-truth-v2",
+            "review_status": "reviewed",
+            "parser_version": "p",
+            "chunking_version": "c",
+            "embedding_model": config.embedding_model,
+            "embedding_dimensions": config.embedding_dimensions,
+            "dataset_sha256": __import__("hashlib").sha256(dataset.read_bytes()).hexdigest(),
+            "review_bundle_sha256": "b" * 64,
+            "prompt_sha256": "c" * 64,
+            "generation_config_sha256": "d" * 64,
+            "corpus_snapshot_sha256": "e" * 64,
+            "generation_run_id": str(uuid.uuid4()),
+            "corpora": [
+                {"ticker": "AAPL", "accession": "old-accession", "corpus_version_id": first_version},
+                {"ticker": "AAPL", "accession": "new-accession", "corpus_version_id": second_version},
+            ],
+            "coverage": {"accepted_questions": 1},
+            "warnings": [{"code": "question_count"}],
+        }
+    )
     validate_review_gate(cases, manifest, dataset, config)
 
 

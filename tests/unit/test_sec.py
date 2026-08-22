@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from sec_filing_rag.errors import UpstreamServiceError
 from sec_filing_rag.sec import EdgarGateway
 
 
@@ -78,10 +79,10 @@ def gateway(
 
 def test_ticker_resolution_rejects_zero_and_multiple_distinct_ciks() -> None:
     missing, _ = gateway([{"ticker": "NOPE", "cik": 1}])
-    with pytest.raises(ValueError, match="absent"):
+    with pytest.raises(UpstreamServiceError, match="absent"):
         missing.resolve("EX")
     ambiguous, _ = gateway([{"ticker": "EX", "cik": 1}, {"ticker": "EX", "cik": 2}])
-    with pytest.raises(ValueError, match="multiple"):
+    with pytest.raises(UpstreamServiceError, match="multiple"):
         ambiguous.resolve("ex")
 
 
@@ -137,16 +138,16 @@ def test_accession_is_revalidated_and_metadata_is_normalized() -> None:
 )
 def test_missing_or_non_html_document_metadata_fails_safely(changes: dict[str, Any], message: str) -> None:
     value, _ = gateway(filings=[filing(**changes)])
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(UpstreamServiceError):
         value.acquire("EX", max_bytes=1000)
 
 
 def test_provider_failure_and_document_bound_are_safe() -> None:
     value, _ = gateway(filings=[filing(html=RuntimeError("secret provider detail"))])
-    with pytest.raises(ValueError, match="retrieval failed"):
+    with pytest.raises(UpstreamServiceError, match="retrieval failed"):
         value.acquire("EX", max_bytes=1000)
     bounded, _ = gateway(filings=[filing(html="<html>" + "x" * 100 + "</html>")])
-    with pytest.raises(ValueError, match="size limit"):
+    with pytest.raises(UpstreamServiceError, match="size limit"):
         bounded.acquire("EX", max_bytes=20)
 
 
@@ -169,3 +170,29 @@ def test_bundled_edgartools_ticker_contract_maps_xom_without_network() -> None:
     rows = get_company_tickers()
     matches = rows.loc[rows["ticker"] == "XOM", "cik"].astype(int).unique().tolist()
     assert matches == [34088]
+
+
+def test_discovery_ignores_acquisition_only_defects_in_legacy_filings() -> None:
+    current = filing(
+        "0000320193-24-000123",
+        filing_date=date(2024, 11, 1),
+        report_date=date(2024, 9, 28),
+        document="aapl-20240928.htm",
+    )
+    legacy = [
+        filing(
+            f"0000320193-{year % 100:02d}-000001",
+            filing_date=date(year, 12, 20),
+            report_date=date(year, 9, 30),
+            document=None,
+        )
+        for year in range(1994, 1999)
+    ]
+    value, _ = gateway(filings=[*legacy, current])
+
+    _, _, candidates = value.discover_candidates("EX")
+
+    assert candidates[0].accession == current.accession_number
+    assert candidates[0].fiscal_year == 2024
+    with pytest.raises(UpstreamServiceError):
+        value.acquire("EX", accession=legacy[0].accession_number, max_bytes=1000)

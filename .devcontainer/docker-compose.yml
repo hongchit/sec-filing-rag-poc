@@ -9,9 +9,15 @@ services:
     volumes:
       - ..:/workspaces/sec-filing-rag-poc:cached
       - devcontainer-uv-cache:/home/vscode/.cache/uv
+      - devcontainer-cargo-cache:/home/vscode/.cache/cargo
+      - cargo-tools:/home/vscode/.local/cargo-tools
       - codex-home:/home/vscode/.codex
       - ${HOME}/.codex/skills/bootstrap-project:/home/vscode/.agents/skills/bootstrap-project:ro
-    environment: {UV_CACHE_DIR: /home/vscode/.cache/uv, UV_LINK_MODE: copy}
+    environment:
+      CARGO_HOME: /home/vscode/.cache/cargo
+      CARGO_INSTALL_ROOT: /home/vscode/.local/cargo-tools
+      UV_CACHE_DIR: /home/vscode/.cache/uv
+      UV_LINK_MODE: copy
     ports: ["127.0.0.1:8000:8000", "127.0.0.1:5173:5173"]
     command: sleep infinity
   db:
@@ -70,6 +76,10 @@ volumes:
   devcontainer-uv-cache:
     external: true
     name: devcontainer-uv-cache
+  devcontainer-cargo-cache:
+    external: true
+    name: devcontainer-cargo-cache
+  cargo-tools:
   codex-home:
   postgres-data:
   kestra-postgres-data:

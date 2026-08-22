@@ -202,11 +202,18 @@ class GroundTruthRepository:
             if set(default_by_ticker) != set(TICKERS):
                 raise ValueError("active ready corpora are required for AAPL, MSFT, and NVDA")
             contracts = {
-                (row["parser_version"], row["chunking_version"], row["embedding_model"], row["embedding_dimensions"])
+                (
+                    row["parser_version"],
+                    row["chunking_version"],
+                    row["embedding_model"],
+                    row["embedding_dimensions"],
+                )
                 for row in default_by_ticker.values()
             }
             if len(contracts) != 1:
-                raise ValueError("active default corpora have incompatible parser, chunking, or embedding metadata")
+                raise ValueError(
+                    "active default corpora have incompatible parser, chunking, or embedding metadata"
+                )
             contract = next(iter(contracts))
             rows = connection.execute(
                 "WITH compatible AS (SELECT c.ticker,c.name AS company,cv.id AS corpus_version_id,"
@@ -235,8 +242,25 @@ class GroundTruthRepository:
             )
             if row["chunk_id"] is not None:
                 chunks.append(row)
-        ordered_corpora = sorted(corpora.values(), key=lambda corpus: (TICKERS.index(corpus.ticker), corpus.report_date, corpus.accession, str(corpus.corpus_version_id)))
-        chunks.sort(key=lambda row: (TICKERS.index(row["ticker"]), row["report_date"], row["accession"], str(row["corpus_version_id"]), REQUIRED_ITEMS.index(row["item"]), row["chunk_id"]))
+        ordered_corpora = sorted(
+            corpora.values(),
+            key=lambda corpus: (
+                TICKERS.index(corpus.ticker),
+                corpus.report_date,
+                corpus.accession,
+                str(corpus.corpus_version_id),
+            ),
+        )
+        chunks.sort(
+            key=lambda row: (
+                TICKERS.index(row["ticker"]),
+                row["report_date"],
+                row["accession"],
+                str(row["corpus_version_id"]),
+                REQUIRED_ITEMS.index(row["item"]),
+                row["chunk_id"],
+            )
+        )
         return ordered_corpora, chunks
 
     def start_run(self, run_id: uuid.UUID, config: GenerationConfiguration, prompt_sha: str) -> None:
@@ -388,6 +412,7 @@ class OpenAIAssessor:
 
 def deterministic_rank(rows: list[dict[str, Any]], seed: int) -> list[dict[str, Any]]:
     """Rank reproducibly without process-dependent random state."""
+
     def key(row: dict[str, Any]) -> tuple[str, str]:
         digest = hashlib.sha256(
             f"{seed}:{row['ticker']}:{row['item']}:{row['chunk_id']}".encode()
@@ -447,6 +472,7 @@ def generate_bundle(
         repository.finish_run(run_id, error=safe_error(exc))
         raise
     strata = [(ticker, item) for ticker in TICKERS for item in REQUIRED_ITEMS]
+
     def process(stratum: tuple[str, str]) -> tuple[tuple[str, str], list[ReviewChunk], list[dict[str, Any]]]:
         # Bound screening independently for every company and Item stratum.
         candidates = deterministic_rank(
@@ -477,9 +503,7 @@ def generate_bundle(
                 stratum, selected, decisions = future.result()
                 diagnostics[f"{stratum[0]}:{stratum[1]}"] = decisions
                 chunks.extend(selected)
-                available = sum(
-                    1 for row in rows if (row["ticker"], row["item"]) == stratum
-                )
+                available = sum(1 for row in rows if (row["ticker"], row["item"]) == stratum)
                 summaries[stratum] = GenerationStratumSummary.model_validate(
                     {
                         "ticker": stratum[0],
@@ -561,10 +585,7 @@ def coverage_metadata(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
         record["goal"] == "legal_and_regulatory_risk" or record["allowed_items"] == ["3"]
         for record in records
     )
-    nonlegal = sum(
-        record["goal"] == "key_risks" and record["allowed_items"] != ["3"]
-        for record in records
-    )
+    nonlegal = sum(record["goal"] == "key_risks" and record["allowed_items"] != ["3"] for record in records)
     coverage = {
         "accepted_questions": len(records),
         "companies": len(companies),
@@ -579,13 +600,18 @@ def coverage_metadata(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
         ("company_coverage", companies == set(TICKERS), {"missing": sorted(set(TICKERS) - companies)}),
         ("item_coverage", items == set(REQUIRED_ITEMS), {"missing": sorted(set(REQUIRED_ITEMS) - items)}),
         ("goal_coverage", len(goals) == 5, {"actual": len(goals), "target": 5}),
-        ("query_type_coverage", query_types == {"exact_keyword", "semantic_paraphrase"}, {"actual": len(query_types), "target": 2}),
+        (
+            "query_type_coverage",
+            query_types == {"exact_keyword", "semantic_paraphrase"},
+            {"actual": len(query_types), "target": 2},
+        ),
         ("legal_coverage", legal > 0, {"actual": legal, "target": 1}),
         ("nonlegal_risk_coverage", nonlegal > 0, {"actual": nonlegal, "target": 1}),
     ]
     warnings = [
         {"code": code, "message": f"coverage target not met: {code}", **details}
-        for code, passed, details in checks if not passed
+        for code, passed, details in checks
+        if not passed
     ]
     return coverage, warnings
 

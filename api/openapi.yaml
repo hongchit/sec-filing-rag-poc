@@ -1,0 +1,730 @@
+openapi: 3.1.0
+info:
+  title: SEC Filing RAG
+  version: 0.2.0
+paths:
+  /api/health:
+    get:
+      tags:
+      - system
+      summary: Health
+      description: Check application database readiness.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+                title: Response Gethealth
+  /api/companies:
+    get:
+      tags:
+      - companies
+      summary: Companies
+      description: List configured companies and corpus readiness.
+      operationId: listCompanies
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  additionalProperties: true
+                  type: object
+                type: array
+                title: Response Listcompanies
+  /api/companies/{ticker}/status:
+    get:
+      tags:
+      - companies
+      summary: Company Status
+      description: Inspect application-owned corpus status without querying Kestra.
+      operationId: getCompanyStatus
+      parameters:
+      - name: ticker
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Ticker
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Getcompanystatus
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/filing-batches:
+    post:
+      tags:
+      - filing-workflows
+      summary: Create Batch
+      description: Submit all enabled companies or an explicit ordered ticker subset for latest or exact-year ingestion.
+      operationId: createFilingBatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilingBatchRequest'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilingBatchAccepted'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/companies/{ticker}/filing-preparations:
+    post:
+      tags:
+      - filing-workflows
+      summary: Create Preparation
+      description: Submit one configured company for latest or exact fiscal-year ingestion.
+      operationId: createCompanyFilingPreparation
+      parameters:
+      - name: ticker
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Ticker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilingPreparationRequest'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilingBatchAccepted'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/filing-batches/{batch_id}:
+    get:
+      tags:
+      - filing-workflows
+      summary: Get Batch
+      description: Read authoritative overall and per-company workflow status.
+      operationId: getFilingBatch
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Batch Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilingBatchStatus'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/filing-batches/{batch_id}:
+    get:
+      tags:
+      - internal-lifecycle
+      summary: Get Execution Batch
+      operationId: getFilingBatchExecution
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Batch Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Getfilingbatchexecution
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/providers/filing-items/{item_id}/selection:
+    post:
+      tags:
+      - internal-provider-execution
+      summary: Select
+      description: Select the latest original 10-K or an exact SEC report-date year.
+      operationId: selectFilingForBatchItem
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemExecutionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilingSelectionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/providers/filing-items/{item_id}/acquisitions:
+    post:
+      tags:
+      - internal-provider-execution
+      summary: Acquire
+      description: Validate and persist selected filing HTML; return only a safe acquisition reference.
+      operationId: acquireSelectedFiling
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemExecutionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcquisitionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/corpus-executions/{item_id}:
+    post:
+      tags:
+      - internal-corpus-execution
+      summary: Process
+      description: Build a corpus from a persisted acquisition and promote only in latest mode.
+      operationId: executeCorpusForBatchItem
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemExecutionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorpusExecutionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/filing-items/{item_id}/failures:
+    post:
+      tags:
+      - internal-lifecycle
+      summary: Fail Item
+      description: Record a safe terminal item failure after an orchestration error.
+      operationId: failFilingBatchItem
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemFailureRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                title: Response Failfilingbatchitem
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/filing-batches/{batch_id}/finalizations:
+    post:
+      tags:
+      - internal-lifecycle
+      summary: Finalize
+      description: Finalize aggregate state and fail any stranded running items.
+      operationId: finalizeFilingBatch
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Batch Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchFinalizationRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                title: Response Finalizefilingbatch
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    AcquisitionResponse:
+      properties:
+        acquisition_id:
+          type: string
+          format: uuid
+          title: Acquisition Id
+        accession:
+          type: string
+          title: Accession
+        checksum:
+          type: string
+          title: Checksum
+        media_type:
+          type: string
+          const: text/html
+          title: Media Type
+          default: text/html
+        size:
+          type: integer
+          title: Size
+      type: object
+      required:
+      - acquisition_id
+      - accession
+      - checksum
+      - size
+      title: AcquisitionResponse
+    BatchFinalizationRequest:
+      properties:
+        kestra_execution_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Kestra Execution Id
+      additionalProperties: false
+      type: object
+      title: BatchFinalizationRequest
+    CorpusExecutionResponse:
+      properties:
+        item_id:
+          type: string
+          format: uuid
+          title: Item Id
+        status:
+          type: string
+          enum:
+          - succeeded
+          - skipped
+          - failed
+          title: Status
+        corpus_version_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Corpus Version Id
+        promoted:
+          type: boolean
+          title: Promoted
+          default: false
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+      type: object
+      required:
+      - item_id
+      - status
+      title: CorpusExecutionResponse
+    FilingBatchAccepted:
+      properties:
+        batch_id:
+          type: string
+          format: uuid
+          title: Batch Id
+        kestra_execution_id:
+          type: string
+          title: Kestra Execution Id
+        mode:
+          type: string
+          enum:
+          - latest
+          - exact_year
+          title: Mode
+        fiscal_year:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Fiscal Year
+        tickers:
+          items:
+            type: string
+          type: array
+          title: Tickers
+        status:
+          type: string
+          const: submitted
+          title: Status
+          default: submitted
+      type: object
+      required:
+      - batch_id
+      - kestra_execution_id
+      - mode
+      - fiscal_year
+      - tickers
+      title: FilingBatchAccepted
+    FilingBatchItemStatus:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        position:
+          type: integer
+          title: Position
+        ticker:
+          type: string
+          title: Ticker
+        status:
+          type: string
+          enum:
+          - pending
+          - selecting
+          - acquiring
+          - processing
+          - succeeded
+          - skipped
+          - failed
+          title: Status
+        selected_accession:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Selected Accession
+        acquisition_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Acquisition Id
+        corpus_version_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Corpus Version Id
+        safe_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safe Error
+        started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Started At
+        finished_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Finished At
+      type: object
+      required:
+      - id
+      - position
+      - ticker
+      - status
+      title: FilingBatchItemStatus
+    FilingBatchRequest:
+      properties:
+        fiscal_year:
+          anyOf:
+          - type: integer
+            maximum: 9999.0
+            minimum: 1900.0
+          - type: 'null'
+          title: Fiscal Year
+        tickers:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Tickers
+      additionalProperties: false
+      type: object
+      title: FilingBatchRequest
+    FilingBatchStatus:
+      properties:
+        batch_id:
+          type: string
+          format: uuid
+          title: Batch Id
+        kestra_execution_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Kestra Execution Id
+        request_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Request Id
+        mode:
+          type: string
+          enum:
+          - latest
+          - exact_year
+          title: Mode
+        fiscal_year:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Fiscal Year
+        status:
+          type: string
+          enum:
+          - submitted
+          - running
+          - succeeded
+          - partial_failure
+          - failed
+          title: Status
+        items:
+          items:
+            $ref: '#/components/schemas/FilingBatchItemStatus'
+          type: array
+          title: Items
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - batch_id
+      - kestra_execution_id
+      - request_id
+      - mode
+      - fiscal_year
+      - status
+      - items
+      - created_at
+      - updated_at
+      title: FilingBatchStatus
+    FilingPreparationRequest:
+      properties:
+        fiscal_year:
+          anyOf:
+          - type: integer
+            maximum: 9999.0
+            minimum: 1900.0
+          - type: 'null'
+          title: Fiscal Year
+      additionalProperties: false
+      type: object
+      title: FilingPreparationRequest
+    FilingSelectionResponse:
+      properties:
+        item_id:
+          type: string
+          format: uuid
+          title: Item Id
+        status:
+          type: string
+          enum:
+          - selected
+          - skipped
+          title: Status
+        accession:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Accession
+        fiscal_year:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Fiscal Year
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason
+      type: object
+      required:
+      - item_id
+      - status
+      title: FilingSelectionResponse
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ItemExecutionRequest:
+      properties:
+        kestra_execution_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Kestra Execution Id
+      additionalProperties: false
+      type: object
+      title: ItemExecutionRequest
+    ItemFailureRequest:
+      properties:
+        error:
+          type: string
+          title: Error
+        kestra_execution_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Kestra Execution Id
+      additionalProperties: false
+      type: object
+      required:
+      - error
+      title: ItemFailureRequest
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    InternalBearer:
+      type: http
+      scheme: bearer

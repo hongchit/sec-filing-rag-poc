@@ -17,7 +17,7 @@ from .domain import (
     safe_error,
     sanitize_filing_html,
 )
-from .sec import EdgarGateway, configure_edgartools
+from .sec import AcquiredFiling, EdgarGateway, configure_edgartools
 from .store import Store
 
 
@@ -125,6 +125,8 @@ class IngestionPipeline:
         selected_accession: str | None = None,
         preparation_request_id: uuid.UUID | None = None,
         kestra_execution_id: str | None = None,
+        acquired_filing: AcquiredFiling | None = None,
+        promote_default: bool | None = None,
     ) -> CompanyResult:
         # The provisional run key becomes checksum-bound once the exact source is acquired.
         provisional_key = compatibility_key(
@@ -146,23 +148,30 @@ class IngestionPipeline:
         stage = "resolve"
         try:
             self.store.stage(run_id, stage, "running")
-            gateway = EdgarGateway(
-                facade=configure_edgartools(
-                    self.settings.edgar_identity,
-                    self.settings.edgar_rate_limit_per_sec,
-                    self.settings.edgar_access_mode,
+            gateway: EdgarGateway | None = None
+            if acquired_filing is None:
+                gateway = EdgarGateway(
+                    facade=configure_edgartools(
+                        self.settings.edgar_identity,
+                        self.settings.edgar_rate_limit_per_sec,
+                        self.settings.edgar_access_mode,
+                    )
                 )
-            )
-            company = gateway.resolve(ticker)
+                company = gateway.resolve(ticker)
+            else:
+                company = acquired_filing.company
             cik, name = company.cik, company.name
             self.store.stage(run_id, stage, "succeeded", output_count=1)
             stage = "select-filing"
             self.store.stage(run_id, stage, "running")
-            acquired = gateway.acquire(
-                ticker,
-                accession=selected_accession,
-                max_bytes=self.settings.max_filing_document_bytes,
-            )
+            acquired = acquired_filing
+            if acquired is None:
+                assert gateway is not None
+                acquired = gateway.acquire(
+                    ticker,
+                    accession=selected_accession,
+                    max_bytes=self.settings.max_filing_document_bytes,
+                )
             filing = acquired.filing
             document = acquired.document
             accession = filing.accession
@@ -284,7 +293,9 @@ class IngestionPipeline:
                 usage=usage,
                 identity_hash=hashlib.sha256(self.settings.edgar_identity.encode()).hexdigest(),
                 # Historical preparation creates a ready corpus without moving the default.
-                promote_default=preparation_request_id is None,
+                promote_default=(preparation_request_id is None)
+                if promote_default is None
+                else promote_default,
                 preparation_request_id=preparation_request_id,
             )
             coverage: dict[str, str] = {item: sections[item].status for item in REQUIRED_ITEMS}
@@ -298,7 +309,9 @@ class IngestionPipeline:
                 len(flat_chunks),
                 len(flat_chunks),
                 usage[3],
-                "activated" if preparation_request_id is None else "historical_ready",
+                "activated"
+                if ((preparation_request_id is None) if promote_default is None else promote_default)
+                else "historical_ready",
                 None,
             )
         except Exception as exc:

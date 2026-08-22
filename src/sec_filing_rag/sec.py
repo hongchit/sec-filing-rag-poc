@@ -9,6 +9,7 @@ from datetime import date, datetime
 from typing import Any, Protocol
 
 from .domain import FilingCandidate, sha256_bytes
+from .errors import UpstreamServiceError
 
 EDGARTOOLS_VERSION = "5.41.0"
 _ACCESSION = re.compile(r"^[0-9]{10}-[0-9]{2}-[0-9]{6}$")
@@ -46,9 +47,6 @@ class EdgarFilingMetadata:
     homepage_url: str
     filing_url: str
     text_url: str
-
-    def candidate(self) -> FilingCandidate:
-        return FilingCandidate(self.accession, self.primary_document, self.filing_date, self.report_date)
 
 
 @dataclass(frozen=True)
@@ -134,6 +132,18 @@ class EdgarGateway:
         # Operation-local caches prevent duplicate provider resolution and discovery work.
         self._companies: dict[str, tuple[EdgarCompanySnapshot, Any]] = {}
         self._filings: dict[tuple[str, bool, str | None], list[tuple[EdgarFilingMetadata, Any]]] = {}
+        self._candidates: dict[str, list[FilingCandidate]] = {}
+
+    @staticmethod
+    def _upstream(message: str, exc: BaseException | None = None) -> UpstreamServiceError:
+        error = UpstreamServiceError(
+            message,
+            public_detail="SEC filing discovery is temporarily unavailable",
+            code="sec_provider_failure",
+        )
+        if exc is not None:
+            error.__cause__ = exc
+        return error
 
     def resolve(self, ticker: str) -> EdgarCompanySnapshot:
         normalized = ticker.strip().upper()
@@ -144,11 +154,11 @@ class EdgarGateway:
                     value = row.get("cik") if "cik" in row else row.get("cik_str")
                     matches[_cik(value)] = row
         except Exception as exc:
-            raise ValueError("EdgarTools ticker resolution failed") from exc
+            raise self._upstream("EdgarTools ticker resolution failed", exc) from exc
         if not matches:
-            raise ValueError("ticker is absent from EdgarTools metadata")
+            raise self._upstream("ticker is absent from EdgarTools metadata")
         if len(matches) != 1:
-            raise ValueError("ticker maps to multiple distinct CIKs")
+            raise self._upstream("ticker maps to multiple distinct CIKs")
         cik, row = next(iter(matches.items()))
         if cik in self._companies:
             return self._companies[cik][0]
@@ -168,18 +178,41 @@ class EdgarGateway:
                 _optional(getattr(company, "filer_category", None) or getattr(company, "filer_type", None)),
                 _boolean(getattr(company, "is_company", None)),
             )
-        except ValueError:
-            raise
         except Exception as exc:
-            raise ValueError("EdgarTools company lookup failed") from exc
+            raise self._upstream("EdgarTools company lookup failed", exc) from exc
         self._companies[cik] = (snapshot, company)
         return snapshot
 
     def discover_candidates(self, ticker: str) -> tuple[str, str, list[FilingCandidate]]:
         company = self.resolve(ticker)
-        filings = [metadata.candidate() for metadata, _ in self._load(company, full=True, accession=None)]
+        if company.cik in self._candidates:
+            return company.cik, company.name, self._candidates[company.cik]
+        try:
+            values = self._facade.filings(self._companies[company.cik][1], full=True)
+            candidates = [
+                self._candidate(value) for value in values if _text(getattr(value, "form", None)) == "10-K"
+            ]
+        except Exception as exc:
+            if isinstance(exc, UpstreamServiceError):
+                raise
+            raise self._upstream("EdgarTools filing discovery failed", exc) from exc
+        deduplicated: dict[str, FilingCandidate] = {}
+        for candidate in candidates:
+            current = deduplicated.get(candidate.accession)
+            if current is None or candidate.filing_date > current.filing_date:
+                deduplicated[candidate.accession] = candidate
+        filings = sorted(
+            deduplicated.values(),
+            key=lambda candidate: (
+                candidate.report_date or date.min,
+                candidate.filing_date,
+                candidate.accession,
+            ),
+            reverse=True,
+        )
         if not filings:
-            raise ValueError("company has no original 10-K filing")
+            raise self._upstream("company has no original 10-K filing")
+        self._candidates[company.cik] = filings
         return company.cik, company.name, filings
 
     def acquire(self, ticker: str, *, accession: str | None = None, max_bytes: int) -> AcquiredFiling:
@@ -187,7 +220,7 @@ class EdgarGateway:
         pairs = self._load(company, full=accession is not None, accession=accession)
         if accession is None:
             if not pairs:
-                raise ValueError("company has no original 10-K filing")
+                raise self._upstream("company has no original 10-K filing")
             metadata, sdk = max(pairs, key=lambda pair: (pair[0].filing_date, pair[0].accession))
         else:
             if not _ACCESSION.fullmatch(accession):
@@ -199,19 +232,19 @@ class EdgarGateway:
         try:
             html = sdk.html()
         except Exception as exc:
-            raise ValueError("EdgarTools filing HTML retrieval failed") from exc
+            raise self._upstream("EdgarTools filing HTML retrieval failed", exc) from exc
         if not isinstance(html, str) or not html.strip():
-            raise ValueError("EdgarTools returned missing filing HTML")
+            raise self._upstream("EdgarTools returned missing filing HTML")
         content = html.encode("utf-8")
         if len(content) > max_bytes:
-            raise ValueError("filing document exceeds configured size limit")
+            raise self._upstream("filing document exceeds configured size limit")
         lowered = metadata.primary_document.lower()
         html_start = html.lstrip().lower()
         # Inline-XBRL primary documents may validly begin with an XML declaration.
         if not lowered.endswith((".htm", ".html")) or not html_start.startswith(
             ("<!doctype html", "<html", "<xhtml", "<?xml")
         ):
-            raise ValueError("EdgarTools primary document is not HTML")
+            raise self._upstream("EdgarTools primary document is not HTML")
         return AcquiredFiling(
             company,
             metadata,
@@ -244,10 +277,8 @@ class EdgarGateway:
                 if _text(getattr(value, "form", None)) == "10-K"
                 and (accession is None or _text(getattr(value, "accession_number", None)) == accession)
             ]
-        except ValueError:
-            raise
         except Exception as exc:
-            raise ValueError("EdgarTools filing discovery failed") from exc
+            raise self._upstream("EdgarTools filing discovery failed", exc) from exc
         deduplicated: dict[str, tuple[EdgarFilingMetadata, Any]] = {}
         for pair in normalized:
             current = deduplicated.get(pair[0].accession)
@@ -260,6 +291,20 @@ class EdgarGateway:
         )
         self._filings[key] = result
         return result
+
+    @staticmethod
+    def _candidate(filing: Any) -> FilingCandidate:
+        accession = _required(
+            getattr(filing, "accession_number", None) or getattr(filing, "accession", None),
+            "accession",
+        )
+        if not _ACCESSION.fullmatch(accession):
+            raise ValueError("EdgarTools returned malformed accession")
+        return FilingCandidate(
+            accession,
+            _date(getattr(filing, "filing_date", None), "filing date"),
+            _date(getattr(filing, "period_of_report", None), "report date"),
+        )
 
     @staticmethod
     def _metadata(filing: Any) -> EdgarFilingMetadata:

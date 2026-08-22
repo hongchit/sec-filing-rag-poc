@@ -60,7 +60,7 @@ def test_ready_is_false_when_database_is_unavailable() -> None:
 def test_ready_is_false_when_migration_record_is_missing() -> None:
     connection = Connection(relations(), migration=False)
     assert store_with(connection).ready() is False
-    assert connection.queries[1][1] == ("0001_schema.sql",)
+    assert connection.queries[1][1] == (["0001_schema.sql", "0002_filing_batches.sql"],)
 
 
 @pytest.mark.parametrize("missing", ["company", "corpus_version", "search_document"])

@@ -120,7 +120,17 @@ def evaluate_main() -> None:
         validate_review_gate(cases, manifest, args.dataset, service.config)
         validate_database_lineage(database, cases)
         if args.validate_only:
-            print(json.dumps({"status": "valid", "case_count": len(cases), "coverage": manifest.coverage, "warnings": manifest.warnings}, sort_keys=True))
+            print(
+                json.dumps(
+                    {
+                        "status": "valid",
+                        "case_count": len(cases),
+                        "coverage": manifest.coverage,
+                        "warnings": manifest.warnings,
+                    },
+                    sort_keys=True,
+                )
+            )
             return
         artifact = RetrievalEvaluator(database, service, service.config).run(
             cases, dataset_sha256(args.dataset), manifest.coverage, manifest.warnings
@@ -133,6 +143,15 @@ def evaluate_main() -> None:
             "--manifest evaluation/retrieval-v1-manifest.json"
         )
         markdown_path.write_text(_markdown(artifact, command), encoding="utf-8")
-        print(json.dumps({"status": "succeeded", "json": str(json_path), "markdown": str(markdown_path), "warnings": manifest.warnings}))
+        print(
+            json.dumps(
+                {
+                    "status": "succeeded",
+                    "json": str(json_path),
+                    "markdown": str(markdown_path),
+                    "warnings": manifest.warnings,
+                }
+            )
+        )
     except (OSError, ValueError, ValidationError, RuntimeError) as exc:
         _fail(exc)

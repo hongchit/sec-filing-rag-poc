@@ -7,10 +7,23 @@
   "shutdownAction": "stopCompose",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {"version": "22"},
+    "ghcr.io/devcontainers/features/rust:1": {"version": "latest"},
     "ghcr.io/devcontainers-extra/features/uv:1": {}
   },
   "remoteUser": "vscode",
-  "customizations": {"vscode": {"extensions": ["ms-python.python", "ms-python.debugpy", "ms-ossdata.vscode-pgsql", "GitHub.vscode-github-actions"], "settings": {"python.terminal.useEnvFile": true, "python.envFile": "${workspaceFolder}/.env"}}},
+  "remoteEnv": {
+    "CARGO_HOME": "/home/vscode/.cache/cargo",
+    "CARGO_INSTALL_ROOT": "/home/vscode/.local/cargo-tools",
+    "PATH": "${containerEnv:PATH}:/home/vscode/.local/cargo-tools/bin"
+  },
+  "customizations": {"vscode": {"extensions": [
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-ossdata.vscode-pgsql",
+        "GitHub.vscode-github-actions",
+        "humao.rest-client",
+        "42Crunch.vscode-openapi"
+      ], "settings": {"python.terminal.useEnvFile": true, "python.envFile": "${workspaceFolder}/.env"}}},
   "postCreateCommand": ".devcontainer/post-create.sh",
   "postStartCommand": ".devcontainer/post-start.sh",
   "waitFor": "postCreateCommand",

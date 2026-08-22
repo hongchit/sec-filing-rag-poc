@@ -35,6 +35,36 @@ class KestraGateway:
         self.timeout = timeout
         self.retries = retries
 
+    def submit_batch(self, *, batch_id: str) -> KestraExecution:
+        return self._submit({"batch_id": (None, batch_id)})
+
+    def _submit(self, fields: dict[str, tuple[None, str]]) -> KestraExecution:
+        last_error: BaseException | None = None
+        for attempt in range(self.retries + 1):
+            try:
+                response = httpx.post(
+                    self.url, files=fields, auth=(self.username, self.password), timeout=self.timeout
+                )
+                response.raise_for_status()
+                execution_id = str(response.json().get("id", ""))
+                if not execution_id:
+                    raise ValueError("Kestra response did not contain an execution id")
+                return KestraExecution(execution_id)
+            except (httpx.HTTPError, ValueError) as exc:
+                last_error = exc
+                retryable = not isinstance(exc, httpx.HTTPStatusError) or exc.response.status_code in {
+                    429,
+                    500,
+                    502,
+                    503,
+                    504,
+                }
+                if attempt >= self.retries or not retryable:
+                    break
+                time.sleep(min(2**attempt, 4))
+        assert last_error is not None
+        raise KestraSubmissionError(safe_error(last_error, (self.username, self.password))) from None
+
     def submit_historical(
         self, *, request_id: str, ticker: str, requested_year: int, accession: str
     ) -> KestraExecution:
@@ -44,27 +74,4 @@ class KestraGateway:
             "requested_year": (None, str(requested_year)),
             "selected_accession": (None, accession),
         }
-        last_error: BaseException | None = None
-        for attempt in range(self.retries + 1):
-            try:
-                response = httpx.post(
-                    self.url,
-                    files=fields,
-                    auth=(self.username, self.password),
-                    timeout=self.timeout,
-                )
-                response.raise_for_status()
-                execution_id = str(response.json().get("id", ""))
-                if not execution_id:
-                    raise ValueError("Kestra response did not contain an execution id")
-                return KestraExecution(execution_id)
-            except (httpx.HTTPError, ValueError) as exc:
-                last_error = exc
-                retryable = not isinstance(exc, httpx.HTTPStatusError) or (
-                    exc.response.status_code in {429, 500, 502, 503, 504}
-                )
-                if attempt >= self.retries or not retryable:
-                    break
-                time.sleep(min(2**attempt, 4))
-        assert last_error is not None
-        raise KestraSubmissionError(safe_error(last_error, (self.username, self.password))) from None
+        return self._submit(fields)

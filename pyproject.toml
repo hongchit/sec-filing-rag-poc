@@ -14,6 +14,8 @@ sec-rag-migrate = "sec_filing_rag.migrate:main"
 sec-rag-search = "sec_filing_rag.retrieval_cli:search_main"
 sec-rag-evaluate-retrieval = "sec_filing_rag.retrieval_cli:evaluate_main"
 sec-rag-generate-ground-truth = "sec_filing_rag.ground_truth_cli:main"
+sec-rag-export-openapi = "sec_filing_rag.generation:openapi_main"
+sec-rag-generate-http = "sec_filing_rag.generation:http_main"
 [build-system]
 requires = ["hatchling==1.27.0"]
 build-backend = "hatchling.build"

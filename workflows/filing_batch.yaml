@@ -1,0 +1,112 @@
+id: filing_batch
+namespace: sec_filings.ingestion
+description: Sequentially execute persisted filing batch items; Python owns selection and state.
+inputs:
+  - id: batch_id
+    type: STRING
+tasks:
+  - id: load_items
+    type: io.kestra.plugin.core.http.Request
+    uri: "http://app:8000/internal/filing-batches/{{ inputs.batch_id }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+    options:
+      connectTimeout: PT10S
+      readTimeout: PT30M
+    retry:
+      type: constant
+      interval: PT5S
+      maxAttempts: 3
+  - id: execute_items
+    type: io.kestra.plugin.core.flow.ForEach
+    concurrencyLimit: 1
+    values: "{{ outputs.load_items.body | jq('.items[].id') }}"
+    tasks:
+      - id: select
+        type: io.kestra.plugin.core.http.Request
+        uri: "http://app:8000/internal/providers/filing-items/{{ taskrun.value }}/selection"
+        method: POST
+        contentType: application/json
+        headers:
+          Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+        body: "{{ {'kestra_execution_id': execution.id} | toJson }}"
+        options:
+          connectTimeout: PT10S
+          readTimeout: PT30M
+        retry:
+          type: constant
+          interval: PT5S
+          maxAttempts: 3
+      - id: if_selected
+        type: io.kestra.plugin.core.flow.If
+        condition: "{{ outputs.select[taskrun.value].body | jq('.status') | first == 'selected' }}"
+        then:
+          - id: acquire
+            type: io.kestra.plugin.core.http.Request
+            uri: "http://app:8000/internal/providers/filing-items/{{ parent.taskrun.value }}/acquisitions"
+            method: POST
+            contentType: application/json
+            headers:
+              Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+            body: "{{ {'kestra_execution_id': execution.id} | toJson }}"
+            options:
+              connectTimeout: PT10S
+              readTimeout: PT30M
+            retry:
+              type: constant
+              interval: PT5S
+              maxAttempts: 3
+          - id: process
+            type: io.kestra.plugin.core.http.Request
+            uri: "http://app:8000/internal/corpus-executions/{{ parent.taskrun.value }}"
+            method: POST
+            contentType: application/json
+            headers:
+              Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+            body: "{{ {'kestra_execution_id': execution.id} | toJson }}"
+            options:
+              connectTimeout: PT10S
+              readTimeout: PT30M
+            retry:
+              type: constant
+              interval: PT5S
+              maxAttempts: 3
+    errors:
+      - id: fail_item
+        type: io.kestra.plugin.core.http.Request
+        uri: "http://app:8000/internal/filing-items/{{ taskrun.value }}/failures"
+        method: POST
+        contentType: application/json
+        headers:
+          Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+        body: "{{ {'error': 'Kestra item execution failed', 'kestra_execution_id': execution.id} | toJson }}"
+        options:
+          connectTimeout: PT10S
+          readTimeout: PT30M
+        allowFailure: true
+errors:
+  - id: finalize_failed_batch
+    type: io.kestra.plugin.core.http.Request
+    uri: "http://app:8000/internal/filing-batches/{{ inputs.batch_id }}/finalizations"
+    method: POST
+    contentType: application/json
+    headers:
+      Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+    body: "{{ {'kestra_execution_id': execution.id} | toJson }}"
+    options:
+      connectTimeout: PT10S
+      readTimeout: PT30M
+    allowFailure: true
+finally:
+  - id: finalize_batch
+    type: io.kestra.plugin.core.http.Request
+    uri: "http://app:8000/internal/filing-batches/{{ inputs.batch_id }}/finalizations"
+    method: POST
+    contentType: application/json
+    headers:
+      Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+    body: "{{ {'kestra_execution_id': execution.id} | toJson }}"
+    options:
+      connectTimeout: PT10S
+      readTimeout: PT30M

@@ -16,5 +16,8 @@ RUN apt-get update \
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
-# Ensure that the cache directory exists and is owned by the vscode user.
-RUN install -d -o vscode -g vscode /home/vscode/.cache
+# Ensure that persistent cache and tool directories are owned by the vscode user.
+RUN install -d -o vscode -g vscode \
+    /home/vscode/.cache \
+    /home/vscode/.cache/cargo \
+    /home/vscode/.local/cargo-tools

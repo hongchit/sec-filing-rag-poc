@@ -11,6 +11,7 @@ from .domain import (
     safe_error,
     select_fiscal_year,
 )
+from .errors import UpstreamServiceError
 from .kestra import KestraGateway
 from .repositories import FilingRepository, PreparationRepository
 
@@ -104,6 +105,6 @@ class HistoricalPreparationService:
         except Exception as exc:
             error = safe_error(exc)
             self.requests.submission_failed(request_id, error)
-            raise RuntimeError(error) from None
+            raise UpstreamServiceError(error, public_detail=error, code="kestra_submission_failure") from exc
         self.requests.submitted(request_id, execution.id)
         return str(request_id), execution.id

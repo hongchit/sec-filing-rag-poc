@@ -53,7 +53,6 @@ def safe_error(error: BaseException | str, secrets: tuple[str, ...] = ()) -> str
 @dataclass(frozen=True)
 class FilingCandidate:
     accession: str
-    primary_document: str
     filing_date: date
     report_date: date | None
 
@@ -157,7 +156,6 @@ def confirmed_candidate(selection: FilingSelection, accession: str | None) -> Fi
 
 def should_promote_default(*, historical: bool, candidate_complete: bool) -> bool:
     return candidate_complete and not historical
-
 
 
 @dataclass(frozen=True)

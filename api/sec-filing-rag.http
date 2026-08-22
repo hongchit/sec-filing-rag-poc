@@ -1,0 +1,52 @@
+@baseUrl = http://{{$processEnv APP_HOST}}:{{$processEnv APP_PORT}}
+@internalToken = {{$processEnv INGESTION_API_TOKEN}}
+@batchId = 00000000-0000-0000-0000-000000000000
+@itemId = 00000000-0000-0000-0000-000000000000
+
+### Latest filings for every enabled company
+POST {{baseUrl}}/api/filing-batches
+Content-Type: application/json
+
+{}
+
+### Exact fiscal year
+POST {{baseUrl}}/api/filing-batches
+Content-Type: application/json
+
+{"fiscal_year": 2024}
+
+### Explicit ticker subset
+POST {{baseUrl}}/api/filing-batches
+Content-Type: application/json
+
+{"tickers": ["AAPL", "MSFT"]}
+
+### Single-company preparation
+POST {{baseUrl}}/api/companies/AAPL/filing-preparations
+Content-Type: application/json
+
+{"fiscal_year": 2024}
+
+### Batch status
+GET {{baseUrl}}/api/filing-batches/{{batchId}}
+
+### Internal selection
+POST {{baseUrl}}/internal/providers/filing-items/{{itemId}}/selection
+Authorization: Bearer {{internalToken}}
+Content-Type: application/json
+
+{}
+
+### Internal acquisition
+POST {{baseUrl}}/internal/providers/filing-items/{{itemId}}/acquisitions
+Authorization: Bearer {{internalToken}}
+Content-Type: application/json
+
+{}
+
+### Internal corpus execution
+POST {{baseUrl}}/internal/corpus-executions/{{itemId}}
+Authorization: Bearer {{internalToken}}
+Content-Type: application/json
+
+{}

@@ -106,10 +106,7 @@ def test_partial_generation_records_empty_and_rejected_strata_and_caps_screening
                 )
                 for ticker in ("AAPL", "MSFT", "NVDA")
             ]
-            rows = [
-                {"ticker": "AAPL", "item": "1", "chunk_id": f"{index:064x}"}
-                for index in range(6)
-            ]
+            rows = [{"ticker": "AAPL", "item": "1", "chunk_id": f"{index:064x}"} for index in range(6)]
             return corpora, rows
 
     class RejectingAssessor:
@@ -132,12 +129,10 @@ def test_partial_generation_records_empty_and_rejected_strata_and_caps_screening
     )
     bundle = generate_bundle(repository, assessor, config, "a" * 64)  # type: ignore[arg-type]
     aapl_business = next(
-        summary for summary in bundle.generation_summary
-        if (summary.ticker, summary.item) == ("AAPL", "1")
+        summary for summary in bundle.generation_summary if (summary.ticker, summary.item) == ("AAPL", "1")
     )
     empty = next(
-        summary for summary in bundle.generation_summary
-        if (summary.ticker, summary.item) == ("MSFT", "1A")
+        summary for summary in bundle.generation_summary if (summary.ticker, summary.item) == ("MSFT", "1A")
     )
     assert assessor.calls == 5
     assert (aapl_business.available_chunks, aapl_business.screened_chunks) == (6, 5)

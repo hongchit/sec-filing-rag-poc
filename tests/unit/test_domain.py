@@ -27,6 +27,7 @@ def test_company_configuration_rejects_duplicates_and_invalid(companies: list[di
     with pytest.raises(ValidationError):
         CompanyConfiguration.model_validate({"companies": companies})
 
+
 def test_item_1a_prefers_long_section_over_toc() -> None:
     text = (
         "Item 1A. Risk Factors\npage 12\nItem 1B.\n"
@@ -184,9 +185,9 @@ def test_fiscal_selection_uses_report_year_and_inclusive_lookback() -> None:
     from sec_filing_rag.domain import AnalysisPeriod, FilingCandidate, select_fiscal_year
 
     candidates = [
-        FilingCandidate("2024", "a.htm", date(2025, 2, 1), date(2024, 12, 31)),
-        FilingCandidate("2023", "b.htm", date(2024, 2, 1), date(2023, 12, 31)),
-        FilingCandidate("2015", "c.htm", date(2016, 2, 1), date(2015, 12, 31)),
+        FilingCandidate("2024", date(2025, 2, 1), date(2024, 12, 31)),
+        FilingCandidate("2023", date(2024, 2, 1), date(2023, 12, 31)),
+        FilingCandidate("2015", date(2016, 2, 1), date(2015, 12, 31)),
     ]
     selected = select_fiscal_year(candidates, AnalysisPeriod.year("2024"), 10)
     assert selected.exact and selected.exact.accession == "2024"
@@ -205,9 +206,9 @@ def test_missing_year_neighbors_and_confirmation_are_deterministic() -> None:
     )
 
     candidates = [
-        FilingCandidate("later", "l.htm", date(2025, 1, 2), date(2024, 12, 31)),
-        FilingCandidate("earlier", "e.htm", date(2023, 1, 2), date(2022, 12, 31)),
-        FilingCandidate("older", "o.htm", date(2022, 1, 2), date(2021, 12, 31)),
+        FilingCandidate("later", date(2025, 1, 2), date(2024, 12, 31)),
+        FilingCandidate("earlier", date(2023, 1, 2), date(2022, 12, 31)),
+        FilingCandidate("older", date(2022, 1, 2), date(2021, 12, 31)),
     ]
     selection = select_fiscal_year(candidates, AnalysisPeriod.year("2023"), 4)
     assert selection.exact is None

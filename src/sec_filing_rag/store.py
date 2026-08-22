@@ -37,8 +37,8 @@ class Store:
                 if relations is None or any(value is None for value in relations.values()):
                     return False
                 migration = connection.execute(
-                    "SELECT 1 FROM public.schema_migration WHERE name=%s",
-                    ("0001_schema.sql",),
+                    "SELECT 1 FROM public.schema_migration WHERE name=ANY(%s) GROUP BY true HAVING count(*)=2",
+                    (["0001_schema.sql", "0002_filing_batches.sql"],),
                 ).fetchone()
                 return migration is not None
         except psycopg.Error:
@@ -184,6 +184,15 @@ class Store:
                 "VALUES (%s,'unchanged','skipped',now())",
                 (run_id,),
             )
+
+    def run_compatibility_key(self, run_id: uuid.UUID) -> str:
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT compatibility_key FROM public.ingestion_run WHERE id=%s", (run_id,)
+            ).fetchone()
+        if row is None:
+            raise ValueError("unknown ingestion run")
+        return str(row["compatibility_key"])
 
     def ready_corpus(self, company_id: uuid.UUID, accession: str, key: str) -> dict[str, Any] | None:
         with self.connect() as connection:
