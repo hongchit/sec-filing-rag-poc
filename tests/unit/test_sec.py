@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from sec_filing_rag.errors import UpstreamServiceError
-from sec_filing_rag.sec import EdgarGateway
+from sec_filing_rag.core.errors import UpstreamServiceError
+from sec_filing_rag.integrations.sec import EdgarGateway
 
 
 class FakeFacade:
@@ -152,7 +152,7 @@ def test_provider_failure_and_document_bound_are_safe() -> None:
 
 
 def test_acquisition_source_has_no_alternate_transport() -> None:
-    source = Path("src/sec_filing_rag/sec.py").read_text(encoding="utf-8")
+    source = Path("src/sec_filing_rag/integrations/sec.py").read_text(encoding="utf-8")
     forbidden = (
         "import httpx",
         "sec.gov/files",

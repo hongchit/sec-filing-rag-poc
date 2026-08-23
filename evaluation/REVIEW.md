@@ -1,15 +1,34 @@
 # Retrieval ground-truth preparation and review
 
-This guide is the developer workflow for preparing SEC corpora, generating candidate questions, reviewing them, finalizing the retrieval ground truth, and running the retrieval evaluation. Run commands from the repository root.
+This guide is the operator workflow for preparing SEC corpora, generating candidate questions, reviewing them, finalizing the retrieval ground truth, and running the retrieval evaluation. Run commands from the repository root.
+
+## Purpose and completion criteria
+
+The aim is to create a reproducible, human-reviewed retrieval benchmark and use it to select the best measured retrieval configuration. Ground truth in this process is not a generated answer. It is a reviewed investor question linked to one or more filing chunk IDs that retrieval should return. The benchmark measures whether those relevant chunks are found and how highly they rank.
+
+The process has three distinct outcomes:
+
+| Stage | Objective | Authoritative outcome |
+| --- | --- | --- |
+| Generate and review | Produce useful questions from substantive, correctly attributed filing passages and record human acceptance decisions | `evaluation/ground-truth-review-v1.json` |
+| Finalize | Convert accepted questions into immutable retrieval cases with checksums, lineage, coverage, and warnings | `evaluation/retrieval-v1.jsonl` and `evaluation/retrieval-v1-manifest.json` |
+| Evaluate | Compare retrieval strategies against the same reviewed cases and select the best measured configuration | `evaluation/results/retrieval-v1.json` and `evaluation/results/retrieval-v1.md` |
+
+An operationally successful end-to-end run therefore requires all of the following:
+
+- ground-truth generation and strict review validation succeed;
+- finalization produces at least one checksum-valid reviewed case whose source chunks still exist in the declared ready corpora;
+- `sec-rag-evaluate-retrieval --validate-only` reports `status: valid`;
+- the full evaluation reports `status: succeeded`, writes both result artifacts, and records a successful database audit row;
+- the operator reviews coverage warnings, per-question misses, MRR, Hit Rate, and latency before accepting the selected default.
+
+A command succeeding proves processing integrity, not benchmark quality. A small or unrepresentative dataset can be valid while producing misleadingly strong metrics. Treat complete target coverage, credible human review, and failure analysis as part of completion.
 
 ## 1. Prepare the environment
 
 Before downloading filings, make sure `.env` contains real values for `DATABASE_URL`, `OPENAI_API_KEY`, `EDGAR_IDENTITY`, the ingestion token, and the Kestra credentials. `EDGAR_IDENTITY` must identify the application and a real contact. Keep the configured SEC caution mode and rate limit.
 
-Start the Dev Container, application API, and frontend as described in the main README. The application API must be reachable by Kestra at `http://app:8000`. Import or re-import these flows in the Kestra UI at <http://127.0.0.1:18082>:
-
-- `workflows/ingest_corpus.yaml`
-- `workflows/prepare_historical_filing.yaml`
+Start the Dev Container and application API as described in the main README. The application API must be reachable by Kestra at `http://app:8000`. Import or re-import the sole ingestion flow, `workflows/filing_batch.yaml`, in the Kestra UI at <http://127.0.0.1:18082>.
 
 Confirm that the database schema and API are ready:
 
@@ -23,18 +42,14 @@ The health response should report both the process and application database as r
 
 ## 2. Download and prepare the first corpus for each company
 
-In Kestra, run `sec_filings.ingestion.ingest_corpus` with `target=all`. This downloads and prepares the latest original 10-K for every enabled company. To prepare only one company, run it with `target=AAPL`, `target=MSFT`, or `target=NVDA`.
-
-Kestra is the supported entry point for scheduled and operator-initiated ingestion. The protected callback below is useful only in automated tests and local callback diagnostics; do not use it as the normal operator workflow:
+Submit the latest original 10-K for every enabled company through the public API. It persists a batch and starts `sec_filings.ingestion.filing_batch`:
 
 ```bash
-curl -fsS -X POST http://127.0.0.1:8000/internal/ingestions \
-  -H "Authorization: Bearer $INGESTION_API_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"target":"all","trigger":"manual"}'
+curl --fail-with-body -i -X POST http://127.0.0.1:8000/api/filing-batches \
+  -H 'Content-Type: application/json' -d '{}'
 ```
 
-Expect one result per enabled company. A new filing should report `outcome: succeeded` and a ready corpus disposition. Repeating unchanged ingestion should report `outcome: skipped`; it must not create duplicate corpus data.
+Save `batch_id` from the HTTP 202 response and poll `GET /api/filing-batches/{batch_id}` until terminal. Expect one ordered item per enabled company. A new filing succeeds; repeated latest processing skips when already active and must not duplicate corpus data.
 
 Inspect readiness without exposing filing text or credentials:
 
@@ -42,6 +57,7 @@ Inspect readiness without exposing filing text or credentials:
 curl -fsS http://127.0.0.1:8000/api/companies/AAPL/status
 curl -fsS http://127.0.0.1:8000/api/companies/MSFT/status
 curl -fsS http://127.0.0.1:8000/api/companies/NVDA/status
+curl -fsS http://127.0.0.1:8000/api/filing-batches/$BATCH_ID
 psql "$DATABASE_URL" -c "select ticker,accession,item,coverage_status,chunk_count,search_document_count,embedding_usage_status from gold.corpus_status order by ticker,item"
 ```
 
@@ -51,41 +67,31 @@ Each company must have an active, ready default corpus. Its six Item coverage ro
 
 Ground-truth generation uses every ready filing compatible with the active defaults, not just the latest year. Prepare the years wanted in the evaluation pool before generating the review bundle.
 
-First discover the original 10-K for a fiscal year:
+Submit each desired fiscal year directly. Exact-year selection uses the SEC report date and skips a company if no original 10-K exists; it never substitutes a neighboring year:
 
 ```bash
-curl -fsS -X POST http://127.0.0.1:8000/api/companies/AAPL/filings/discover \
+curl --fail-with-body -i -X POST http://127.0.0.1:8000/api/filing-batches \
   -H 'Content-Type: application/json' \
-  -d '{"period":{"granularity":"year","value":"2024"}}'
+  -d '{"tickers":["AAPL","MSFT","NVDA"],"fiscal_year":2024}'
 ```
 
-The response contains `exact`, `earlier`, and `later` candidates. Check the accession, report date, `ready` flag, and corpus version. If `exact` is present, submit preparation without a confirmation accession:
+For one company, the retained convenience route creates the same one-item batch:
 
 ```bash
-curl -fsS -X POST http://127.0.0.1:8000/api/companies/AAPL/filings/prepare \
+curl --fail-with-body -i -X POST http://127.0.0.1:8000/api/companies/AAPL/filing-preparations \
   -H 'Content-Type: application/json' \
-  -d '{"period":{"granularity":"year","value":"2024"}}'
+  -d '{"fiscal_year":2024}'
 ```
 
-If the requested year is missing, choose one of the displayed `earlier` or `later` candidates deliberately and send its exact accession:
-
-```bash
-curl -fsS -X POST http://127.0.0.1:8000/api/companies/AAPL/filings/prepare \
-  -H 'Content-Type: application/json' \
-  -d '{"period":{"granularity":"year","value":"2024"},"confirmed_accession":"ACCESSION_FROM_DISCOVERY"}'
-```
-
-The prepare endpoint returns HTTP 202 with a `request_id`, Kestra `execution_id`, and `status: submitted`. It launches `prepare_historical_filing`; preparation is asynchronous. Repeat discovery and preparation for each desired fiscal year and each ticker. Do not invent an accession or reuse one from another company.
-
-Monitor a company until the preparation request is `succeeded` and has a `corpus_version_id`:
+Poll the returned batch until every item is terminal, then inspect the company and ready corpora:
 
 ```bash
 curl -fsS http://127.0.0.1:8000/api/companies/AAPL/status
-psql "$DATABASE_URL" -c "select c.ticker,pr.requested_year,pr.selected_accession,pr.status,pr.corpus_version_id,pr.safe_error from public.preparation_request pr join public.company c on c.id=pr.company_id order by pr.created_at desc"
+curl -fsS http://127.0.0.1:8000/api/filing-batches/$BATCH_ID
 psql "$DATABASE_URL" -c "select c.ticker,f.report_date,f.accession,cv.id as corpus_version_id,cv.status,cv.parser_version,cv.chunking_version,cv.embedding_model,cv.embedding_dimensions from silver.corpus_version cv join silver.filing f on f.id=cv.filing_id join public.company c on c.id=f.company_id where cv.status='ready' order by c.ticker,f.report_date,f.accession,cv.created_at"
 ```
 
-Historical preparation does not replace the latest default pointer. If multiple ready processing versions exist for one accession, generation uses only the newest compatible version. A ready corpus with no usable chunks is retained in snapshot lineage and contributes zero candidates.
+Exact-year processing does not replace the latest default pointer. If multiple ready processing versions exist for one accession, generation uses only the newest compatible version. A ready corpus with no usable chunks is retained in snapshot lineage and contributes zero candidates.
 
 ## 4. Generate the review bundle
 
@@ -115,6 +121,23 @@ Inspect `generation_summary` in the bundle. Every stratum reports:
 - `meaningfulness_shortfall`: fewer meaningful chunks than the target.
 
 These shortfalls are quality warnings, not failed generation. `evaluation/ground-truth-generation-failure.json` is reserved for operational or integrity failures such as missing defaults, incompatible contracts, database errors, or model failures.
+
+The generation run and its model usage are also auditable in PostgreSQL:
+
+```sql
+select id,status,model,prompt_version,sampling_seed,configuration_sha256,prompt_sha256,
+       corpus_snapshot_sha256,review_bundle_sha256,safe_error,started_at,finished_at
+from public.ground_truth_generation_run
+order by started_at desc;
+
+select ground_truth_generation_run_id,operation,model,input_tokens,output_tokens,total_tokens,
+       latency_ms,usage_status,normalized_status,retry_count
+from public.llm_usage
+where ground_truth_generation_run_id is not null
+order by ground_truth_generation_run_id;
+```
+
+For a successful generation, expect `ground_truth_generation_run.status = 'succeeded'`, populated snapshot and review-bundle checksums, `safe_error is null`, and a non-null `finished_at`. A failed generation has `status = 'failed'`; use `safe_error`, the diagnostic artifact, and associated `llm_usage.normalized_status` to distinguish corpus/configuration failures from model-call failures. Token usage may be `unavailable` without making an otherwise successful generation invalid.
 
 To reuse an existing compatible bundle without repeating model calls:
 
@@ -191,6 +214,10 @@ wc -l evaluation/retrieval-v1.jsonl
 python -m json.tool evaluation/retrieval-v1-manifest.json
 ```
 
+Each JSONL line is one accepted evaluation case. Its `question`, `query_type`, `goal`, company/corpus lineage, `allowed_items`, and `relevant_chunk_ids` define what will be queried and which retrieved chunks count as correct. The manifest is the summary and reproducibility contract: inspect `coverage`, `warnings`, `dataset_sha256`, `review_bundle_sha256`, processing versions, embedding contract, and `corpora`.
+
+Finalization does not create a separate database run. Its success is established by the command's `status: finalized` response, the two artifacts, their checksum agreement, and a subsequent successful `--validate-only` run. Do not confuse `ground_truth_generation_run` with finalization or retrieval evaluation: it audits model-assisted candidate generation only.
+
 Do not hand-edit the finalized JSONL or manifest. Any change breaks the manifest checksum. Make corrections in the review bundle and run `finalize` again.
 
 ## 7. Validate and run retrieval evaluation
@@ -215,6 +242,48 @@ The evaluator embeds each question once, evaluates the configured keyword, vecto
 - `evaluation/results/retrieval-v1.md` with a concise reproducibility summary.
 
 Coverage warnings qualify how representative the benchmark is; they do not change the metric formulas. Compare results only when the dataset checksum and retrieval configuration checksum are understood.
+
+### Inspect the evaluation outcome
+
+The JSON result is authoritative. For every tested configuration, `results` contains:
+
+- `hit_rate`: the fraction of questions for which at least one relevant chunk appears in the configured top-k results; `1.0` means every case had a hit;
+- `mrr`: mean reciprocal rank of the first relevant chunk; `1.0` means the first result was relevant for every case, while lower values indicate later rankings or misses;
+- `median_latency_ms`: median database retrieval time per question for that configuration; lower is better after quality is acceptable;
+- `questions`: per-case retrieved chunk IDs, `hit`, and `reciprocal_rank`, which identify the exact misses and weak rankings;
+- `selected_default`: the winner chosen by MRR, then Hit Rate, then lower latency, then strategy simplicity;
+- `failures`, `coverage`, and `warnings`: execution failures and qualifications on representativeness.
+
+Use the following database query to confirm run status and correlate it with the result artifact's `evaluation_run_id`:
+
+```sql
+select id,status,dataset_sha256,configuration_sha256,selected_configuration,
+       safe_error,started_at,finished_at
+from public.retrieval_evaluation_run
+order by started_at desc;
+
+select evaluation_run_id,operation,model,input_tokens,total_tokens,latency_ms,
+       usage_status,normalized_status
+from public.llm_usage
+where evaluation_run_id is not null
+order by evaluation_run_id;
+```
+
+A successful run has `status = 'succeeded'`, a populated `selected_configuration`, `safe_error is null`, a non-null `finished_at`, an empty artifact `failures` list, and both result files. A failed run has `status = 'failed'` and a bounded `safe_error`; result files are not written because artifact output occurs only after the benchmark finishes. Failed runs and their usage rows are retained as audit history and should not be deleted merely to rerun the benchmark.
+
+### Decide whether the results are good enough
+
+The software intentionally enforces no universal metric cutoff. Judge fitness using all of these checks:
+
+1. **Ground-truth credibility:** accepted questions are natural investor questions, their relevant chunks contain sufficient evidence, and rejected boilerplate or malformed passages did not enter the dataset.
+2. **Representativeness:** the manifest has at least 30 questions and covers all three companies, five goals, six required Items, both query types, and legal and non-legal risk questions. Explain any warning before using the winner as a default.
+3. **Retrieval quality:** prioritize high MRR because the first useful chunk should rank early, then high Hit Rate. Inspect every case with `hit = 0` and low reciprocal rank; aggregate scores alone can hide systematic failures by company, Item, goal, or query type.
+4. **Strategy evidence:** compare keyword, vector, weighted hybrid, and RRF on the same dataset and configuration checksum. Confirm the selected default's advantage is meaningful and not caused by a narrow dataset or a few duplicate/easy questions.
+5. **Operational quality:** consider latency only after relevance is acceptable. Re-run comparisons when database load is comparable, because the benchmark records retrieval latency but does not isolate all environmental variance.
+
+MRR and Hit Rate near `1.0` are strong on the reviewed dataset, but they are not proof of general production quality. High scores should prompt a check for overly literal questions, duplicated questions, source leakage, or too-small coverage. Low scores should be traced through the per-question rankings before changing retrieval configuration; the cause may instead be incorrect ground truth, missing corpus coverage, or poor question quality.
+
+Record the accepted dataset checksum, retrieval configuration checksum, selected default, coverage warnings, and the rationale for accepting or rejecting the run. Results from different checksums are different experiments and should not be treated as direct regressions without explaining the changed inputs.
 
 ## 8. Typical correction loop
 

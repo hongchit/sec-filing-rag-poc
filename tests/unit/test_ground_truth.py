@@ -6,7 +6,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from sec_filing_rag.ground_truth import (
+from sec_filing_rag.ground_truth.service import (
     CorpusSnapshot,
     GeneratedQuestion,
     GenerationConfiguration,

@@ -10,12 +10,12 @@ dependencies = ["beautifulsoup4==4.13.4", "edgartools==5.41.0", "fastapi==0.116.
 dev = ["mypy==1.17.1", "pytest==8.4.1", "pytest-cov==6.2.1", "respx==0.22.0", "ruff==0.12.8", "types-pyyaml==6.0.12.20250822"]
 [project.scripts]
 sec-rag-api = "sec_filing_rag.main:run"
-sec-rag-migrate = "sec_filing_rag.migrate:main"
-sec-rag-search = "sec_filing_rag.retrieval_cli:search_main"
-sec-rag-evaluate-retrieval = "sec_filing_rag.retrieval_cli:evaluate_main"
-sec-rag-generate-ground-truth = "sec_filing_rag.ground_truth_cli:main"
-sec-rag-export-openapi = "sec_filing_rag.generation:openapi_main"
-sec-rag-generate-http = "sec_filing_rag.generation:http_main"
+sec-rag-migrate = "sec_filing_rag.cli.migrate:main"
+sec-rag-search = "sec_filing_rag.cli.retrieval:search_main"
+sec-rag-evaluate-retrieval = "sec_filing_rag.cli.retrieval:evaluate_main"
+sec-rag-generate-ground-truth = "sec_filing_rag.cli.ground_truth:main"
+sec-rag-export-openapi = "sec_filing_rag.cli.generation:openapi_main"
+sec-rag-generate-http = "sec_filing_rag.cli.generation:http_main"
 [build-system]
 requires = ["hatchling==1.27.0"]
 build-backend = "hatchling.build"

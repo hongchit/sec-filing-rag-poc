@@ -5,7 +5,7 @@ from typing import Any
 import psycopg
 import pytest
 
-from sec_filing_rag.store import Store
+from sec_filing_rag.repositories.system import SystemRepository
 
 
 class Result:
@@ -29,17 +29,15 @@ class Connection:
         return Result({"exists": 1} if self.migration else None)
 
 
-def store_with(connection: Connection | None) -> Store:
-    instance = Store("postgresql://unused")
+def store_with(connection: Connection | None) -> SystemRepository:
+    class Database:
+        @contextmanager
+        def transaction(self) -> Iterator[Any]:
+            if connection is None:
+                raise psycopg.OperationalError("database unavailable")
+            yield connection
 
-    @contextmanager
-    def connect() -> Iterator[Any]:
-        if connection is None:
-            raise psycopg.OperationalError("database unavailable")
-        yield connection
-
-    instance.connect = connect  # type: ignore[method-assign]
-    return instance
+    return SystemRepository(Database())  # type: ignore[arg-type]
 
 
 def relations(**missing: None) -> dict[str, object]:
@@ -60,7 +58,7 @@ def test_ready_is_false_when_database_is_unavailable() -> None:
 def test_ready_is_false_when_migration_record_is_missing() -> None:
     connection = Connection(relations(), migration=False)
     assert store_with(connection).ready() is False
-    assert connection.queries[1][1] == (["0001_schema.sql", "0002_filing_batches.sql"],)
+    assert connection.queries[1][1] == ("0001_schema.sql",)
 
 
 @pytest.mark.parametrize("missing", ["company", "corpus_version", "search_document"])

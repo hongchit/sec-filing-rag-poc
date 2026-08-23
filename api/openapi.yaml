@@ -16,10 +16,7 @@ paths:
           content:
             application/json:
               schema:
-                additionalProperties:
-                  type: string
-                type: object
-                title: Response Gethealth
+                $ref: '#/components/schemas/HealthResponse'
   /api/companies:
     get:
       tags:
@@ -34,8 +31,7 @@ paths:
             application/json:
               schema:
                 items:
-                  additionalProperties: true
-                  type: object
+                  $ref: '#/components/schemas/CompanySummary'
                 type: array
                 title: Response Listcompanies
   /api/companies/{ticker}/status:
@@ -58,9 +54,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Getcompanystatus
+                $ref: '#/components/schemas/CompanyStatus'
         '422':
           description: Validation Error
           content:
@@ -176,9 +170,79 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
-                title: Response Getfilingbatchexecution
+                $ref: '#/components/schemas/FilingBatchStatus'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/filing-items/{item_id}/failures:
+    post:
+      tags:
+      - internal-lifecycle
+      summary: Fail Item
+      description: Record a safe terminal item failure after an orchestration error.
+      operationId: failFilingBatchItem
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemFailureRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/filing-batches/{batch_id}/finalizations:
+    post:
+      tags:
+      - internal-lifecycle
+      summary: Finalize
+      description: Finalize aggregate state and fail any stranded running items.
+      operationId: finalizeFilingBatch
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Batch Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchFinalizationRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
         '422':
           description: Validation Error
           content:
@@ -293,84 +357,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /internal/filing-items/{item_id}/failures:
-    post:
-      tags:
-      - internal-lifecycle
-      summary: Fail Item
-      description: Record a safe terminal item failure after an orchestration error.
-      operationId: failFilingBatchItem
-      security:
-      - InternalBearer: []
-      parameters:
-      - name: item_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Item Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ItemFailureRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  type: string
-                title: Response Failfilingbatchitem
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /internal/filing-batches/{batch_id}/finalizations:
-    post:
-      tags:
-      - internal-lifecycle
-      summary: Finalize
-      description: Finalize aggregate state and fail any stranded running items.
-      operationId: finalizeFilingBatch
-      security:
-      - InternalBearer: []
-      parameters:
-      - name: batch_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Batch Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BatchFinalizationRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  type: string
-                title: Response Finalizefilingbatch
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
     AcquisitionResponse:
@@ -400,6 +386,52 @@ components:
       - checksum
       - size
       title: AcquisitionResponse
+    ActiveCorpus:
+      properties:
+        corpus_version_id:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+        ready_at:
+          type: string
+          format: date-time
+          title: Ready At
+        embedding_model:
+          type: string
+          title: Embedding Model
+        embedding_dimensions:
+          type: integer
+          title: Embedding Dimensions
+        accession:
+          type: string
+          title: Accession
+        filing_date:
+          type: string
+          format: date
+          title: Filing Date
+        report_date:
+          type: string
+          format: date
+          title: Report Date
+        source_url:
+          type: string
+          title: Source Url
+        embedding_usage_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Embedding Usage Status
+      type: object
+      required:
+      - corpus_version_id
+      - ready_at
+      - embedding_model
+      - embedding_dimensions
+      - accession
+      - filing_date
+      - report_date
+      - source_url
+      title: ActiveCorpus
     BatchFinalizationRequest:
       properties:
         kestra_execution_id:
@@ -410,6 +442,144 @@ components:
       additionalProperties: false
       type: object
       title: BatchFinalizationRequest
+    CompanyStatus:
+      properties:
+        ticker:
+          type: string
+          title: Ticker
+        enabled:
+          type: boolean
+          title: Enabled
+        cik:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Cik
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        resolution_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolution Status
+        safe_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safe Error
+        active_corpus:
+          anyOf:
+          - $ref: '#/components/schemas/ActiveCorpus'
+          - type: 'null'
+        historical_corpora:
+          items:
+            $ref: '#/components/schemas/HistoricalCorpus'
+          type: array
+          title: Historical Corpora
+          default: []
+        coverage:
+          items:
+            $ref: '#/components/schemas/CorpusCoverage'
+          type: array
+          title: Coverage
+        latest_run:
+          anyOf:
+          - $ref: '#/components/schemas/LatestRun'
+          - type: 'null'
+      type: object
+      required:
+      - ticker
+      - enabled
+      - coverage
+      title: CompanyStatus
+    CompanySummary:
+      properties:
+        ticker:
+          type: string
+          title: Ticker
+        enabled:
+          type: boolean
+          title: Enabled
+        cik:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Cik
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        resolution_status:
+          type: string
+          title: Resolution Status
+        safe_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safe Error
+        accession:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Accession
+        filing_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Filing Date
+        corpus_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Corpus Status
+        ready_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Ready At
+        latest_run_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Latest Run Status
+      type: object
+      required:
+      - ticker
+      - enabled
+      - resolution_status
+      title: CompanySummary
+    CorpusCoverage:
+      properties:
+        item:
+          type: string
+          title: Item
+        status:
+          type: string
+          title: Status
+        safe_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safe Error
+        chunk_count:
+          type: integer
+          title: Chunk Count
+        search_document_count:
+          type: integer
+          title: Search Document Count
+      type: object
+      required:
+      - item
+      - status
+      - chunk_count
+      - search_document_count
+      title: CorpusCoverage
     CorpusExecutionResponse:
       properties:
         item_id:
@@ -678,6 +848,49 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    HealthResponse:
+      properties:
+        process:
+          type: string
+          const: ok
+          title: Process
+          default: ok
+        application_database:
+          type: string
+          const: ready
+          title: Application Database
+          default: ready
+      type: object
+      title: HealthResponse
+    HistoricalCorpus:
+      properties:
+        corpus_version_id:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+        ready_at:
+          type: string
+          format: date-time
+          title: Ready At
+        accession:
+          type: string
+          title: Accession
+        report_date:
+          type: string
+          format: date
+          title: Report Date
+        filing_date:
+          type: string
+          format: date
+          title: Filing Date
+      type: object
+      required:
+      - corpus_version_id
+      - ready_at
+      - accession
+      - report_date
+      - filing_date
+      title: HistoricalCorpus
     ItemExecutionRequest:
       properties:
         kestra_execution_id:
@@ -703,6 +916,60 @@ components:
       required:
       - error
       title: ItemFailureRequest
+    LatestRun:
+      properties:
+        run_id:
+          type: string
+          format: uuid
+          title: Run Id
+        status:
+          type: string
+          title: Status
+        stage:
+          type: string
+          title: Stage
+        section_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Section Count
+        chunk_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Chunk Count
+        safe_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safe Error
+        started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Started At
+        finished_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Finished At
+      type: object
+      required:
+      - run_id
+      - status
+      - stage
+      title: LatestRun
+    StatusResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - status
+      title: StatusResponse
     ValidationError:
       properties:
         loc:

@@ -1,0 +1,2318 @@
+{
+  "version": "ground-truth-review-v2",
+  "generation_run_id": "7855ccaf-6f7b-44c4-ba73-263a29e3af1d",
+  "model": "gpt-5.4-mini",
+  "prompt_version": "investor-questions-v1",
+  "prompt_sha256": "901fa469229c79685bf157dbd600f5fb48604ae5332717d0da8a470757530810",
+  "configuration": {
+    "version": "ground-truth-generation-v1",
+    "model": "gpt-5.4-mini",
+    "prompt_version": "investor-questions-v1",
+    "sampling_seed": 20260817,
+    "workers": 6,
+    "chunks_per_stratum": 2,
+    "questions_per_chunk": 3,
+    "max_candidates_per_stratum": 5
+  },
+  "configuration_sha256": "f9d4849ec486ae8e31ff76e4b12f2c0ca9d7d657da9b1c9b08cb6f175dfe71da",
+  "sampling_seed": 20260817,
+  "corpus_snapshot_sha256": "ad49418995f96047084e676a32bcb0cee1476dc3a73b2f3937d0f934f002def8",
+  "corpora": [
+    {
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "accession": "0000320193-24-000123",
+      "report_date": "2024-09-28",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "parser_version": "corpus-heading-sanitized-v2",
+      "chunking_version": "character-v1",
+      "embedding_model": "text-embedding-3-small",
+      "embedding_dimensions": 1536
+    },
+    {
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "39b27d3e-e222-4814-8f63-468ed38b5a8a",
+      "accession": "0000320193-25-000079",
+      "report_date": "2025-09-27",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "parser_version": "corpus-heading-sanitized-v2",
+      "chunking_version": "character-v1",
+      "embedding_model": "text-embedding-3-small",
+      "embedding_dimensions": 1536
+    },
+    {
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "93cc9201-93e3-4f98-8185-e4f4e9152a6f",
+      "accession": "0000950170-24-087843",
+      "report_date": "2024-06-30",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "parser_version": "corpus-heading-sanitized-v2",
+      "chunking_version": "character-v1",
+      "embedding_model": "text-embedding-3-small",
+      "embedding_dimensions": 1536
+    },
+    {
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "54c842a6-f610-4ec6-a3bb-f4ffbd545f9e",
+      "accession": "0001193125-26-323660",
+      "report_date": "2026-06-30",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+      "parser_version": "corpus-heading-sanitized-v2",
+      "chunking_version": "character-v1",
+      "embedding_model": "text-embedding-3-small",
+      "embedding_dimensions": 1536
+    },
+    {
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "7e0d7ccb-98b6-421f-9520-b865dd64879b",
+      "accession": "0001045810-24-000029",
+      "report_date": "2024-01-28",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+      "parser_version": "corpus-heading-sanitized-v2",
+      "chunking_version": "character-v1",
+      "embedding_model": "text-embedding-3-small",
+      "embedding_dimensions": 1536
+    },
+    {
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "f18b8aee-3971-438a-b975-f5fb7e7d3c05",
+      "accession": "0001045810-26-000021",
+      "report_date": "2026-01-25",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+      "parser_version": "corpus-heading-sanitized-v2",
+      "chunking_version": "character-v1",
+      "embedding_model": "text-embedding-3-small",
+      "embedding_dimensions": 1536
+    }
+  ],
+  "generation_summary": [
+    {
+      "ticker": "AAPL",
+      "item": "1",
+      "available_chunks": 17,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "AAPL",
+      "item": "1A",
+      "available_chunks": 77,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "AAPL",
+      "item": "3",
+      "available_chunks": 5,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "AAPL",
+      "item": "7",
+      "available_chunks": 18,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "AAPL",
+      "item": "7A",
+      "available_chunks": 4,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "AAPL",
+      "item": "8",
+      "available_chunks": 61,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "MSFT",
+      "item": "1",
+      "available_chunks": 2,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "MSFT",
+      "item": "1A",
+      "available_chunks": 6,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "MSFT",
+      "item": "3",
+      "available_chunks": 2,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "MSFT",
+      "item": "7",
+      "available_chunks": 4,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "MSFT",
+      "item": "7A",
+      "available_chunks": 2,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "MSFT",
+      "item": "8",
+      "available_chunks": 2,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "NVDA",
+      "item": "1",
+      "available_chunks": 56,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "NVDA",
+      "item": "1A",
+      "available_chunks": 128,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "NVDA",
+      "item": "3",
+      "available_chunks": 2,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "NVDA",
+      "item": "7",
+      "available_chunks": 39,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "NVDA",
+      "item": "7A",
+      "available_chunks": 5,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 2,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": false
+    },
+    {
+      "ticker": "NVDA",
+      "item": "8",
+      "available_chunks": 2,
+      "screened_chunks": 2,
+      "selected_meaningful_chunks": 0,
+      "target": 2,
+      "source_shortfall": false,
+      "meaningfulness_shortfall": true
+    }
+  ],
+  "chunks": [
+    {
+      "chunk_id": "ab0d22613b2fcb69b0569672d99b4b0d2e067adbd54a3b00e3c98cae1538f104",
+      "chunk_sha256": "a7386f0e8afa47435cf2ae95fdabe90a4155610398187642cc038795cf997544",
+      "text": "ommon components instead of components customized to meet the Company’s requirements, further limiting the Company’s ability to obtain sufficient quantities of components on commercially reasonable terms, or at all.\nResearch and Development\nBecause the industries in which the Company competes are characterized by rapid technological advances, the Company’s ability to compete successfully depends heavily upon its ability to ensure a continual and timely flow of competitive products, services and technologies to the marketplace. The Company continues to develop new technologies to enhance existing products and services, and to expand the range of its offerings through research and development (“R&D”), licensing of intellectual property and acquisition of third-party businesses and technology.\nIntellectual Property\nThe Company currently holds a broad collection of intellectual property rights relating to certain aspects of its hardware, software and services. This includes patents, designs, copyrights, trademarks, trade secrets and other forms of intellectual property rights in the U.S. and various foreign countries. Although the Company believes the ownership of such intellectual property rights is an important factor in differentiating its business and that its success does depend in part on such ownership, the Company relies primarily on the innovative skills, technical competence and marketing abilities of its personnel.\nThe Company regularly files patent, design, copyright and trademark applications to protect innovations arising from its hardware, software and service research, development, design and marketing, and is currently pursuing thousands of applications around the world. Over time, the Company has accumulated a large portfolio of issued and registered intellectual property rights around the world. No single intellectual property right is solely responsible for protecting the Company’s products and services. The Company believes the duration of its intellectual property rights is adequate relative to the expected lives of its products and services.\nApple Inc. | 2025 Form 10-K | 3",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "39b27d3e-e222-4814-8f63-468ed38b5a8a",
+      "accession": "0000320193-25-000079",
+      "report_date": "2025-09-27",
+      "item": "1",
+      "item_title": "Business",
+      "citation": "0000320193-25-000079:item-1:0005",
+      "source_start": 17913,
+      "source_end": 20041,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "1",
+        "anchor": "0000320193-25-000079:item-1:0005",
+        "ticker": "AAPL",
+        "ordinal": 5,
+        "accession": "0000320193-25-000079",
+        "source_end": 20041,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+        "source_start": 17913,
+        "source_checksum": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a",
+        "source_document": "aapl-20250927.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+        "edgar_filing_document_id": "6f21ee8b-0735-4219-a319-4db238efc477",
+        "edgar_filing_snapshot_id": "3337f798-da27-4f37-811c-e4d2a561db83",
+        "source_document_checksum": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains substantive business and risk information about Apple’s dependence on research and development, intellectual property protection, and component sourcing constraints.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What does the Company say about its research and development efforts?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-0b440cb18e20ad54",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does Apple describe the role of its intellectual property in competing and differentiating its products and services?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-1097d473db429bf6",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What risk does Apple describe if it cannot obtain enough components on commercially reasonable terms?",
+          "goal": "key_risks",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-c2739af81302c78b",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "deb6e7a76be0a6499336fa680ed1c76222161a3b6615557249975b74c1a7567a",
+      "chunk_sha256": "d549bf136273f1f306b9e76b40c98b05dd3809d371145a9cdaaedc284c2b0213",
+      "text": "is representative of the communities it serves. The Company continues to work to increase diverse representation at every level, foster an inclusive culture, and support equitable pay and access to opportunity for all employees.\nEngagement\nThe Company believes that open and honest communication among team members, managers and leaders helps create an open, collaborative work environment where everyone can contribute, grow and succeed. Team members are encouraged to come to their managers with questions, feedback or concerns, and the Company conducts surveys that gauge employee sentiment in areas like career development, manager performance and inclusivity.\nHealth and Safety\nThe Company is committed to protecting its team members everywhere it operates. The Company identifies potential workplace risks in order to develop measures to mitigate possible hazards. The Company supports employees with general safety, security and crisis management training, and by putting specific programs in place for those working in potentially high-hazard environments. Additionally, the Company works to protect the safety and security of its team members, visitors and customers through its global security team.\nApple Inc. | 2024 Form 10-K | 4\nAvailable Information\nThe Company’s Annual Reports on Form 10-K, Quarterly Reports on Form 10-Q, Current Reports on Form 8-K, and amendments to reports filed pursuant to Sections 13(a) and 15(d) of the Securities Exchange Act of 1934, as amended (the “Exchange Act”), are filed with the U.S. Securities and Exchange Commission (the “SEC”). Such reports and other information filed by the Company with the SEC are available free of charge at investor.apple.com/investor-relations/sec-filings/default.aspx when such reports are available on the SEC’s website. The Company periodically provides certain information for investors on its corporate website, www.apple.com, and its investor relations website, investor.apple.com. This includes press releases and other information about financial performance, information on environmental, social and governance matters, and details related to the Company’s annual meeting of shareholders. The information contained on the websites referenced in this Form 10-K is not incorporated by reference into this filing. Further, the Company’s references to website URLs are intended to be inactive textual references only.",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "accession": "0000320193-24-000123",
+      "report_date": "2024-09-28",
+      "item": "1",
+      "item_title": "Business",
+      "citation": "0000320193-24-000123:item-1:0007",
+      "source_start": 21911,
+      "source_end": 24310,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "1",
+        "anchor": "0000320193-24-000123:item-1:0007",
+        "ticker": "AAPL",
+        "ordinal": 7,
+        "accession": "0000320193-24-000123",
+        "source_end": 24310,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "source_start": 21911,
+        "source_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6",
+        "source_document": "aapl-20240928.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "edgar_filing_document_id": "8cc1ed18-7e73-4965-8b84-43fd7f084450",
+        "edgar_filing_snapshot_id": "450a835d-4dff-4981-aaef-a706091446bf",
+        "source_document_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive investor-relevant disclosure about employee engagement, health and safety practices, and where Apple makes SEC filings and investor information available.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What does Apple say about health and safety for team members in potentially high-hazard environments?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-a564a39487a77eb4",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does Apple describe its approach to employee engagement and communication?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ab2c01396f822db0",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Where can investors find Apple’s SEC reports and other investor information?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-42c6a46824843dc1",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "8bfa4c32d01f3f9ed0a50d7e8df4c4d0489cb890efb1dbb7273473e4276e199e",
+      "chunk_sha256": "db5b1d1f5eaddbc69bda2bd16d5a6cf98993dc3e628ae96ab0daa5a537ad8a53",
+      "text": "r reasons, the Company may decide not to raise international pricing to offset the U.S. dollar’s strengthening, which would adversely affect the U.S. dollar value of the gross margins the Company earns on foreign currency–denominated sales.\nConversely, a strengthening of foreign currencies relative to the U.S. dollar, while generally beneficial to the Company’s foreign currency–denominated sales and earnings, could cause the Company to reduce international pricing or incur losses on its foreign currency derivative instruments, thereby limiting the benefit. Additionally, strengthening of foreign currencies may increase the Company’s cost of product components denominated in those currencies, thus adversely affecting gross margins.\nThe Company uses derivative instruments, such as foreign currency forward and option contracts, to hedge certain exposures to fluctuations in foreign exchange rates. The use of such hedging activities may not be effective to offset any, or more than a portion, of the adverse financial effects of unfavorable movements in foreign exchange rates over the limited time the hedges are in place.\nThe Company is exposed to credit risk and fluctuations in the values of its investment portfolio.\nThe Company’s investments can be negatively affected by changes in liquidity, credit deterioration, financial results, market and economic conditions, political risk, sovereign risk, interest rate fluctuations or other factors. As a result, the value and liquidity of the Company’s cash, cash equivalents and marketable securities may fluctuate substantially. Although the Company has not realized significant losses on its cash, cash equivalents and marketable securities, future fluctuations in their value could result in significant losses and could have a material adverse impact on the Company’s results of operations and financial condition.\nThe Company is exposed to credit risk on its trade accounts receivable, vendor non-trade receivables and prepayments related to long-term supply agreements, and this risk is heightened during periods when economic conditions worsen.",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "accession": "0000320193-24-000123",
+      "report_date": "2024-09-28",
+      "item": "1A",
+      "item_title": "Risk Factors",
+      "citation": "0000320193-24-000123:item-1a:0035",
+      "source_start": 86118,
+      "source_end": 88229,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "1A",
+        "anchor": "0000320193-24-000123:item-1a:0035",
+        "ticker": "AAPL",
+        "ordinal": 35,
+        "accession": "0000320193-24-000123",
+        "source_end": 88229,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "source_start": 86118,
+        "source_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6",
+        "source_document": "aapl-20240928.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "edgar_filing_document_id": "8cc1ed18-7e73-4965-8b84-43fd7f084450",
+        "edgar_filing_snapshot_id": "450a835d-4dff-4981-aaef-a706091446bf",
+        "source_document_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains substantive investor risk disclosures about foreign exchange exposure, hedging limits, and credit/investment portfolio risk, which are self-contained and useful for research.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What derivative instruments does the Company use to hedge certain exposures to fluctuations in foreign exchange rates?",
+          "goal": "market_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-6419f555d4342530",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How could changes in foreign currency values affect the Company’s international pricing, derivative losses, and product component costs?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-1530ab0195374c7b",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What risks does the Company identify for its investment portfolio and cash, cash equivalents, and marketable securities?",
+          "goal": "key_risks",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-50e5aeab89a1afc7",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "ddafece6b71b251403eb8cf00e689a20f1b30bb305e09bdf1a896aec40a74578",
+      "chunk_sha256": "c6508151fdce00a92e4508954c7d4bd4965501dc0e99ea3e2064c1ad554f6f3e",
+      "text": "users of the Company’s products and services, and result in harm to the Company’s reputation, loss of competitive advantage, poor market acceptance, reduced demand for products and services, delay in new product and service introductions and lost sales.\nThe Company is exposed to the risk of write-downs on the value of its inventory and other assets, in addition to purchase commitment cancellation risk.\nThe Company records a write-down for product and component inventories that have become obsolete or exceed anticipated demand, or for which cost exceeds net realizable value. The Company also accrues necessary cancellation fee reserves for orders of excess products and components. The Company reviews long-lived assets, including capital assets held at its suppliers’ facilities and inventory prepayments, for impairment whenever events or circumstances indicate the assets may not be recoverable. If the Company determines that an impairment has occurred, it records a write-down equal to the amount by which the carrying value of the asset exceeds its fair value. Although the Company believes its inventory, capital assets, inventory prepayments and other assets and purchase commitments are currently recoverable, there can be no assurance the Company will not incur write-downs, fees, impairments and other charges given the rapid and unpredictable pace of product obsolescence in the industries in which the Company competes.\nThe Company orders components for its products and builds inventory in advance of product announcements and shipments. Manufacturing purchase obligations cover the Company’s forecasted component and manufacturing requirements, typically for periods up to 150 days. Because the Company’s markets are volatile, competitive and subject to rapid technology and price changes, there is a risk the Company will forecast incorrectly and order or produce excess or insufficient amounts of components or products, or not fully utilize firm purchase commitments.\nThe Company relies on access to third-party intellectual property, which may not be available to the Company on commercially reasonable terms, or at all.",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "accession": "0000320193-24-000123",
+      "report_date": "2024-09-28",
+      "item": "1A",
+      "item_title": "Risk Factors",
+      "citation": "0000320193-24-000123:item-1a:0013",
+      "source_start": 47022,
+      "source_end": 49167,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "1A",
+        "anchor": "0000320193-24-000123:item-1a:0013",
+        "ticker": "AAPL",
+        "ordinal": 13,
+        "accession": "0000320193-24-000123",
+        "source_end": 49167,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "source_start": 47022,
+        "source_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6",
+        "source_document": "aapl-20240928.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "edgar_filing_document_id": "8cc1ed18-7e73-4965-8b84-43fd7f084450",
+        "edgar_filing_snapshot_id": "450a835d-4dff-4981-aaef-a706091446bf",
+        "source_document_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive Item 1A risk disclosures about inventory write-downs, purchase commitments, forecasting risk, and dependence on third-party intellectual property.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What risk does the Company face from inventory write-downs and purchase commitment cancellation risk?",
+          "goal": "key_risks",
+          "query_type": "exact_keyword",
+          "id": "gtq-b122f70586c96329",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How can rapid product obsolescence affect the Company’s assets and purchase commitments?",
+          "goal": "management_analysis",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-7fe1d6346153b3f2",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What access issue does the Company have with third-party intellectual property?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-3e9010e0207df201",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "6644fb11f24feb9cd2211ddab93b5a917d7044515a19d8db7590ff510d730a70",
+      "chunk_sha256": "0392a7159c6296987468aa743dd2f1c739dac05ae23fe0d119b89fcac758fc1d",
+      "text": "Item 3. Legal Proceedings\nDigital Markets Act Investigations\nOn March 25, 2024, the Commission announced that it had opened two formal noncompliance investigations against the Company under the DMA. The Commission’s investigations concern (1) Article 5(4) of the DMA, which relates to how developers may communicate and promote offers to end users for apps distributed through the App Store as well as how developers may conclude contracts with those end users; and (2) Article 6(3) of the DMA, which relates to default settings, uninstallation of apps, and a web browser choice screen on iOS. On June 24, 2024, the Commission announced its preliminary findings in the Article 5(4) investigation alleging that the Company’s App Store rules are in breach of the DMA and announced that it had opened a third formal investigation against the Company regarding whether the Company’s new contractual requirements for third-party app developers and app marketplaces may violate the DMA. If the Commission makes a final determination that there has been a violation, it can issue a cease and desist order and may impose fines up to 10% of the Company’s annual worldwide net sales. Although any decision by the Commission can be appealed to the General Court of the EU, the effectiveness of the Commission’s order would apply immediately while the appeal is pending, unless a stay of the order is granted. The Company believes that it complies with the DMA and has continued to make changes to its compliance plan in response to feedback and engagement with the Commission.\nDepartment of Justice Lawsuit\nOn March 21, 2024, the U.S. Department of Justice (the “DOJ”) and a number of state and district attorneys general filed a civil antitrust lawsuit in the U.S. District Court for the District of New Jersey against the Company alleging monopolization or attempted monopolization in the markets for “performance smartphones” and “smartphones” in violation of U.S. antitrust laws. The DOJ is seeking equitable relief to redress the alleged anticompetitive behavior. In addition,\nvarious civil litigation matters have been filed in state and federal courts in the U.S.\nalleging similar violations of U.S. antitrust laws and seeking monetary damages and other nonmonetary relief. The Company believes it has substantial defenses and intends to vigorously defend itself.\nEpic Games",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "accession": "0000320193-24-000123",
+      "report_date": "2024-09-28",
+      "item": "3",
+      "item_title": "Legal Proceedings",
+      "citation": "0000320193-24-000123:item-3:0000",
+      "source_start": 96332,
+      "source_end": 98702,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "3",
+        "anchor": "0000320193-24-000123:item-3:0000",
+        "ticker": "AAPL",
+        "ordinal": 0,
+        "accession": "0000320193-24-000123",
+        "source_end": 98702,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "source_start": 96332,
+        "source_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6",
+        "source_document": "aapl-20240928.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "edgar_filing_document_id": "8cc1ed18-7e73-4965-8b84-43fd7f084450",
+        "edgar_filing_snapshot_id": "450a835d-4dff-4981-aaef-a706091446bf",
+        "source_document_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains substantive legal and regulatory risk information about active DMA investigations and a DOJ antitrust lawsuit, including alleged violations, potential penalties, and the company’s response.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What fines can the Commission impose if it finds a violation of the DMA?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-29a117e8cbaaf36d",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Which regulations are the Commission’s investigations focused on, and what company practices do they concern?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-22beabe9451d333d",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What civil antitrust claims did the DOJ and state attorneys general file against the company in March 2024?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-4efeb9fb09cca34b",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "9563d616ccb3c02eea57bb3135e204d1ee25bef7ad37fe4fdbe36f63f657d1ba",
+      "chunk_sha256": "2c12cbcf2a04ed219612898f3dd3a5c6eef0601d89298bd36db812e5e245e9c9",
+      "text": "etermination whether criminal contempt proceedings are appropriate. The Company will continue to vigorously defend its actions and employees, and has appealed the California District Court’s most recent decision to the U.S. Court of Appeals for the Ninth Circuit (“Ninth Circuit Court”). Although the Company’s request to stay the decision pending appeal was denied, the Ninth Circuit Court has agreed to consider the Company’s appeal on an expedited basis, with oral arguments heard in October 2025.\nOther Legal Proceedings\nThe Company is subject to other legal proceedings and claims that have not been fully resolved and that have arisen in the ordinary course of business. The Company settled certain matters during the fourth quarter of 2025 that did not individually or in the aggregate have a material impact on the Company’s financial condition or operating results. The outcome of litigation is inherently uncertain. If one or more legal matters were resolved against the Company in a reporting period for amounts above management’s expectations, the Company’s financial condition and operating results for that reporting period could be materially adversely affected.",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "39b27d3e-e222-4814-8f63-468ed38b5a8a",
+      "accession": "0000320193-25-000079",
+      "report_date": "2025-09-27",
+      "item": "3",
+      "item_title": "Legal Proceedings",
+      "citation": "0000320193-25-000079:item-3:0002",
+      "source_start": 100110,
+      "source_end": 101287,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "3",
+        "anchor": "0000320193-25-000079:item-3:0002",
+        "ticker": "AAPL",
+        "ordinal": 2,
+        "accession": "0000320193-25-000079",
+        "source_end": 101287,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+        "source_start": 100110,
+        "source_checksum": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a",
+        "source_document": "aapl-20250927.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+        "edgar_filing_document_id": "6f21ee8b-0735-4219-a319-4db238efc477",
+        "edgar_filing_snapshot_id": "3337f798-da27-4f37-811c-e4d2a561db83",
+        "source_document_checksum": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive legal and regulatory risk information about ongoing litigation, appeals, unresolved claims, and the potential for material adverse effects.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What does the Company say about other legal proceedings and claims that have not been fully resolved?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-c90e21c3107f8035",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How could an adverse outcome in legal matters affect the Company’s financial condition and operating results?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-377f96d01d15806a",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What action has the Company taken after the California District Court’s most recent decision, and how is the appeal being handled?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-767d0623e9d5bfbb",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "28ab241877d6926e4e8b9f7707fe32c3e5e48bfc710a73f11219c59b96352ea3",
+      "chunk_sha256": "0ff65803fdc4759d791218b8203ad31913e0fe92470c240d27ee42f1a71ace2e",
+      "text": "ment profit or loss information in assessing segment performance and deciding how to allocate resources. The Company will adopt ASU 2023-07 in its fourth quarter of 2025 using a retrospective transition method.\nCritical Accounting Estimates\nThe preparation of financial statements and related disclosures in conformity with U.S. generally accepted accounting principles (“GAAP”) and the Company’s discussion and analysis of its financial condition and operating results require the Company’s management to make judgments, assumptions and estimates that affect the amounts reported. Note 1, “Summary of Significant Accounting Policies” of the Notes to Consolidated Financial Statements in Part II, Item 8 of this Form 10-K describes the significant accounting policies and methods used in the preparation of the Company’s consolidated financial statements. Management bases its estimates on historical experience and on various other assumptions it believes to be reasonable under the circumstances, the results of which form the basis for making judgments about the carrying values of assets and liabilities.\nUncertain Tax Positions\nThe Company is subject to income taxes in the U.S. and numerous foreign jurisdictions. The evaluation of the Company’s uncertain tax positions involves significant judgment in the interpretation and application of GAAP and complex domestic and international tax laws, including the TCJA and the allocation of international taxation rights between countries. Although management believes the Company’s reserves are reasonable, no assurance can be given that the final outcome of these uncertainties will not be different from that reflected in the Company’s reserves. Reserves are adjusted considering changing facts and circumstances, such as the closing of a tax examination. Resolution of these uncertainties in a manner inconsistent with management’s expectations could have a material impact on the Company’s financial condition and operating results.\nLegal and Other Contingencies",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "accession": "0000320193-24-000123",
+      "report_date": "2024-09-28",
+      "item": "7",
+      "item_title": "Management's Discussion and Analysis",
+      "citation": "0000320193-24-000123:item-7:0006",
+      "source_start": 116194,
+      "source_end": 118212,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "7",
+        "anchor": "0000320193-24-000123:item-7:0006",
+        "ticker": "AAPL",
+        "ordinal": 6,
+        "accession": "0000320193-24-000123",
+        "source_end": 118212,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "source_start": 116194,
+        "source_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6",
+        "source_document": "aapl-20240928.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "edgar_filing_document_id": "8cc1ed18-7e73-4965-8b84-43fd7f084450",
+        "edgar_filing_snapshot_id": "450a835d-4dff-4981-aaef-a706091446bf",
+        "source_document_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive management discussion about critical accounting estimates, uncertain tax positions, and the potential financial impact of tax and other contingencies.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What does the Company say about uncertain tax positions and the TCJA?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-c316f8e6dfa939d8",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does management determine the estimates used in preparing financial statements and why could those estimates change?",
+          "goal": "management_analysis",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-befd881a16383e76",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What risk does the Company describe if the resolution of its tax uncertainties differs from management’s expectations?",
+          "goal": "key_risks",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-6a9d0fc42f338344",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "dc3b9984dd2146f2a25dfa42d5a3ea346d43f01cbcce07d0071038b68e23b6d1",
+      "chunk_sha256": "47c28c74809a3dd8720373a95c94d297f4ffe43b96353b7fd6410e6ac27cd34a",
+      "text": "September 27, 2025, the balance of the deemed repatriation tax payable imposed by the U.S. Tax Cuts and Jobs Act of 2017 (“TCJA”) was $8.8 billion, which was payable within 12 months.\nApple Inc. | 2025 Form 10-K | 25\nCapital Return Program\nIn addition to its contractual cash requirements, the Company has an authorized share repurchase program. The program does not obligate the Company to acquire a minimum amount of shares. As of September 27, 2025, the Company’s quarterly cash dividend was $0.26 per share. The Company intends to increase its dividend on an annual basis, subject to declaration by the Board.\nIn May 2025, the Company announced a new share repurchase program of up to $100 billion and raised its quarterly dividend from $0.25 to $0.26 per share beginning in May 2025. During 2025, the Company repurchased $89.3 billion of its common stock and paid dividends and dividend equivalents of $15.4 billion.\nRecent Accounting Pronouncements\nInternal-Use Software\nIn September 2025, the Financial Accounting Standards Board (“FASB”) issued Accounting Standards Update (“ASU”) No. 2025-06,\nIntangibles—Goodwill and Other—Internal-Use Software (Subtopic 350-40): Targeted Improvements to the Accounting for Internal-Use Software\n(“ASU 2025-06”), which modernizes the accounting for internal-use software. ASU 2025-06 removes all references to software development stages and requires capitalization of software costs when management has committed to the software project and it is probable the software will be completed and perform its intended use. ASU 2025-06 will be effective for the Company in its first quarter of 2029, and early adoption is permitted. The Company is currently evaluating the timing and method of its adoption of ASU 2025-06.\nDisaggregation of Income Statement Expenses\nIn November 2024, the FASB issued ASU No. 2024-03,\nIncome Statement—Reporting Comprehensive Income—Expense Disaggregation Disclosures (Subtopic 220-40): Disaggregation of Income Statement Expenses\n(“ASU 2024-03”) and in January 2025, the FASB issued ASU No. 2025-01,\nIncome Statement—Reporting Comprehensive Income—Expense Disaggregation Disclosures (Subtopic 220-40): Clarifying the Effective Date",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "39b27d3e-e222-4814-8f63-468ed38b5a8a",
+      "accession": "0000320193-25-000079",
+      "report_date": "2025-09-27",
+      "item": "7",
+      "item_title": "Management's Discussion and Analysis",
+      "citation": "0000320193-25-000079:item-7:0006",
+      "source_start": 116276,
+      "source_end": 118479,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "7",
+        "anchor": "0000320193-25-000079:item-7:0006",
+        "ticker": "AAPL",
+        "ordinal": 6,
+        "accession": "0000320193-25-000079",
+        "source_end": 118479,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+        "source_start": 116276,
+        "source_checksum": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a",
+        "source_document": "aapl-20250927.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+        "edgar_filing_document_id": "6f21ee8b-0735-4219-a319-4db238efc477",
+        "edgar_filing_snapshot_id": "3337f798-da27-4f37-811c-e4d2a561db83",
+        "source_document_checksum": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive investor information about Apple’s capital return program, dividend policy, repurchase activity, and upcoming accounting pronouncements, including a material tax payable amount.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What is the balance of the deemed repatriation tax payable under the TCJA, and when is it payable?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-ea4848bd4e78b0ba",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How much stock did Apple repurchase during 2025, and how much did it pay in dividends and dividend equivalents?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-b6d08b5f28339e76",
+          "review_status": "accepted"
+        },
+        {
+          "question": "When will ASU 2025-06 be effective for Apple, and is early adoption allowed?",
+          "goal": "management_analysis",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-f831a2cf1e0e81ab",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "846202e2d884bc745c8a66cd9737048fe931c3de3623502d34e7f1d81e58b89a",
+      "chunk_sha256": "f963a9034b7a57425982ffff791d6d740ee2d239d894d14d10fc6a3b801334f9",
+      "text": "Item 7A. Quantitative and Qualitative Disclosures About Market Risk\nThe Company is exposed to economic risk from interest rates and foreign exchange rates. The Company uses various strategies to manage these risks; however, they may still impact the Company’s consolidated financial statements.\nInterest Rate Risk\nThe Company is primarily exposed to fluctuations in U.S. interest rates and their impact on the Company’s investment portfolio and term debt. Increases in interest rates will negatively affect the fair value of the Company’s investment portfolio and increase the interest expense on the Company’s term debt. To protect against interest rate risk, the Company may use derivative instruments, offset interest rate–sensitive assets and liabilities, or control duration of the investment and term debt portfolios.\nThe following table sets forth potential impacts on the Company’s investment portfolio and term debt, including the effects of any associated derivatives, that would result from a hypothetical increase in relevant interest rates as of September 28, 2024 and September 30, 2023 (dollars in millions):\nInterest Rate\nSensitive Instrument\nHypothetical Interest\nRate Increase\nPotential Impact\n2024\n2023\nInvestment portfolio\n100 basis points, all tenors\nDecline in fair value\n$\n2,755\n$\n3,089\nTerm debt\n100 basis points, all tenors\nIncrease in annual interest expense\n$\n139\n$\n194\nForeign Exchange Rate Risk\nThe Company’s exposure to foreign exchange rate risk relates primarily to the Company being a net receiver of currencies other than the U.S. dollar. Changes in exchange rates, and in particular a strengthening of the U.S. dollar, will negatively affect the Company’s net sales and gross margins as expressed in U.S. dollars. Fluctuations in exchange rates may also affect the fair values of certain of the Company’s assets and liabilities. To protect against foreign exchange rate risk, the Company may use derivative instruments, offset exposures, or adjust local currency pricing of its products and services. However, the Company may choose to not hedge certain foreign currency exposures for a variety of reasons, including accounting considerations or prohibitive cost.",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "accession": "0000320193-24-000123",
+      "report_date": "2024-09-28",
+      "item": "7A",
+      "item_title": "Quantitative and Qualitative Disclosures About Market Risk",
+      "citation": "0000320193-24-000123:item-7a:0000",
+      "source_start": 118757,
+      "source_end": 120955,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "7A",
+        "anchor": "0000320193-24-000123:item-7a:0000",
+        "ticker": "AAPL",
+        "ordinal": 0,
+        "accession": "0000320193-24-000123",
+        "source_end": 120955,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "source_start": 118757,
+        "source_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6",
+        "source_document": "aapl-20240928.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "edgar_filing_document_id": "8cc1ed18-7e73-4965-8b84-43fd7f084450",
+        "edgar_filing_snapshot_id": "450a835d-4dff-4981-aaef-a706091446bf",
+        "source_document_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage is self-contained and provides investor-relevant disclosures on market risk, including interest rate exposure, foreign exchange exposure, and the potential financial impact of rate changes.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What is the Company's exposure to interest rates and foreign exchange rates under Item 7A?",
+          "goal": "market_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-3f108b135644cb50",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How could higher U.S. interest rates affect the Company’s investment portfolio and term debt?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-c44fbca712dd5849",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Why might the Company choose not to hedge certain foreign currency exposures?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-fa6d0e2fd65e2040",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "96678c721a84cef1a97e4369424e8dc831044c5308aecd676dd93fee3ca93356",
+      "chunk_sha256": "6d6f041a0022b798796f12517012419a4c09c4bb37b97ab0cb4ec104b785cebf",
+      "text": "set exposures, or adjust local currency pricing of its products and services. However, the Company may choose to not hedge certain foreign currency exposures for a variety of reasons, including accounting considerations or prohibitive cost.\nThe Company applied a value-at-risk (“VAR”) model to its foreign currency derivative positions to assess the potential impact of fluctuations in exchange rates. The VAR model used a Monte Carlo simulation. The VAR is the maximum expected loss in fair value, for a given confidence interval, to the Company’s foreign currency derivative positions due to adverse movements in rates. Based on the results of the model, the Company estimates, with 95% confidence, a maximum one-day loss in fair value of $538 million and $669 million as of September 28, 2024 and September 30, 2023, respectively. Changes in the Company’s underlying foreign currency exposures, which were excluded from the assessment, generally offset changes in the fair values of the Company’s foreign currency derivatives.\nApple Inc. | 2024 Form 10-K | 27",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "accession": "0000320193-24-000123",
+      "report_date": "2024-09-28",
+      "item": "7A",
+      "item_title": "Quantitative and Qualitative Disclosures About Market Risk",
+      "citation": "0000320193-24-000123:item-7a:0001",
+      "source_start": 120715,
+      "source_end": 121777,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "7A",
+        "anchor": "0000320193-24-000123:item-7a:0001",
+        "ticker": "AAPL",
+        "ordinal": 1,
+        "accession": "0000320193-24-000123",
+        "source_end": 121777,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "source_start": 120715,
+        "source_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6",
+        "source_document": "aapl-20240928.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "edgar_filing_document_id": "8cc1ed18-7e73-4965-8b84-43fd7f084450",
+        "edgar_filing_snapshot_id": "450a835d-4dff-4981-aaef-a706091446bf",
+        "source_document_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive market-risk disclosure about foreign currency exposures, hedging choices, and value-at-risk estimates with quantified losses, which is useful for investors.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What maximum one-day loss in fair value did Apple estimate for its foreign currency derivative positions as of September 28, 2024 using VAR?",
+          "goal": "market_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-b01c6eb70e6157f1",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does Apple describe its use of foreign currency hedging and what reasons does it give for not hedging some exposures?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-f35909ef5a0d398a",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What simulation method did Apple use in its value-at-risk model for foreign currency derivatives?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-8c0a7681a4a1fb3b",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "0d61f8a1026b958b545ed676d6159ea25f23dda491efeeb8fd3b91aab01c3d37",
+      "chunk_sha256": "00e85bb1c7295e6f58bac0c10500c8f6cd38e6b90ab8371c3d7773d8b43fa3f8",
+      "text": "or other instruments, and may designate these instruments as cash flow hedges. The Company generally hedges portions of its forecasted foreign currency exposure associated with revenue and inventory purchases, typically for up to\n12\nmonths.\nApple Inc. | 2024 Form 10-K | 37\nTo protect the Company’s foreign currency–denominated term debt or marketable securities from fluctuations in foreign exchange rates, the Company may use forwards, cross-currency swaps or other instruments. The Company designates these instruments as either cash flow or fair value hedges. As of September 28, 2024, the maximum length of time over which the Company is hedging its exposure to the variability in future cash flows for term debt–related foreign currency transactions is\n18\nyears.\nThe Company may also use derivative instruments that are not designated as accounting hedges to protect gross margins from certain fluctuations in foreign exchange rates, as well as to offset a portion of the foreign currency gains and losses generated by the remeasurement of certain assets and liabilities denominated in non-functional currencies.\nInterest Rate Risk\nTo protect the Company’s term debt or marketable securities from fluctuations in interest rates, the Company may use interest rate swaps, options or other instruments. The Company designates these instruments as either cash flow or fair value hedges.\nThe notional amounts of the Company’s outstanding derivative instruments as of September 28, 2024 and September 30, 2023 were as follows (in millions):\n2024\n2023\nDerivative instruments designated as accounting hedges:\nForeign exchange contracts\n$\n64,069\n$\n74,730\nInterest rate contracts\n$\n14,575\n$\n19,375\nDerivative instruments not designated as accounting hedges:\nForeign exchange contracts\n$\n91,493\n$\n104,777\nThe carrying amounts of the Company’s hedged items in fair value hedges as of September 28, 2024 and September 30, 2023 were as follows (in millions):\n2024\n2023\nHedged assets/(liabilities):\nCurrent and non-current marketable securities\n$\n—\n$\n14,433\nCurrent and non-current term debt\n$\n(\n13,505\n)\n$\n(\n18,247\n)\nAccounts Receivable\nTrade Receivables\nThe Company’s third-party cellular network carriers accounted for\n38\n% and\n41",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "accession": "0000320193-24-000123",
+      "report_date": "2024-09-28",
+      "item": "8",
+      "item_title": "Financial Statements and Supplementary Data",
+      "citation": "0000320193-24-000123:item-8:0011",
+      "source_start": 144298,
+      "source_end": 146522,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "8",
+        "anchor": "0000320193-24-000123:item-8:0011",
+        "ticker": "AAPL",
+        "ordinal": 11,
+        "accession": "0000320193-24-000123",
+        "source_end": 146522,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "source_start": 144298,
+        "source_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6",
+        "source_document": "aapl-20240928.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm",
+        "edgar_filing_document_id": "8cc1ed18-7e73-4965-8b84-43fd7f084450",
+        "edgar_filing_snapshot_id": "450a835d-4dff-4981-aaef-a706091446bf",
+        "source_document_checksum": "24a830a0f1256e371d36a1f7f72e5e85a38037d1de2f6f966eb8457db42ff6d6"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive investor information about Apple’s use of derivative instruments to hedge foreign exchange and interest rate risk, including hedge types, time horizons, and notional amounts. It ends mid-sentence on trade receivables, but the main content is still self-contained and useful.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What is the maximum length of time over which Apple is hedging its exposure to the variability in future cash flows for term debt-related foreign currency transactions?",
+          "goal": "market_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-5673d1e7a34ddf33",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does Apple use derivative instruments to manage foreign exchange and interest rate exposure?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ceacf271262eb26d",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What types of derivative instruments does Apple use to protect its term debt or marketable securities from changes in market rates?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-3e91ca3d4f52e90e",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "4af72c9320fbc8e46ed599af0fe65598cb2c70c7d58112a9cba88afb860bec6a",
+      "chunk_sha256": "9fea4b04e0b6a12c9d124690402e3bdd6a803f0414ed1f3d8f9ca3e45c6354a1",
+      "text": "ized, would impact the Company’s effective tax rate. In accounting for some of the uncertain tax positions, the Company uses significant judgment in the interpretation and application of GAAP and complex domestic and international tax laws.\nAuditing management’s evaluation of whether an uncertain tax position is more likely than not to be sustained and the measurement of the benefit of various tax positions can be complex, involves significant judgment, and is based on interpretations of tax laws.\nApple Inc. | 2025 Form 10-K | 49\nHow We Addressed the\nMatter in Our Audit\nWe tested controls relating to the evaluation of uncertain tax positions, including controls over management’s assessment as to whether tax positions are more likely than not to be sustained, management’s process to measure the benefit of its tax positions that qualify for recognition, and the related disclosures.\nWe evaluated the Company’s assessment of which tax positions are more likely than not to be sustained and the related measurement of the amount of tax benefit that qualifies for recognition. Our audit procedures included, among others, reading and evaluating management’s assumptions and analysis, and, as applicable, the Company’s communications with taxing authorities, that detailed the basis and technical merits of the uncertain tax positions. We involved our tax subject matter resources in assessing the technical merits of certain of the Company’s tax positions based on our knowledge of relevant tax laws and experience with related taxing authorities. In addition, we evaluated the Company’s disclosure in relation to these matters included in Note 7 to the financial statements.\n/s/\nErnst & Young LLP\nWe have served as the Company’s auditor since 2009.\nSan Jose, California\nOctober 31, 2025\nApple Inc. | 2025 Form 10-K | 50\nReport of Independent Registered Public Accounting Firm\nTo the Shareholders and the Board of Directors of Apple Inc.\nOpinion on Internal Control Over Financial Reporting\nWe have audited Apple Inc.’s internal control over financial reporting as of September 27, 2025, based on criteria established in\nInternal Control – Integrated Framework",
+      "ticker": "AAPL",
+      "company": "Apple Inc.",
+      "corpus_version_id": "39b27d3e-e222-4814-8f63-468ed38b5a8a",
+      "accession": "0000320193-25-000079",
+      "report_date": "2025-09-27",
+      "item": "8",
+      "item_title": "Financial Statements and Supplementary Data",
+      "citation": "0000320193-25-000079:item-8:0028",
+      "source_start": 180390,
+      "source_end": 182557,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+      "source_metadata": {
+        "cik": "0000320193",
+        "item": "8",
+        "anchor": "0000320193-25-000079:item-8:0028",
+        "ticker": "AAPL",
+        "ordinal": 28,
+        "accession": "0000320193-25-000079",
+        "source_end": 182557,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+        "source_start": 180390,
+        "source_checksum": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a",
+        "source_document": "aapl-20250927.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm",
+        "edgar_filing_document_id": "6f21ee8b-0735-4219-a319-4db238efc477",
+        "edgar_filing_snapshot_id": "3337f798-da27-4f37-811c-e4d2a561db83",
+        "source_document_checksum": "548ae59778cf08ee0f2ee088e7ece20d947076c3c01f74d2d65db4c2777e436a"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive investor-relevant information about uncertain tax positions, audit procedures, and internal control over financial reporting, so it is meaningful and self-contained.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What does the Company use significant judgment in interpreting and applying with respect to uncertain tax positions?",
+          "goal": "key_risks",
+          "query_type": "exact_keyword",
+          "id": "gtq-31a0397f0d2795d3",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What did the auditors evaluate regarding the Company’s uncertain tax positions and related tax benefits?",
+          "goal": "management_analysis",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ed8c18e194830298",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What framework was used to audit internal control over financial reporting as of September 27, 2025?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-9854c89552ebf72b",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "7ed90bdfa4036f2b0cbf9a3db2a6a833813526b826dd3116c94070d9ccb62c25",
+      "chunk_sha256": "848d769d79eb2dddb1164f967f6e7372984a8329f8433eadeb38ff0480b2cd5a",
+      "text": "ITEM 1. B\nUSINESS\nGENERAL\nMicrosoft is a technology company committed to making digital technology and artificial intelligence (“AI”) available broadly and doing so responsibly. Our mission is to empower every person and every organization on the planet to achieve more.\nWe develop and support a broad portfolio of technology solutions for individuals and businesses, focusing on secure, trusted, and innovative platforms and applications that meet evolving customer needs across AI, cloud computing, productivity and collaboration, and personal computing. We strive to create opportunity, growth, and impact in every country around the world.\nAI is fundamentally transforming productivity for every individual, organization, and industry. Microsoft's AI offerings span every layer of the technology stack, enabling transformative outcomes across sectors and unlocking opportunity for every country, community, and individual.\nWe believe AI should be as empowering as it is powerful, and we’re committed to designing and deploying AI responsibly with safety and security from the outset.\nWhat We Offer\nFounded in 1975, we develop and support software, services, devices, and solutions that deliver new value for customers and help people and businesses realize their full potential.\nWe offer an array of services, including cloud-based solutions that provide customers with AI, software, services, platforms, and content, and we provide solution support and consulting services. We also deliver relevant online advertising to a global audience.\nOur products include operating systems, server applications, business solution applications, software development tools, desktop and server management tools, and video games. We also design and sell devices, including PCs, tablets, gaming and entertainment consoles, other intelligent devices, and related accessories.\nDigital transformation and adoption of AI continues to revolutionize more business workstreams for organizations in every sector across the globe. For enterprises, digital technology empowers employees, optimizes operations, engages customers, and in some cases, changes the very core of products and services.\n3",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "54c842a6-f610-4ec6-a3bb-f4ffbd545f9e",
+      "accession": "0001193125-26-323660",
+      "report_date": "2026-06-30",
+      "item": "1",
+      "item_title": "Business",
+      "citation": "0001193125-26-323660:item-1:0000",
+      "source_start": 7389,
+      "source_end": 9565,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "1",
+        "anchor": "0001193125-26-323660:item-1:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0001193125-26-323660",
+        "source_end": 9565,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "source_start": 7389,
+        "source_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02",
+        "source_document": "msft-20260630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "edgar_filing_document_id": "d18b5f02-d6f4-4c23-b974-d24109edbf71",
+        "edgar_filing_snapshot_id": "c044c271-07e5-4196-9fe1-99689ad49a1f",
+        "source_document_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage is a self-contained business overview describing Microsoft’s mission, major product and service categories, and its AI and cloud focus.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What products and services does Microsoft offer, including cloud-based solutions and devices?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-69788ca7487f1dd4",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does Microsoft describe its approach to developing and deploying AI responsibly?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-52b4b68a09c849c9",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What areas of technology does Microsoft say it focuses on for individuals and businesses?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-775c53825233fd39",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "dfca7f46aa8de5bbb3dac24a8b9be24327aa623466bc9e7ebeea95c4f55c97b1",
+      "chunk_sha256": "3c8f81fd44e964e1e47bc914fb83785ea41420db514ee5fb69393cb41069226d",
+      "text": "ITEM 1. B\nUSINESS\nGENERAL\nEmbracing Our Future\nMicrosoft is a technology company committed to making digital technology and artificial intelligence (“AI”) available broadly and doing so responsibly, with a mission to empower every person and every organization on the planet to achieve more. We create platforms and tools, powered by AI, that deliver innovative solutions that meet the evolving needs of our customers. From infrastructure and data, to business applications and collaboration, we provide unique, differentiated value to customers. We strive to create local opportunity, growth, and impact in every country around the world.\nWe have entered a new age of AI that will fundamentally transform productivity for every individual, organization, and industry on earth, while helping us address some of our most pressing challenges. Microsoft's AI offerings, including Copilot and our Copilot stack, are already orchestrating a new era of AI transformation, driving better business outcomes across every role and industry. As a company, we believe we can be the democratizing force for this new generation of technology and the opportunity it will help unlock for every country, community, and individual.\nWe believe AI should be as empowering across communities as it is powerful, and we’re committed to ensuring it is responsibly designed and built with safety and security from the outset.\nWhat We Offer\nFounded in 1975, we develop and support software, services, devices, and solutions that deliver new value for customers and help people and businesses realize their full potential.\nWe offer an array of services, including cloud-based solutions that provide customers with software, services, platforms, and content, and we provide solution support and consulting services. We also deliver relevant online advertising to a global audience.\nOur products include operating systems, cross-device productivity and collaboration applications, server applications, business solution applications, desktop and server management tools, software development tools, and video games. We also design and sell devices, including PCs, tablets, gaming and entertainment consoles, other intelligent devices, and related accessories.\n3",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "93cc9201-93e3-4f98-8185-e4f4e9152a6f",
+      "accession": "0000950170-24-087843",
+      "report_date": "2024-06-30",
+      "item": "1",
+      "item_title": "Business",
+      "citation": "0000950170-24-087843:item-1:0000",
+      "source_start": 7388,
+      "source_end": 9620,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "1",
+        "anchor": "0000950170-24-087843:item-1:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0000950170-24-087843",
+        "source_end": 9620,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "source_start": 7388,
+        "source_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95",
+        "source_document": "msft-20240630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "edgar_filing_document_id": "fe275416-7c39-4723-bc1d-44722536b26f",
+        "edgar_filing_snapshot_id": "bb65923e-214f-4024-bf11-15cc6eb94961",
+        "source_document_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains self-contained business information about Microsoft’s mission, AI strategy, and the main products and services it offers.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What products and services does Microsoft offer?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-9f380e1001380eca",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does Microsoft describe its mission and use of AI in serving customers?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-737f727f7fa76d51",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What kinds of devices does Microsoft design and sell?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-048df89681feb985",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "4fe3b2b894171800020dd3f5f82d0627da791749d5c636a252a64a524624f200",
+      "chunk_sha256": "a163089d53745ae2a93107b721f81c01b363ae52abf31f63d61c3218362a3487",
+      "text": "growth. Establishing significant scale in the marketplace is necessary to meet consumer demand and to achieve and maintain attractive margins. Firms offering competing platforms may make it more difficult to attract and retain customers.\n•\nA competing vertically-integrated model, in which a single firm controls the hardware and software elements of a product and related services, has succeeded with some consumer products such as PCs, tablets, smartphones, gaming consoles, wearables, and other endpoint devices. Competitors pursuing this model also earn revenue from services integrated with the hardware and software platform, including applications and content sold through their integrated marketplaces. They may also be able to claim security and performance benefits from their vertically-integrated offer. We also offer some vertically-integrated hardware and software products and services. Expansion of our vertically-integrated capabilities, including developing proprietary hardware, infrastructure, and artificial intelligence (“AI”) models, could increase our cost structure, reduce margins, and expose us to operational risks.\n•\nWe derive substantial revenue from licenses of Windows operating systems on PCs. We face significant competition from competing platforms developed for new types of devices, including smartphones and tablets. These devices compete on multiple bases including price and the perceived utility of the device and its platform. Users continue to turn to these devices to perform functions that in the past were performed by PCs. Even if many users view these devices as complementary to a PC, the prevalence of these devices may make it more difficult to attract application developers to our PC operating system platforms. Competing with operating systems licensed at low or no cost may decrease our PC operating system margins. Popular products or services offered on competing platforms could increase their competitive strength. In addition, some of our devices compete with products made by our OEM partners, which may affect their commitment to our platform.\n•",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "54c842a6-f610-4ec6-a3bb-f4ffbd545f9e",
+      "accession": "0001193125-26-323660",
+      "report_date": "2026-06-30",
+      "item": "1A",
+      "item_title": "Risk Factors",
+      "citation": "0001193125-26-323660:item-1a:0001",
+      "source_start": 50413,
+      "source_end": 52520,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "1A",
+        "anchor": "0001193125-26-323660:item-1a:0001",
+        "ticker": "MSFT",
+        "ordinal": 1,
+        "accession": "0001193125-26-323660",
+        "source_end": 52520,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "source_start": 50413,
+        "source_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02",
+        "source_document": "msft-20260630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "edgar_filing_document_id": "d18b5f02-d6f4-4c23-b974-d24109edbf71",
+        "edgar_filing_snapshot_id": "c044c271-07e5-4196-9fe1-99689ad49a1f",
+        "source_document_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive risk information about competition, vertically integrated rivals, margins, and Windows PC licensing, which is useful for investor research.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What operating system licenses does Microsoft derive substantial revenue from?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-e191d4f5f2b3fa58",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How could expanding vertically integrated capabilities affect Microsoft's cost structure and margins?",
+          "goal": "key_risks",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-be0bc129fdb2a488",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Why might competing smartphones and tablets make it harder for Microsoft to attract application developers to its PC operating system platforms?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ff670c49440144ce",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "92e695611d73fc904ea9005a7f76c5d78876a06072f6675361b4d02756d39e7c",
+      "chunk_sha256": "f6bab9972a72a76bb3ae1aaee3ea38b746775fb6a2d22dad9376bf0474a5f5c9",
+      "text": "ITEM 1A. RIS\nK FACTORS\nOur operations and financial results are subject to various risks and uncertainties, including those described below, that could adversely affect our business, operations, financial condition, results of operations, liquidity, and the trading price of our common stock. Statements in this section reflect our beliefs and opinions as to matters that could adversely affect us in the future. References to past events are provided by way of example only and are not intended to be a complete listing or a representation as to whether or not such matters have occurred in the past.\nSTRATEGIC AND COMPETITIVE RISKS\nWe face intense competition across all markets for our products and services, which could adversely affect our results of operations.\nCompetition in the technology sector\nOur competitors range in size from diversified global companies with significant research and development resources to small, specialized firms who may be more effective in deploying technical, marketing, and financial resources. Barriers to entry in many of our businesses are low and many of the areas in which we compete evolve rapidly with changing and disruptive technologies, shifting user needs, and frequent introductions of new products and services. If we do not continue to innovate and provide products, devices, and services that appeal to businesses and consumers, we may not remain competitive, which could adversely affect our business, financial condition, and results of operations.\nCompetition among platform-based ecosystems\nAn important element of our business model has been to create platform-based ecosystems on which many participants can build diverse solutions. A well-established ecosystem creates beneficial network effects among users, application developers, and the platform provider that can accelerate growth. Establishing significant scale in the marketplace is necessary to meet consumer demand and to achieve and maintain attractive margins. Firms offering competing platforms may make it more difficult to attract and retain customers.\n•",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "54c842a6-f610-4ec6-a3bb-f4ffbd545f9e",
+      "accession": "0001193125-26-323660",
+      "report_date": "2026-06-30",
+      "item": "1A",
+      "item_title": "Risk Factors",
+      "citation": "0001193125-26-323660:item-1a:0000",
+      "source_start": 48572,
+      "source_end": 50652,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "1A",
+        "anchor": "0001193125-26-323660:item-1a:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0001193125-26-323660",
+        "source_end": 50652,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "source_start": 48572,
+        "source_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02",
+        "source_document": "msft-20260630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "edgar_filing_document_id": "d18b5f02-d6f4-4c23-b974-d24109edbf71",
+        "edgar_filing_snapshot_id": "c044c271-07e5-4196-9fe1-99689ad49a1f",
+        "source_document_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains substantive risk factor disclosure about Microsoft’s competition and platform-based ecosystem risks, which is useful investor information.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What does Microsoft say about intense competition across all markets for its products and services?",
+          "goal": "key_risks",
+          "query_type": "exact_keyword",
+          "id": "gtq-b6b60e8cfe38d557",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Why does Microsoft say a well-established ecosystem matters to its business model?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-7c6f0f00f9bb4a39",
+          "review_status": "accepted"
+        },
+        {
+          "question": "According to Microsoft, how could competing platforms affect its ability to attract and retain customers?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-c615b0f381e21b43",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "55ca08d829940c60ce73e81d96c092597f34562f43ab5a2f3273e11fcdd0d0a9",
+      "chunk_sha256": "bf95a9541a815824fcfd6efb231dcf9d00727b6e60c7a48f12194a4b0fc3da4a",
+      "text": "ITEM 3. LEGAL\nPROCEEDINGS\nRefer to Note 15 – Contingencies of the Notes to Financial Statements (Part II, Item 8 of this Form 10-K) for information regarding legal proceedings in which we are involved.",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "93cc9201-93e3-4f98-8185-e4f4e9152a6f",
+      "accession": "0000950170-24-087843",
+      "report_date": "2024-06-30",
+      "item": "3",
+      "item_title": "Legal Proceedings",
+      "citation": "0000950170-24-087843:item-3:0000",
+      "source_start": 161383,
+      "source_end": 161584,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "3",
+        "anchor": "0000950170-24-087843:item-3:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0000950170-24-087843",
+        "source_end": 161584,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "source_start": 161383,
+        "source_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95",
+        "source_document": "msft-20240630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "edgar_filing_document_id": "fe275416-7c39-4723-bc1d-44722536b26f",
+        "edgar_filing_snapshot_id": "bb65923e-214f-4024-bf11-15cc6eb94961",
+        "source_document_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This is a self-contained legal-risk disclosure that directs readers to the company’s contingencies note for details on legal proceedings.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What note gives information regarding legal proceedings in which Microsoft is involved?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-3a3359a0e7918daf",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Where does Microsoft say investors can find details about its legal proceedings?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ddb0552b99efdc9c",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Which part of the 10-K should be consulted for information on contingencies related to legal proceedings?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-07fc1f22e4d289cb",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "8222f1f0744e76f55338a979060880213afa6f8b1ea30786cd792bb780d33efb",
+      "chunk_sha256": "2873a7e6b8a0e3b0117503937b8ecb3c6d9ac56b0f0833f0fba339b921d08322",
+      "text": "ITEM 3. LEGAL\nPROCEEDINGS\nRefer to Note 14 – Contingencies of the Notes to Financial Statements (Part II, Item 8 of this Form 10-K) for information regarding legal proceedings in which we are involved.",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "54c842a6-f610-4ec6-a3bb-f4ffbd545f9e",
+      "accession": "0001193125-26-323660",
+      "report_date": "2026-06-30",
+      "item": "3",
+      "item_title": "Legal Proceedings",
+      "citation": "0001193125-26-323660:item-3:0000",
+      "source_start": 139503,
+      "source_end": 139704,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "3",
+        "anchor": "0001193125-26-323660:item-3:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0001193125-26-323660",
+        "source_end": 139704,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "source_start": 139503,
+        "source_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02",
+        "source_document": "msft-20260630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "edgar_filing_document_id": "d18b5f02-d6f4-4c23-b974-d24109edbf71",
+        "edgar_filing_snapshot_id": "c044c271-07e5-4196-9fe1-99689ad49a1f",
+        "source_document_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage is a short but self-contained legal-risk disclosure that directs readers to Note 14 for details about ongoing legal proceedings, which is useful investor information.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What note provides information regarding legal proceedings in which Microsoft is involved?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-206dee5056ef7d74",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Where does Microsoft say investors should look for details about its legal proceedings?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-52f66d3b4f763b7b",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Which section of the financial statements contains the contingencies note referenced for legal proceedings?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-cee0abc03256ea1e",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "c33833f425e7e6ea22415c55ba92c4acb89071f1716171267df8338c305ba254",
+      "chunk_sha256": "7afff63e7f0bf2f670b0969ac0110c9162cda3e9257bddae545b59f8d8aca88d",
+      "text": "ITEM 7. MANAGEMENT’S DISCUSSION AND ANALYSIS OF\nFINANCIAL CONDITION AND RESULTS OF OPERATIONS\nThe following Management’s Discussion and Analysis of Financial Condition and Results of Operations (“MD&A”) is intended to help the reader understand the results of operations and financial condition of Microsoft Corporation. MD&A is provided as a supplement to, and should be read in conjunction with, our consolidated financial statements and the accompanying Notes to Financial Statements (Part II, Item 8 of this Form 10-K). This section generally discusses the results of our operations for the year ended June 30, 2026 compared to the year ended June 30, 2025. For a discussion of the year ended June 30, 2025 compared to the year ended June 30, 2024, please refer to Part II, Item 7, “Management’s Discussion and Analysis of Financial Condition and Results of Operations” in our Annual Report on Form 10-K for the year ended June 30, 2025.\nOVERVIEW\nMicrosoft is a technology company committed to making digital technology and artificial intelligence (“AI”) available broadly and doing so responsibly, with a mission to empower every person and every organization on the planet to achieve more. We create platforms and applications, powered by AI, that deliver innovative solutions that meet the evolving needs of our customers.\nWe generate revenue by offering a wide range of cloud-based solutions, content, and other services to people and businesses; licensing and supporting an array of software products; delivering relevant online advertising to a global audience; and designing and selling devices. Our most significant expenses are related to compensating employees; supporting and investing in our cloud-based services, including datacenter operations; designing, manufacturing, marketing, and selling our other products and services; and income taxes.\nHighlights from fiscal year 2026 compared with fiscal year 2025 included:\n•\nMicrosoft Cloud revenue increased 27% to $214.4 billion.\n•\nCommercial remaining performance obligation increased 84% to $678 billion.\n•\nMicrosoft 365 Commercial cloud revenue increased 17%.\n•\nMicrosoft 365 Consumer cloud revenue increased 28%.\n•\nLinkedIn revenue increased 11%.\n•\nDynamics 365 revenue increased 18%.\n•\nAzure and other cloud services revenue increased 41%.\n•\nWindows OEM and Devices revenue decreased slightly.\n•",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "54c842a6-f610-4ec6-a3bb-f4ffbd545f9e",
+      "accession": "0001193125-26-323660",
+      "report_date": "2026-06-30",
+      "item": "7",
+      "item_title": "Management's Discussion and Analysis",
+      "citation": "0001193125-26-323660:item-7:0000",
+      "source_start": 141567,
+      "source_end": 143933,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "7",
+        "anchor": "0001193125-26-323660:item-7:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0001193125-26-323660",
+        "source_end": 143933,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "source_start": 141567,
+        "source_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02",
+        "source_document": "msft-20260630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "edgar_filing_document_id": "d18b5f02-d6f4-4c23-b974-d24109edbf71",
+        "edgar_filing_snapshot_id": "c044c271-07e5-4196-9fe1-99689ad49a1f",
+        "source_document_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains substantive, self-contained MD&A information about Microsoft’s business model, revenue sources, major expense categories, and fiscal 2026 operating highlights, so it is useful for investor research.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What did Microsoft say are its most significant expenses?",
+          "goal": "management_analysis",
+          "query_type": "exact_keyword",
+          "id": "gtq-5c3282d5f2de6eca",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does Microsoft describe the main ways it generates revenue?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ab6d547774f5976c",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Which fiscal 2026 highlight showed the biggest increase in cloud-related revenue?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-7ec9b66b3955b631",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "d326bab944b2bd2c5a55de1a6c6d719d0d36d2d158684f559153aa53f3d835e8",
+      "chunk_sha256": "6e202ef71602f10ce1ebc02c6571c74ac5aa9e4aa5e5827b2f0cc948e36b7576",
+      "text": "ITEM 7. MANAGEMENT’S DISCUSSION AND ANALYSIS OF\nFINANCIAL CONDITION AND RESULTS OF OPERATIONS\nThe following Management’s Discussion and Analysis of Financial Condition and Results of Operations (“MD&A”) is intended to help the reader understand the results of operations and financial condition of Microsoft Corporation. MD&A is provided as a supplement to, and should be read in conjunction with, our consolidated financial statements and the accompanying Notes to Financial Statements (Part II, Item 8 of this Form 10-K). This section generally discusses the results of our operations for the year ended June 30, 2024 compared to the year ended June 30, 2023. For a discussion of the year ended June 30, 2023 compared to the year ended June 30, 2022, please refer to Part II, Item 7, “Management’s Discussion and Analysis of Financial Condition and Results of Operations” in our Annual Report on Form 10-K for the year ended June 30, 2023.\nOVERVIEW\nMicrosoft is a technology company committed to making digital technology and artificial intelligence (“AI”) available broadly and doing so responsibly, with a mission to empower every person and every organization on the planet to achieve more. We create platforms and tools, powered by AI, that deliver innovative solutions that meet the evolving needs of our customers.\nWe generate revenue by offering a wide range of cloud-based solutions, content, and other services to people and businesses; licensing and supporting an array of software products; delivering relevant online advertising to a global audience; and designing and selling devices. Our most significant expenses are related to compensating employees; supporting and investing in our cloud-based services, including datacenter operations; designing, manufacturing, marketing, and selling our other products and services; and income taxes.\nHighlights from fiscal year 2024 compared with fiscal year 2023 included:\n•\nMicrosoft Cloud revenue increased 23% to $137.4 billion.\n•\nOffice Commercial products and cloud services revenue increased 14% driven by Office 365 Commercial growth of 16%.\n•\nOffice Consumer products and cloud services revenue increased 4% and Microsoft 365 Consumer subscribers grew to 82.5 million.\n•\nLinkedIn revenue increased 9%.\n•\nDynamics products and cloud services revenue increased 19% driven by Dynamics 365 growth of 24%.\n•",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "93cc9201-93e3-4f98-8185-e4f4e9152a6f",
+      "accession": "0000950170-24-087843",
+      "report_date": "2024-06-30",
+      "item": "7",
+      "item_title": "Management's Discussion and Analysis",
+      "citation": "0000950170-24-087843:item-7:0000",
+      "source_start": 163446,
+      "source_end": 165813,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "7",
+        "anchor": "0000950170-24-087843:item-7:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0000950170-24-087843",
+        "source_end": 165813,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "source_start": 163446,
+        "source_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95",
+        "source_document": "msft-20240630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "edgar_filing_document_id": "fe275416-7c39-4723-bc1d-44722536b26f",
+        "edgar_filing_snapshot_id": "bb65923e-214f-4024-bf11-15cc6eb94961",
+        "source_document_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains substantive MD&A and business overview information, including Microsoft’s mission, revenue sources, major expenses, and fiscal 2024 operating highlights. It is self-contained and useful for investor research.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What is Microsoft Cloud revenue for fiscal year 2024?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-46f77f8f5e195b0b",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does Microsoft describe the main ways it makes money and its biggest expense categories?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-19eb8b94fa9eb815",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What fiscal 2024 operating highlights does management point to, such as changes in Microsoft Cloud, Office, LinkedIn, and Dynamics revenue?",
+          "goal": "management_analysis",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-57d4c12219114c33",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "71b599746edbbaa4810599ca7fb34f014373ee6dfe90f5987cfe55ff8156a165",
+      "chunk_sha256": "b992f2a11cbfdaf5e5c704a3e5fce7a112679a556371f8a6bc0b6080fa961279",
+      "text": "ITEM 7A. QUANTITATIVE AND QUALITAT\nIVE DISCLOSURES ABOUT MARKET RISK\nRISKS\nWe are exposed to economic risk from foreign exchange rates, interest rates, credit risk, and equity prices. We use derivatives instruments to manage these risks, however, they may still impact our consolidated financial statements.\nForeign Currencies\nCertain forecasted transactions, assets, and liabilities are exposed to foreign currency risk. We monitor our foreign currency exposures daily to maximize the economic effectiveness of our foreign currency positions, including hedges. Principal currency exposures include the Euro, Japanese yen, British pound, Canadian dollar, and Australian dollar.\nInterest Rate\nSecurities held in our fixed-income portfolio are subject to different interest rate risks based on their maturities. We manage the average maturity of the fixed-income portfolio to achieve economic returns that correlate to certain global fixed-income indices.\nCredit\nOur fixed-income portfolio is diversified and consists primarily of investment-grade securities. We manage credit exposures relative to broad-based indices to facilitate portfolio diversification.\nEquity\nSecurities held in our equity investments portfolio are subject to price risk.\nSENSITIVITY ANALYSIS\nThe following table sets forth the potential loss in future earnings or fair values, including associated derivatives, resulting from hypothetical changes in relevant market rates or prices:\n(In millions)\nRisk Categories\nHypothetical Change\nJune 30,\n2026\nImpact\nForeign currency – Revenue\n10% decrease in foreign exchange rates\n$\n(13,653\n)\nEarnings\nForeign currency – Investments\n10% decrease in foreign exchange rates\n(5\n)\nFair Value\nInterest rate\n100 basis point increase in U.S. treasury interest rates\n(1,201\n)\nFair Value\nCredit\n100 basis point increase in credit spreads\n(412\n)\nFair Value\nEquity\n10% decrease in equity market prices\n(2,654\n)\nEarnings\n49",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "54c842a6-f610-4ec6-a3bb-f4ffbd545f9e",
+      "accession": "0001193125-26-323660",
+      "report_date": "2026-06-30",
+      "item": "7A",
+      "item_title": "Quantitative and Qualitative Disclosures About Market Risk",
+      "citation": "0001193125-26-323660:item-7a:0000",
+      "source_start": 192825,
+      "source_end": 194748,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "7A",
+        "anchor": "0001193125-26-323660:item-7a:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0001193125-26-323660",
+        "source_end": 194748,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "source_start": 192825,
+        "source_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02",
+        "source_document": "msft-20260630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "edgar_filing_document_id": "d18b5f02-d6f4-4c23-b974-d24109edbf71",
+        "edgar_filing_snapshot_id": "c044c271-07e5-4196-9fe1-99689ad49a1f",
+        "source_document_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains substantive Market Risk disclosure, including foreign exchange, interest rate, credit, and equity risk exposures plus sensitivity analysis figures.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What currencies are listed as principal currency exposures in the foreign currency risk section?",
+          "goal": "market_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-bb961ccc6dfccb73",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does the company describe managing its interest rate exposure in the fixed-income portfolio?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ab33a93d3d1d933d",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What potential loss is shown for a 10% decrease in equity market prices?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-7de40712c3d8a868",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "9ed1b268001e453a85bb282eeb445799451026565fced771d53373c1dd2313ad",
+      "chunk_sha256": "236cd63398648dcd4a84675d8226dacd5556859f06ee733138bcd240576fcae8",
+      "text": "ITEM 7A. QUANTITATIVE AND QUALITAT\nIVE DISCLOSURES ABOUT MARKET RISK\nRISKS\nWe are exposed to economic risk from foreign exchange rates, interest rates, credit risk, and equity prices. We use derivatives instruments to manage these risks, however, they may still impact our consolidated financial statements.\nForeign Currencies\nCertain forecasted transactions, assets, and liabilities are exposed to foreign currency risk. We monitor our foreign currency exposures daily to maximize the economic effectiveness of our foreign currency positions, including hedges. Principal currency exposures include the Euro, Japanese yen, British pound, Canadian dollar, and Australian dollar.\nInterest Rate\nSecurities held in our fixed-income portfolio are subject to different interest rate risks based on their maturities. We manage the average maturity of the fixed-income portfolio to achieve economic returns that correlate to certain global fixed-income indices.\nCredit\nOur fixed-income portfolio is diversified and consists primarily of investment-grade securities. We manage credit exposures relative to broad-based indices to facilitate portfolio diversification.\nEquity\nSecurities held in our equity investments portfolio are subject to price risk.\nSENSITIVITY ANALYSIS\nThe following table sets forth the potential loss in future earnings or fair values, including associated derivatives, resulting from hypothetical changes in relevant market rates or prices:\n(In millions)\nRisk Categories\nHypothetical Change\nJune 30,\n2024\nImpact\nForeign currency – Revenue\n10% decrease in foreign exchange rates\n$\n(9,605\n)\nEarnings\nForeign currency – Investments\n10% decrease in foreign exchange rates\n(38\n)\nFair Value\nInterest rate\n100 basis point increase in U.S. treasury interest rates\n(1,343\n)\nFair Value\nCredit\n100 basis point increase in credit spreads\n(318\n)\nFair Value\nEquity\n10% decrease in equity market prices\n(1,078\n)\nEarnings\n55",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "93cc9201-93e3-4f98-8185-e4f4e9152a6f",
+      "accession": "0000950170-24-087843",
+      "report_date": "2024-06-30",
+      "item": "7A",
+      "item_title": "Quantitative and Qualitative Disclosures About Market Risk",
+      "citation": "0000950170-24-087843:item-7a:0000",
+      "source_start": 215081,
+      "source_end": 217004,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "7A",
+        "anchor": "0000950170-24-087843:item-7a:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0000950170-24-087843",
+        "source_end": 217004,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "source_start": 215081,
+        "source_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95",
+        "source_document": "msft-20240630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "edgar_filing_document_id": "fe275416-7c39-4723-bc1d-44722536b26f",
+        "edgar_filing_snapshot_id": "bb65923e-214f-4024-bf11-15cc6eb94961",
+        "source_document_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage gives self-contained market risk disclosures, including the company’s main exposures, how it manages them, and a sensitivity analysis with quantified impacts.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What principal currency exposures does the company identify in its foreign currency risk discussion?",
+          "goal": "market_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-de7760ed9dd9c62a",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does the company say it manages the average maturity of its fixed-income portfolio?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-f153c4d0337c22a0",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What impact does a 10% decrease in equity market prices have in the sensitivity analysis?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-fba54a61f6da957d",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "abb992299c277ad5d7968677928e740dfb0c3eb2e68f47c763dc5d38ec03691d",
+      "chunk_sha256": "8163aed0400d4fc8c5abb5c26290932a29a7b842737f8d9aa52e80a73c6f545b",
+      "text": "ITEM 8. FINANCIAL STATE\nMENTS AND SUPPLEMENTARY DATA\nINC\nOME STATEMENTS\n(In millions, except per share amounts)\nYear Ended June 30,\n2024\n2023\n2022\nRevenue:\nProduct\n$\n64,773\n$\n64,699\n$\n72,732\nService and other\n180,349\n147,216\n125,538\nTotal revenue\n245,122\n211,915\n198,270\nCost of revenue:\nProduct\n15,272\n17,804\n19,064\nService and other\n58,842\n48,059\n43,586\nTotal cost of revenue\n74,114\n65,863\n62,650\nGross margin\n171,008\n146,052\n135,620\nResearch and development\n29,510\n27,195\n24,512\nSales and marketing\n24,456\n22,759\n21,825\nGeneral and administrative\n7,609\n7,575\n5,900\nOperating income\n109,433\n88,523\n83,383\nOther income (expense), net\n(\n1,646\n)\n788\n333\nIncome before income taxes\n107,787\n89,311\n83,716\nProvision for income taxes\n19,651\n16,950\n10,978\nNet income\n$\n88,136\n$\n72,361\n$\n72,738\nEarnings per share:\nBasic\n$\n11.86\n$\n9.72\n$\n9.70\nDiluted\n$\n11.80\n$\n9.68\n$\n9.65\nWeighted average shares outstanding:\nBasic\n7,431\n7,446\n7,496\nDiluted\n7,469\n7,472\n7,540\nRefer to accompanying notes.\n56",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "93cc9201-93e3-4f98-8185-e4f4e9152a6f",
+      "accession": "0000950170-24-087843",
+      "report_date": "2024-06-30",
+      "item": "8",
+      "item_title": "Financial Statements and Supplementary Data",
+      "citation": "0000950170-24-087843:item-8:0000",
+      "source_start": 217020,
+      "source_end": 218004,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "8",
+        "anchor": "0000950170-24-087843:item-8:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0000950170-24-087843",
+        "source_end": 218004,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "source_start": 217020,
+        "source_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95",
+        "source_document": "msft-20240630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
+        "edgar_filing_document_id": "fe275416-7c39-4723-bc1d-44722536b26f",
+        "edgar_filing_snapshot_id": "bb65923e-214f-4024-bf11-15cc6eb94961",
+        "source_document_checksum": "43829a12cc9cd7198474b3d735c4fc1aba1f871fb637d237aa5979d57e6b8c95"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains a self-contained income statement with revenue, expenses, operating income, net income, and earnings per share for multiple years, which is useful investor information.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What was total revenue in 2024?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-5651c589912f1ab7",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How did operating income change from 2023 to 2024?",
+          "goal": "management_analysis",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-a3e4ed8e8bd4ef85",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What was the provision for income taxes in 2024?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-6d65028088f30c6e",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "fd486cca49e457b1b35786e9efd3f0899eb8825681835af93ddc60ca73d46164",
+      "chunk_sha256": "f270e5ed1e17eb9e5c349eb565fa11ca566dd75a8d9275a501470a8f94776c50",
+      "text": "ITEM 8. FINANCIAL STATE\nMENTS AND SUPPLEMENTARY DATA\nINC\nOME STATEMENTS\n(In millions, except per share amounts)\nYear Ended June 30,\n2026\n2025\n2024\nRevenue:\nProduct\n$\n64,696\n$\n63,946\n$\n64,773\nService and other\n267,143\n217,778\n180,349\nTotal revenue\n331,839\n281,724\n245,122\nCost of revenue:\nProduct\n12,098\n13,501\n15,272\nService and other\n94,276\n74,330\n58,842\nTotal cost of revenue\n106,374\n87,831\n74,114\nGross margin\n225,465\n193,893\n171,008\nResearch and development\n35,562\n32,488\n29,510\nSales and marketing\n26,710\n25,654\n24,456\nGeneral and administrative\n7,956\n7,223\n7,609\nOperating income\n155,237\n128,528\n109,433\nOther income (expense), net\n10,697\n(\n4,901\n)\n(\n1,646\n)\nIncome before income taxes\n165,934\n123,627\n107,787\nProvision for income taxes\n32,185\n21,795\n19,651\nNet income\n$\n133,749\n$\n101,832\n$\n88,136\nEarnings per share:\nBasic\n$\n18.00\n$\n13.70\n$\n11.86\nDiluted\n$\n17.95\n$\n13.64\n$\n11.80\nWeighted average shares outstanding:\nBasic\n7,429\n7,433\n7,431\nDiluted\n7,453\n7,465\n7,469\nRefer to accompanying notes.\n50",
+      "ticker": "MSFT",
+      "company": "MICROSOFT CORP",
+      "corpus_version_id": "54c842a6-f610-4ec6-a3bb-f4ffbd545f9e",
+      "accession": "0001193125-26-323660",
+      "report_date": "2026-06-30",
+      "item": "8",
+      "item_title": "Financial Statements and Supplementary Data",
+      "citation": "0001193125-26-323660:item-8:0000",
+      "source_start": 194764,
+      "source_end": 195768,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+      "source_metadata": {
+        "cik": "0000789019",
+        "item": "8",
+        "anchor": "0001193125-26-323660:item-8:0000",
+        "ticker": "MSFT",
+        "ordinal": 0,
+        "accession": "0001193125-26-323660",
+        "source_end": 195768,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "source_start": 194764,
+        "source_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02",
+        "source_document": "msft-20260630.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm",
+        "edgar_filing_document_id": "d18b5f02-d6f4-4c23-b974-d24109edbf71",
+        "edgar_filing_snapshot_id": "c044c271-07e5-4196-9fe1-99689ad49a1f",
+        "source_document_checksum": "4bcf2da2871acc19e32c5a62f36f6d83d6aae03cdc4aaa9a86a9a21ee8223f02"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains a complete income statement with revenue, costs, operating income, net income, and per-share results for three fiscal years, which is useful investor information.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What was total revenue in 2026 and 2025?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-4e853c62355d81e1",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How did operating income change from 2024 to 2026?",
+          "goal": "management_analysis",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-7c42d74712281837",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What were the basic and diluted earnings per share for 2026?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-177f3645190b95e8",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "76c0c0d20902efd5b0298a397f51e1052a1f782593db464e8bba17e9ff49b9b3",
+      "chunk_sha256": "2ad6f46857912c555317220ef72ce70122da72f26f61a8c53dcc906cccf52364",
+      "text": "ng. While historically the server was the unit of computing, as AI and HPC workloads have become extremely large spanning thousands of compute nodes, the data center has become the new unit of computing, with networking as an integral part.\nOur end customers include the world’s leading public cloud and consumer internet companies, thousands of enterprises and startups, and public sector entities. We work with industry leaders to help build or transform their applications and data center infrastructure. Our direct customers include original equipment manufacturers, or OEMs, original device manufacturers, or ODMs, system integrators and distributors which we partner with to help bring our products to market. We also have partnerships in automotive, healthcare, financial services, manufacturing, and retail among others, to accelerate the adoption of AI.\n5\nTable of Contents\nAt the foundation of the NVIDIA accelerated computing platform are our GPUs, which excel at parallel workloads such as the training and inferencing of neural networks. They are available in the NVIDIA accelerated computing platform and in industry standard servers from every major cloud provider and server maker. Beyond GPUs, our data center platform expanded to include DPUs in fiscal year 2022 and CPUs in fiscal year 2024. We can optimize across the entire computing, networking and storage stack to deliver data center-scale computing solutions.\nWhile our approach starts with powerful chips, what makes it a full-stack computing platform is our large body of software, including the CUDA parallel programming model, the CUDA-X collection of acceleration libraries, APIs, SDKs, and domain-specific application frameworks.\nIn addition to software delivered to customers as an integral part of our data center computing platform, we offer paid licenses to NVIDIA AI Enterprise, a comprehensive suite of enterprise-grade AI software and NVIDIA vGPU software for graphics-rich virtual desktops and workstations.\nIn fiscal year 2024, we launched the NVIDIA DGX Cloud, an AI-training-as-a-service platform which includes cloud-based infrastructure and software for AI, customizable pretrained AI models, and access to NVIDIA experts. We have partnered with leading cloud service providers to host this service in their data centers.\nGaming",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "7e0d7ccb-98b6-421f-9520-b865dd64879b",
+      "accession": "0001045810-24-000029",
+      "report_date": "2024-01-28",
+      "item": "1",
+      "item_title": "Business",
+      "citation": "0001045810-24-000029:item-1:0005",
+      "source_start": 20047,
+      "source_end": 22369,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "1",
+        "anchor": "0001045810-24-000029:item-1:0005",
+        "ticker": "NVDA",
+        "ordinal": 5,
+        "accession": "0001045810-24-000029",
+        "source_end": 22369,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+        "source_start": 20047,
+        "source_checksum": "3ee6c75beb947d9e815464e5c0b6392db4f8ca20aa2f99666bc17c92b82d7759",
+        "source_document": "nvda-20240128.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+        "edgar_filing_document_id": "06098823-4e2b-4492-8ea5-2ae9508f3336",
+        "edgar_filing_snapshot_id": "b4c03a27-1c40-4187-81cd-5c5e54560490",
+        "source_document_checksum": "3ee6c75beb947d9e815464e5c0b6392db4f8ca20aa2f99666bc17c92b82d7759"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains substantive business description about NVIDIA’s accelerated computing platform, customer base, product stack, software, and DGX Cloud offering, which is useful investor information.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What products and software make up NVIDIA's accelerated computing platform?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-cd2d756b67a422ae",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Which customer groups does NVIDIA say it serves in data center and related markets?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-1ad3cb729af5af1a",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What did NVIDIA launch in fiscal year 2024 as an AI-training-as-a-service platform?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ff5a08bc1e158dae",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "e3f1bf37b0f84c32af5d49170b187603c80224ef4259e00eea013dd8fb2a501a",
+      "chunk_sha256": "a4f5d1a32584f4a446ef6d69bed32687954726355c1c1c5c7b0a8916f888ad19",
+      "text": "or our platforms. Our Deep Learning Institute provides in-person and online training for developers in industries and organizations around the world to build AI and accelerated computing applications that leverage our platforms.\nSeasonality\nOur computing platforms serve a diverse set of markets such as data centers, gaming, professional visualization, and automotive. Our desktop gaming products typically see stronger revenue in the second half of our fiscal year. Historical seasonality trends may not repeat.\nManufacturing\nWe utilize a fabless and contracting manufacturing strategy, whereby we employ and partner with key suppliers for all phases of the manufacturing process, including wafer fabrication, assembly, testing, and packaging. We use the expertise of industry-leading suppliers that are certified by the International Organization for Standardization in such areas as fabrication, assembly, quality control and assurance, reliability, and testing. Additionally, we can avoid many of the significant costs and risks associated with owning and operating manufacturing operations. While we may directly procure certain raw materials used in the production of our products, such as memory, substrates, and a variety of components, our suppliers are responsible for procurement of most raw materials used in the production of our products. As a result, we can focus our resources on product design, quality assurance, marketing, and customer support. In periods of growth, we may place non-cancellable inventory orders for certain product components in advance of our historical lead times, pay premiums, or provide deposits to secure future supply and capacity and may need to continue to do so.",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "f18b8aee-3971-438a-b975-f5fb7e7d3c05",
+      "accession": "0001045810-26-000021",
+      "report_date": "2026-01-25",
+      "item": "1",
+      "item_title": "Business",
+      "citation": "0001045810-26-000021:item-1:0014",
+      "source_start": 35548,
+      "source_end": 37258,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "1",
+        "anchor": "0001045810-26-000021:item-1:0014",
+        "ticker": "NVDA",
+        "ordinal": 14,
+        "accession": "0001045810-26-000021",
+        "source_end": 37258,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "source_start": 35548,
+        "source_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b",
+        "source_document": "nvda-20260125.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "edgar_filing_document_id": "582a6973-69bd-4d74-a765-3c01ebc8a6d2",
+        "edgar_filing_snapshot_id": "554a2f20-0c09-403e-b144-447cbb16b6e5",
+        "source_document_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains self-contained business information about NVIDIA’s markets, seasonality, and fabless manufacturing strategy, including supplier dependence and inventory commitments.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What markets do our computing platforms serve?",
+          "goal": "business",
+          "query_type": "exact_keyword",
+          "id": "gtq-019848b2d5f5893f",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does the company describe its manufacturing approach and supplier reliance?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-929130c2a92dc893",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What seasonal pattern do desktop gaming products typically show?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-d2faf5061ba206da",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "009a9c46c4ac7b9b7e60e871f9ca6ce364ee24eb6e878f2ed2746ed039a89bad",
+      "chunk_sha256": "35b4128a45cbabccdb60907e93d71c3cc001ce6478cc0d4e8229674b195a00a0",
+      "text": "In the event that we are able to sell licensed products into the China market, we may not be able to pass along all or any of the tariff to our customers, and may be subject to litigation, increased costs, and a harmed competitive position.\nThe export controls applicable to China are complex and address a variety of parameters, including the total processing performance of a chip, the “performance density” of a chip, the interconnect bandwidth of a chip, and the memory bandwidth of a chip. Under the current rules and geopolitical landscape, we are unable to create and deliver a competitive product for China’s data center market that receives approval from both the USG and the Chinese government. As of the end of fiscal year 2026, we were effectively foreclosed from competing in China's data center computing/compute market, and our effective foreclosure from the China market helped our competitors build larger developer and customer ecosystems to challenge us worldwide. Unless we are able to return with a product that meets the approval of both the USG and the Chinese government, our lost opportunity and the benefit to our competitors will have a material and adverse impact on our business, operating results, and financial condition.\nIn addition to controls targeting D:1, D:4 and D:5 countries, the USG has also imposed worldwide export controls impacting our products, and may impose additional controls in the future.\nIn January 2025, the USG published the AI Diffusion IFR in the Federal Register. The IFR would have imposed a worldwide licensing requirement on our data center products, such as our H200, GB200 and GB300. The AI Diffusion IFR would have divided the world into three tiers, relegating most countries to “Tier 2” status, and would have created a complex and burdensome scheme for licensing approvals.",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "f18b8aee-3971-438a-b975-f5fb7e7d3c05",
+      "accession": "0001045810-26-000021",
+      "report_date": "2026-01-25",
+      "item": "1A",
+      "item_title": "Risk Factors",
+      "citation": "0001045810-26-000021:item-1a:0046",
+      "source_start": 139248,
+      "source_end": 141087,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "1A",
+        "anchor": "0001045810-26-000021:item-1a:0046",
+        "ticker": "NVDA",
+        "ordinal": 46,
+        "accession": "0001045810-26-000021",
+        "source_end": 141087,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "source_start": 139248,
+        "source_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b",
+        "source_document": "nvda-20260125.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "edgar_filing_document_id": "582a6973-69bd-4d74-a765-3c01ebc8a6d2",
+        "edgar_filing_snapshot_id": "554a2f20-0c09-403e-b144-447cbb16b6e5",
+        "source_document_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive risk disclosure about export controls, China market access, tariffs, and potential impacts on NVIDIA’s business and operating results.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What export controls affect NVIDIA's products in China?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-5e5e3c5bfb579606",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Why does NVIDIA say it is unable to create and deliver a competitive product for China’s data center market under current rules?",
+          "goal": "key_risks",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-7773e226a12bb5aa",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How could the AI Diffusion IFR have affected NVIDIA's data center products such as H200, GB200, and GB300?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-b3103d11a94ef6ed",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "e0f6f1c6b6529aa7609aabcd08bf39cf9f19ba528bb28c994854c9e76e2d1bda",
+      "chunk_sha256": "3d4d3e8fdd6454ffe0ba0ba365bbe6c33fb50ce403a5554960ecb69f6ba5262b",
+      "text": "duced future tax benefits from stock-based compensation, increase our effective tax rate and adversely affect our financial results.\nOur business is exposed to the risks associated with litigation, investigations and regulatory proceedings.\nWe currently and will likely continue to face legal, administrative and regulatory proceedings, claims, demands and/or investigations involving shareholder, consumer, competition and/or other issues relating to our business. For example, we are defending a securities class action lawsuit from multiple shareholders asserting claims that we and certain of our officers made false and/or misleading statements related to channel inventory and the impact of cryptocurrency mining on GPU demand in 2017 and 2018. Litigation and regulatory proceedings are inherently uncertain, and adverse rulings could occur, including monetary damages or fines, or an injunction stopping us from manufacturing or selling certain products, engaging in certain business practices, or requiring other remedies, such as compulsory licensing of patents. An unfavorable outcome or settlement may result in a material adverse impact. Regardless of the outcome, litigation can be costly, time-consuming, and disruptive to our operations.\nOur indebtedness could adversely affect our financial position and cash flows from operations, and prevent us from implementing our strategy or fulfilling our contractual obligations.\nAs of January 28, 2024, we had net outstanding a total of $9.7 billion in notes due by 2060. As each series of senior notes matures, unless redeemed or repurchased, we must repay or refinance the notes. If we decide to refinance, we may receive less favorable terms, or we may be unable to refinance at all, which may adversely affect our financial condition. We also have a $575 million commercial paper program.",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "7e0d7ccb-98b6-421f-9520-b865dd64879b",
+      "accession": "0001045810-24-000029",
+      "report_date": "2024-01-28",
+      "item": "1A",
+      "item_title": "Risk Factors",
+      "citation": "0001045810-24-000029:item-1a:0058",
+      "source_start": 164536,
+      "source_end": 166386,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "1A",
+        "anchor": "0001045810-24-000029:item-1a:0058",
+        "ticker": "NVDA",
+        "ordinal": 58,
+        "accession": "0001045810-24-000029",
+        "source_end": 166386,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+        "source_start": 164536,
+        "source_checksum": "3ee6c75beb947d9e815464e5c0b6392db4f8ca20aa2f99666bc17c92b82d7759",
+        "source_document": "nvda-20240128.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+        "edgar_filing_document_id": "06098823-4e2b-4492-8ea5-2ae9508f3336",
+        "edgar_filing_snapshot_id": "b4c03a27-1c40-4187-81cd-5c5e54560490",
+        "source_document_checksum": "3ee6c75beb947d9e815464e5c0b6392db4f8ca20aa2f99666bc17c92b82d7759"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive risk disclosures about litigation, regulatory proceedings, and indebtedness, including potential adverse outcomes and debt amounts, which are useful to investors.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What litigation, investigations, and regulatory proceedings does NVIDIA say it faces, including the securities class action lawsuit over channel inventory and cryptocurrency mining claims?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-8da45fcbb73f9e58",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What adverse outcomes does NVIDIA warn could result from legal, administrative, or regulatory proceedings?",
+          "goal": "key_risks",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-d12ff9d75926eb40",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How could NVIDIA’s indebtedness affect its financial position, cash flows, and ability to implement its strategy?",
+          "goal": "management_analysis",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-8c60a5d1186051ec",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "4827c2848200b61a508b4b3a88a9c4cc23891867a3e493fec2eec4b67eced3d7",
+      "chunk_sha256": "a16d15e591c235a7ad1319ccaa7138d0b1049ecab544f2d3bf411b031be86e4f",
+      "text": "Item 3. Legal Proceedings\nPlease see Note 13 of the Notes to the Consolidated Financial Statements in Part IV, Item 15 of this Annual Report on Form 10-K for a discussion of our legal proceedings.",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "7e0d7ccb-98b6-421f-9520-b865dd64879b",
+      "accession": "0001045810-24-000029",
+      "report_date": "2024-01-28",
+      "item": "3",
+      "item_title": "Legal Proceedings",
+      "citation": "0001045810-24-000029:item-3:0000",
+      "source_start": 173475,
+      "source_end": 173671,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "3",
+        "anchor": "0001045810-24-000029:item-3:0000",
+        "ticker": "NVDA",
+        "ordinal": 0,
+        "accession": "0001045810-24-000029",
+        "source_end": 173671,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+        "source_start": 173475,
+        "source_checksum": "3ee6c75beb947d9e815464e5c0b6392db4f8ca20aa2f99666bc17c92b82d7759",
+        "source_document": "nvda-20240128.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+        "edgar_filing_document_id": "06098823-4e2b-4492-8ea5-2ae9508f3336",
+        "edgar_filing_snapshot_id": "b4c03a27-1c40-4187-81cd-5c5e54560490",
+        "source_document_checksum": "3ee6c75beb947d9e815464e5c0b6392db4f8ca20aa2f99666bc17c92b82d7759"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This is a self-contained legal-risk disclosure that points to the company’s legal proceedings and directs the reader to a related note for more detail.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What item covers Legal Proceedings?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-bfe97e002898a471",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Where does the passage direct readers for more information about legal proceedings?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-1579ab1a88542918",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Which part of the report is referenced for a discussion of the company’s legal proceedings?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-c07dca7d65ee00ab",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "d3da3a0dfa5f842256bda01a1a2e59e062d0986f4dc9ba7319ed39ed23d52783",
+      "chunk_sha256": "c33265a1c95888fbf1020379b57f56570bc440427badc706a90a4bfa6f99911b",
+      "text": "Item 3. Legal Proceedings\nPlease see Note 12 of the Notes to the Consolidated Financial Statements in Part IV, Item 15 of this Annual Report on Form 10-K for a discussion of our legal proceedings.",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "f18b8aee-3971-438a-b975-f5fb7e7d3c05",
+      "accession": "0001045810-26-000021",
+      "report_date": "2026-01-25",
+      "item": "3",
+      "item_title": "Legal Proceedings",
+      "citation": "0001045810-26-000021:item-3:0000",
+      "source_start": 178423,
+      "source_end": 178619,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "3",
+        "anchor": "0001045810-26-000021:item-3:0000",
+        "ticker": "NVDA",
+        "ordinal": 0,
+        "accession": "0001045810-26-000021",
+        "source_end": 178619,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "source_start": 178423,
+        "source_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b",
+        "source_document": "nvda-20260125.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "edgar_filing_document_id": "582a6973-69bd-4d74-a765-3c01ebc8a6d2",
+        "edgar_filing_snapshot_id": "554a2f20-0c09-403e-b144-447cbb16b6e5",
+        "source_document_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage is brief but self-contained enough to identify that Item 3 covers legal proceedings and directs readers to Note 12 for further discussion; it contains useful investor-relevant legal-risk context rather than navigation debris.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What does Item 3 say about legal proceedings and Note 12?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-ef874ae30896cb9c",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Which note in Part IV, Item 15 provides the discussion of legal proceedings?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-c01babdad9f74711",
+          "review_status": "accepted"
+        },
+        {
+          "question": "Where does the report direct readers for more detail on the company's legal proceedings?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ce048f0841adcfec",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "0276594f486db519f4003f7bec1ff74f33dcc66a33cf0524bcd64e880a4f2b2a",
+      "chunk_sha256": "77b0bcc4da9a0d76ccbe8a106b24e31e58b5eddd83ea6fba1629c47b98185670",
+      "text": "oduct transitions, and macroeconomic conditions - all of which may impact demand for our products.\nRefer to the Gross Profit and Gross Margin discussion below in this Management's Discussion and Analysis for further discussion.\nIncome Taxes\nWe are subject to income taxes in the U.S. and foreign jurisdictions. Our calculation of deferred tax assets and liabilities is based on certain estimates and judgments and involves dealing with uncertainties in the application of complex tax laws. Our estimates of deferred tax assets and liabilities may change based, in part, on added certainty or finality to an anticipated outcome, changes in accounting standards or tax laws in the U.S. or foreign jurisdictions where we operate, or changes in other facts or circumstances. In addition, we recognize liabilities for potential U.S. and foreign income tax contingencies based on our estimate of whether, and the extent to which, additional taxes may be due. If we determine that payment of these amounts is unnecessary or if the recorded tax liability is less than our current assessment, we may be required to recognize an income tax benefit or additional income tax expense in our financial statements accordingly.\nAs of the end of fiscal years 2024 and 2023, we had a valuation allowance of $1.6 billion and $1.5 billion, respectively, related to capital loss carryforwards, and certain state and other deferred tax assets that management determined are not likely to be realized due, in part, to jurisdictional projections of future taxable income, including capital gains. To the extent realization of the deferred tax assets becomes more-likely-than-not, we would recognize such deferred tax assets as income tax benefits during the period.\nWe recognize the benefit from a tax position only if it is more-likely-than-not that the position would be sustained upon audit based solely on the technical merits of the tax position. Our policy is to include interest and penalties related to unrecognized tax benefits as a component of income tax expense.\n37\nTable of Contents\nRevenue Recognition\nRevenue Allowances",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "7e0d7ccb-98b6-421f-9520-b865dd64879b",
+      "accession": "0001045810-24-000029",
+      "report_date": "2024-01-28",
+      "item": "7",
+      "item_title": "Management's Discussion and Analysis",
+      "citation": "0001045810-24-000029:item-7:0010",
+      "source_start": 195866,
+      "source_end": 197976,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "7",
+        "anchor": "0001045810-24-000029:item-7:0010",
+        "ticker": "NVDA",
+        "ordinal": 10,
+        "accession": "0001045810-24-000029",
+        "source_end": 197976,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+        "source_start": 195866,
+        "source_checksum": "3ee6c75beb947d9e815464e5c0b6392db4f8ca20aa2f99666bc17c92b82d7759",
+        "source_document": "nvda-20240128.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000029/nvda-20240128.htm",
+        "edgar_filing_document_id": "06098823-4e2b-4492-8ea5-2ae9508f3336",
+        "edgar_filing_snapshot_id": "b4c03a27-1c40-4187-81cd-5c5e54560490",
+        "source_document_checksum": "3ee6c75beb947d9e815464e5c0b6392db4f8ca20aa2f99666bc17c92b82d7759"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive Management’s Discussion and Analysis content on macroeconomic demand, income taxes, deferred tax assets, valuation allowances, and unrecognized tax benefits, which is useful to investors.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What macroeconomic conditions may impact demand for our products?",
+          "goal": "management_analysis",
+          "query_type": "exact_keyword",
+          "id": "gtq-9062b9ad93c4e610",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How does management determine whether to recognize a benefit from a tax position?",
+          "goal": "management_analysis",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-cbfde6fe0e23821e",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What amounts did the company record as valuation allowance for fiscal years 2024 and 2023?",
+          "goal": "key_risks",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-50a2dc6976311a49",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "116d891560e60bdc7e441b9bd8a7dc34685e31a057c615dcad24ba08c15962d4",
+      "chunk_sha256": "e26cf30e260b56bf8ae72764212352fa08830fa8832847f88c277d6222583ee8",
+      "text": "axes\nIncome tax expense was $21.4 billion and $11.1 billion for fiscal years 2026 and 2025, respectively. Income tax as a percentage of income before income tax was an expense of 15.1% and 13.3% for fiscal years 2026 and 2025, respectively.\nThe effective tax rate increased primarily due to a lower percentage of tax benefits from stock-based compensation, FDDEI, and U.S. federal research tax credit relative to the increase in income before income tax.\nOur effective tax rates for fiscal years 2026 and 2025 were lower than the U.S. federal statutory rate of 21.0% primarily due to tax benefits from FDDEI, stock-based compensation, income earned in jurisdictions that are subject to taxes at rates lower than the U.S. federal statutory tax rate, and the U.S. federal research tax credit.\nIn July 2025, the One Big Beautiful Bill Act (OBBBA) was enacted into law and contains several changes to key U.S. federal income tax laws. We have recognized the tax effects of currently effective OBBBA provisions in our results for fiscal year 2026. We will continue to evaluate the impact of these legislative changes as tax authorities provide additional guidance and interpretation.\nAs of January 25, 2026, based on recent jurisdictional taxable income and expected future earnings, we concluded certain state deferred tax assets are more likely than not realizable and released $711 million of valuation allowance.\nRefer to Note 13 of the Notes to the Consolidated Financial Statements in Part IV, Item 15 of this Annual Report on Form 10-K for additional information.\nLiquidity and Capital Resources\nJan 25, 2026\nJan 26, 2025\n(In millions)\nCash and cash equivalents\n$\n10,605\n$\n8,589\nMarketable securities\n51,951\n34,621\nCash, cash equivalents, and marketable securities\n$\n62,556\n$\n43,210\n42\nTable of Contents\nYear Ended\nJan 25, 2026\nJan 26, 2025\n(In millions)\nNet cash provided by operating activities\n$\n102,718\n$\n64,089\nNet cash used in investing activities\n$\n(52,228)\n$\n(20,421)\nNet cash used in financing activities\n$\n(48,474)\n$\n(42,359)\nOur fixed income security investments include highly rated, diversified investment types and credit exposures with shorter maturities.\nCash provided by operating activities increased in fiscal year 2026 compared to fiscal year 2025, due to higher revenue.",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "f18b8aee-3971-438a-b975-f5fb7e7d3c05",
+      "accession": "0001045810-26-000021",
+      "report_date": "2026-01-25",
+      "item": "7",
+      "item_title": "Management's Discussion and Analysis",
+      "citation": "0001045810-26-000021:item-7:0013",
+      "source_start": 209295,
+      "source_end": 211588,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "7",
+        "anchor": "0001045810-26-000021:item-7:0013",
+        "ticker": "NVDA",
+        "ordinal": 13,
+        "accession": "0001045810-26-000021",
+        "source_end": 211588,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "source_start": 209295,
+        "source_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b",
+        "source_document": "nvda-20260125.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "edgar_filing_document_id": "582a6973-69bd-4d74-a765-3c01ebc8a6d2",
+        "edgar_filing_snapshot_id": "554a2f20-0c09-403e-b144-447cbb16b6e5",
+        "source_document_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "The passage contains substantive investor information on income taxes, a recent tax law change, deferred tax assets, liquidity, cash balances, and cash flow trends, so it is useful for research.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What was the effective tax rate in fiscal year 2026?",
+          "goal": "management_analysis",
+          "query_type": "exact_keyword",
+          "id": "gtq-dc30ad4ebb6fdbee",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How did the One Big Beautiful Bill Act affect the company’s fiscal 2026 tax reporting?",
+          "goal": "legal_and_regulatory_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-76ed2ebc0f3c2504",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What were net cash provided by operating activities in fiscal 2026 and fiscal 2025?",
+          "goal": "business",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-f28e0b2e54c84daa",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "26954761c169fc6b71a5cf8a683372bef74b4084b0f34bef5600c343b7d9752a",
+      "chunk_sha256": "95df36c58eb408dcb5a2fd5ce8fdea2283075ec2fe45f022c71f68d830c11365",
+      "text": "Item 7A. Quantitative and Qualitative Disclosures about Market Risk\nInvestment and Interest Rate Risk\nWe are exposed to interest rate risk related to our fixed-rate investment portfolio and outstanding debt. The investment portfolio is managed consistent with our overall liquidity strategy in support of both working capital needs and growth of our businesses.\nAccording to our sensitivity analysis on our investment portfolio, a decrease in the yield curve of 0.5% as of the end of fiscal year 2026 and 2025 would decrease the fair value for these investments by approximately $0.2 billion.\nAs of the end of fiscal year 2026, we had $8.5 billion of senior Notes outstanding. We carry the Notes at face value less unamortized discount on our Consolidated Balance Sheets. As the Notes bear interest at a fixed rate, we have no financial statement risk associated with changes in interest rates. Refer to Note 11 of the Notes to the Consolidated Financial Statements in Part IV, Item 15 of this Annual Report on Form 10-K for additional information.\n44\nTable of Contents\nPublicly-held equity securities are subject to market price volatility. A hypothetical 10% decrease in our publicly-held equity securities would decrease the fair value of the publicly-held equity securities balance by $1.8 billion and an insignificant amount as of January 25, 2026 and January 26, 2025, respectively.\nNon-marketable equity securities are measured based on cost minus impairment, if any, and are adjusted for observable price changes in orderly transactions for an identical or similar investment in the same issuer. Valuations of our non-marketable equity securities are inherently complex due to the lack of readily available market data and observable transactions, and impact of macroeconomic factors.\nFor a description of our equity investments, refer to Notes 7 and 8 of the Notes to Condensed Consolidated Financial Statements in Part IV, Item 15 of this Annual Report on Form 10-K for additional information.\nForeign Exchange Rate Risk",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "f18b8aee-3971-438a-b975-f5fb7e7d3c05",
+      "accession": "0001045810-26-000021",
+      "report_date": "2026-01-25",
+      "item": "7A",
+      "item_title": "Quantitative and Qualitative Disclosures About Market Risk",
+      "citation": "0001045810-26-000021:item-7a:0000",
+      "source_start": 218135,
+      "source_end": 220165,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "7A",
+        "anchor": "0001045810-26-000021:item-7a:0000",
+        "ticker": "NVDA",
+        "ordinal": 0,
+        "accession": "0001045810-26-000021",
+        "source_end": 220165,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "source_start": 218135,
+        "source_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b",
+        "source_document": "nvda-20260125.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "edgar_filing_document_id": "582a6973-69bd-4d74-a765-3c01ebc8a6d2",
+        "edgar_filing_snapshot_id": "554a2f20-0c09-403e-b144-447cbb16b6e5",
+        "source_document_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains self-contained investor-relevant disclosure about market risk, including interest rate sensitivity, debt, equity security price volatility, and foreign exchange risk.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What does the company say about interest rate risk related to its fixed-rate investment portfolio and outstanding debt?",
+          "goal": "market_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-4bb07f67367ec56b",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How would a 0.5% drop in the yield curve affect the fair value of the investment portfolio?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-3017946aac1c8e4c",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What is the effect of a 10% decline in publicly-held equity securities on fair value?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-ff05c659f1a80010",
+          "review_status": "accepted"
+        }
+      ]
+    },
+    {
+      "chunk_id": "a32b11ba6f82beaa0db638ee11966f09280a055d373b893ad285155f79020065",
+      "chunk_sha256": "f1b55df522bf2ae731098374bf072e1ce79012f0895a165faf2e8fe8063f8346",
+      "text": "s.\nFor a description of our equity investments, refer to Notes 7 and 8 of the Notes to Condensed Consolidated Financial Statements in Part IV, Item 15 of this Annual Report on Form 10-K for additional information.\nForeign Exchange Rate Risk\nWe consider our direct exposure to foreign exchange rate fluctuations to be minimal as substantially all of our sales are in United States dollars and foreign currency forward contracts are used to offset movements of foreign currency exchange rates. Gains or losses from foreign currency remeasurement are included in other income or expenses. The impact of foreign currency transaction gain or loss included in determining net income was not significant for fiscal years 2026 and 2025.\nSales and arrangements with third-party manufacturers provide for pricing and payment in United States dollars, and, therefore, are not subject to exchange rate fluctuations. Increases in the value of the United States’ dollar relative to other currencies would make our products more expensive, which could negatively impact our ability to compete. Conversely, decreases in the value of the United States’ dollar relative to other currencies could result in our suppliers raising their manufacturing costs.\nIf the U.S. dollar strengthened by 10% as of January 25, 2026 and January 26, 2025, the amount recorded in Accumulated other comprehensive income (loss) related to our foreign exchange contracts before tax effect would have been an adverse impact of $180 million and $136 million, respectively. Change in value of our foreign exchange contracts recorded in Accumulated other comprehensive income (loss) would be expected to offset a corresponding change in hedged forecasted foreign currency expenses when recognized.\nIf an adverse 10% foreign exchange rate change was applied to our balance sheet hedging contracts, it would have resulted in an adverse impact on income before taxes of $124 million and $129 million as of January 25, 2026 and January 26, 2025, respectively. These changes in fair values would be offset in Total other income, net, by corresponding change in fair values of the foreign currency denominated monetary assets and liabilities, assuming the hedge contracts fully cover the foreign currency denominated monetary assets and liabilities balances.",
+      "ticker": "NVDA",
+      "company": "NVIDIA CORP",
+      "corpus_version_id": "f18b8aee-3971-438a-b975-f5fb7e7d3c05",
+      "accession": "0001045810-26-000021",
+      "report_date": "2026-01-25",
+      "item": "7A",
+      "item_title": "Quantitative and Qualitative Disclosures About Market Risk",
+      "citation": "0001045810-26-000021:item-7a:0001",
+      "source_start": 219925,
+      "source_end": 222234,
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+      "source_metadata": {
+        "cik": "0001045810",
+        "item": "7A",
+        "anchor": "0001045810-26-000021:item-7a:0001",
+        "ticker": "NVDA",
+        "ordinal": 1,
+        "accession": "0001045810-26-000021",
+        "source_end": 222234,
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "source_start": 219925,
+        "source_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b",
+        "source_document": "nvda-20260125.htm",
+        "edgartools_version": "5.41.0",
+        "primary_document_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+        "edgar_filing_document_id": "582a6973-69bd-4d74-a765-3c01ebc8a6d2",
+        "edgar_filing_snapshot_id": "554a2f20-0c09-403e-b144-447cbb16b6e5",
+        "source_document_checksum": "73d81f5a111abcf72426c840871e76f5f5edc9631f436d495a86b6f87306d58b"
+      },
+      "meaningful": true,
+      "meaningfulness_explanation": "This passage contains self-contained investor information about foreign exchange rate risk, the company’s exposure, hedging approach, and quantified sensitivity impacts.",
+      "review_status": "accepted",
+      "questions": [
+        {
+          "question": "What does NVIDIA say about its foreign exchange rate risk exposure and the use of foreign currency forward contracts?",
+          "goal": "market_risk",
+          "query_type": "exact_keyword",
+          "id": "gtq-e1bc33e11c1782f7",
+          "review_status": "accepted"
+        },
+        {
+          "question": "How could a stronger U.S. dollar affect NVIDIA’s competitiveness and suppliers according to the passage?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-89bdb717e788d0e5",
+          "review_status": "accepted"
+        },
+        {
+          "question": "What adverse impact would a 10% foreign exchange rate change have on NVIDIA’s balance sheet hedging contracts before taxes?",
+          "goal": "market_risk",
+          "query_type": "semantic_paraphrase",
+          "id": "gtq-334214fa289f12db",
+          "review_status": "accepted"
+        }
+      ]
+    }
+  ]
+}

@@ -1,10 +1,8 @@
-from datetime import date
-
 import pytest
 from pydantic import ValidationError
 
-from sec_filing_rag.config import CompanyConfiguration
-from sec_filing_rag.domain import (
+from sec_filing_rag.core.config import CompanyConfiguration
+from sec_filing_rag.domain.filings import (
     REQUIRED_ITEMS,
     compatibility_key,
     extract_item,
@@ -179,51 +177,3 @@ def test_chunk_offsets_are_document_relative() -> None:
         base_offset=100,
     )
     assert (chunks[0].start, chunks[0].end) == (102, 112)
-
-
-def test_fiscal_selection_uses_report_year_and_inclusive_lookback() -> None:
-    from sec_filing_rag.domain import AnalysisPeriod, FilingCandidate, select_fiscal_year
-
-    candidates = [
-        FilingCandidate("2024", date(2025, 2, 1), date(2024, 12, 31)),
-        FilingCandidate("2023", date(2024, 2, 1), date(2023, 12, 31)),
-        FilingCandidate("2015", date(2016, 2, 1), date(2015, 12, 31)),
-    ]
-    selected = select_fiscal_year(candidates, AnalysisPeriod.year("2024"), 10)
-    assert selected.exact and selected.exact.accession == "2024"
-    assert (selected.lookback.earliest_year, selected.lookback.latest_year) == (2015, 2024)
-    assert select_fiscal_year(candidates, AnalysisPeriod.year("2015"), 10).exact is not None
-    with pytest.raises(ValueError, match="outside"):
-        select_fiscal_year(candidates, AnalysisPeriod.year("2014"), 10)
-
-
-def test_missing_year_neighbors_and_confirmation_are_deterministic() -> None:
-    from sec_filing_rag.domain import (
-        AnalysisPeriod,
-        FilingCandidate,
-        confirmed_candidate,
-        select_fiscal_year,
-    )
-
-    candidates = [
-        FilingCandidate("later", date(2025, 1, 2), date(2024, 12, 31)),
-        FilingCandidate("earlier", date(2023, 1, 2), date(2022, 12, 31)),
-        FilingCandidate("older", date(2022, 1, 2), date(2021, 12, 31)),
-    ]
-    selection = select_fiscal_year(candidates, AnalysisPeriod.year("2023"), 4)
-    assert selection.exact is None
-    assert selection.earlier and selection.earlier.accession == "earlier"
-    assert selection.later and selection.later.accession == "later"
-    with pytest.raises(ValueError, match="requires neighbor"):
-        confirmed_candidate(selection, None)
-    with pytest.raises(ValueError, match="current discovery neighbor"):
-        confirmed_candidate(selection, "arbitrary")
-    assert confirmed_candidate(selection, "earlier").accession == "earlier"
-
-
-def test_historical_promotion_decision_never_moves_default() -> None:
-    from sec_filing_rag.domain import should_promote_default
-
-    assert should_promote_default(historical=False, candidate_complete=True)
-    assert not should_promote_default(historical=True, candidate_complete=True)
-    assert not should_promote_default(historical=False, candidate_complete=False)

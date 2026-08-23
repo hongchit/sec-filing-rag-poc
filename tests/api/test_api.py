@@ -1,30 +1,34 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi.testclient import TestClient
+import anyio.to_thread
+import httpx
 
-from sec_filing_rag.config import Settings
-from sec_filing_rag.dependencies import (
+from sec_filing_rag.api.dependencies import (
     batch_service,
+    company_repository,
     execution_service,
-    settings,
-    store,
+    system_repository,
     workflow_repository,
 )
+from sec_filing_rag.core.config import Settings
 from sec_filing_rag.main import create_app
 
 
-class FakeStore:
+class FakeSystemRepository:
     def ready(self) -> bool:
         return True
 
-    def companies(self) -> list[dict[str, object]]:
+
+class FakeCompanyRepository:
+    def list(self) -> list[dict[str, object]]:
         return [{"ticker": "AAPL", "resolution_status": "pending"}]
 
-    def company_status(self, ticker: str) -> dict[str, object] | None:
+    def status(self, ticker: str) -> dict[str, object] | None:
         return {"ticker": ticker, "active_corpus": None, "coverage": [], "latest_run": None}
 
 
@@ -59,7 +63,36 @@ class FakeExecutionService:
         return "0000320193-24-000123", 2024
 
 
-def client(tmp_path: Path) -> TestClient:
+class ApiClient:
+    def __init__(self, app) -> None:  # type: ignore[no-untyped-def]
+        self.app = app
+
+    def request(self, method: str, path: str, **kwargs) -> httpx.Response:  # type: ignore[no-untyped-def]
+        async def send() -> httpx.Response:
+            original = anyio.to_thread.run_sync
+
+            async def direct(function, *args, **options):  # type: ignore[no-untyped-def]
+                del options
+                return function(*args)
+
+            anyio.to_thread.run_sync = direct
+            try:
+                transport = httpx.ASGITransport(app=self.app)
+                async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as api:
+                    return await api.request(method, path, **kwargs)
+            finally:
+                anyio.to_thread.run_sync = original
+
+        return asyncio.run(send())
+
+    def get(self, path: str, **kwargs) -> httpx.Response:  # type: ignore[no-untyped-def]
+        return self.request("GET", path, **kwargs)
+
+    def post(self, path: str, **kwargs) -> httpx.Response:  # type: ignore[no-untyped-def]
+        return self.request("POST", path, **kwargs)
+
+
+def client(tmp_path: Path) -> ApiClient:
     company_file = tmp_path / "companies.yaml"
     company_file.write_text(
         "companies:\n  - ticker: AAPL\n    enabled: true\n  - ticker: MSFT\n    enabled: true\n"
@@ -70,13 +103,13 @@ def client(tmp_path: Path) -> TestClient:
         openai_api_key="key",
         company_config_path=company_file,
     )
-    app = create_app()
-    app.dependency_overrides[settings] = lambda: config
-    app.dependency_overrides[store] = FakeStore
+    app = create_app(config)
+    app.dependency_overrides[system_repository] = FakeSystemRepository
+    app.dependency_overrides[company_repository] = FakeCompanyRepository
     app.dependency_overrides[batch_service] = FakeBatchService
     app.dependency_overrides[workflow_repository] = FakeRepository
     app.dependency_overrides[execution_service] = FakeExecutionService
-    return TestClient(app)
+    return ApiClient(app)
 
 
 def test_public_batch_shapes_and_validation(tmp_path: Path) -> None:
@@ -89,6 +122,10 @@ def test_public_batch_shapes_and_validation(tmp_path: Path) -> None:
     assert api.post("/api/filing-batches", json={"tickers": ["AAPL", "aapl"]}).status_code == 422
     assert api.post("/api/companies/AAPL/filing-preparations", json={}).status_code == 202
     assert api.get(f"/api/filing-batches/{uuid.UUID(int=1)}").status_code == 200
+    company = api.get("/api/companies/AAPL/status").json()
+    assert "preparation_requests" not in company
+    assert "latest_default_corpus" not in company
+    assert {"active_corpus", "historical_corpora", "coverage", "latest_run"} <= company.keys()
 
 
 def test_internal_routes_are_bearer_protected_and_obsolete_routes_are_absent(tmp_path: Path) -> None:

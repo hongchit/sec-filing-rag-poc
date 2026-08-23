@@ -26,8 +26,10 @@ def test_batch_flow_has_retry_continue_and_lifecycle_finalization() -> None:
     retry = flow["tasks"][0]["retry"]
     each = next(task for task in flow["tasks"] if task["id"] == "execute_items")
     assert each["errors"][0]["allowFailure"] is True
-    assert flow["errors"][0]["allowFailure"] is True
     assert flow["finally"][0]["id"] == "finalize_batch"
+    assert "errors" not in flow
+    assert each["errors"][0]["retry"]["maxAttempts"] == 3
+    assert flow["finally"][0]["retry"]["maxAttempts"] == 3
     assert retry["maxAttempts"] == 3
     assert "maxAttempt" not in retry
 

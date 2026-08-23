@@ -85,19 +85,10 @@ tasks:
           connectTimeout: PT10S
           readTimeout: PT30M
         allowFailure: true
-errors:
-  - id: finalize_failed_batch
-    type: io.kestra.plugin.core.http.Request
-    uri: "http://app:8000/internal/filing-batches/{{ inputs.batch_id }}/finalizations"
-    method: POST
-    contentType: application/json
-    headers:
-      Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
-    body: "{{ {'kestra_execution_id': execution.id} | toJson }}"
-    options:
-      connectTimeout: PT10S
-      readTimeout: PT30M
-    allowFailure: true
+        retry:
+          type: constant
+          interval: PT5S
+          maxAttempts: 3
 finally:
   - id: finalize_batch
     type: io.kestra.plugin.core.http.Request
@@ -110,3 +101,8 @@ finally:
     options:
       connectTimeout: PT10S
       readTimeout: PT30M
+    retry:
+      type: constant
+      interval: PT5S
+      maxAttempts: 3
+    allowFailure: true

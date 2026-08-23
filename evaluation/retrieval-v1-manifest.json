@@ -1,0 +1,56 @@
+{
+  "chunking_version": "character-v1",
+  "corpora": [
+    {
+      "accession": "0000320193-24-000123",
+      "corpus_version_id": "48878648-85f7-4ce5-bec3-e36c6fd1ae72",
+      "ticker": "AAPL"
+    },
+    {
+      "accession": "0000320193-25-000079",
+      "corpus_version_id": "39b27d3e-e222-4814-8f63-468ed38b5a8a",
+      "ticker": "AAPL"
+    },
+    {
+      "accession": "0000950170-24-087843",
+      "corpus_version_id": "93cc9201-93e3-4f98-8185-e4f4e9152a6f",
+      "ticker": "MSFT"
+    },
+    {
+      "accession": "0001193125-26-323660",
+      "corpus_version_id": "54c842a6-f610-4ec6-a3bb-f4ffbd545f9e",
+      "ticker": "MSFT"
+    },
+    {
+      "accession": "0001045810-24-000029",
+      "corpus_version_id": "7e0d7ccb-98b6-421f-9520-b865dd64879b",
+      "ticker": "NVDA"
+    },
+    {
+      "accession": "0001045810-26-000021",
+      "corpus_version_id": "f18b8aee-3971-438a-b975-f5fb7e7d3c05",
+      "ticker": "NVDA"
+    }
+  ],
+  "corpus_snapshot_sha256": "ad49418995f96047084e676a32bcb0cee1476dc3a73b2f3937d0f934f002def8",
+  "coverage": {
+    "accepted_questions": 102,
+    "companies": 3,
+    "goals": 5,
+    "items": 6,
+    "legal_questions": 26,
+    "nonlegal_risk_questions": 10,
+    "query_types": 2
+  },
+  "dataset_sha256": "16758fdf6a1ab74b06772244ae8217f4530f006fb4aabfc78accee76ba06ad10",
+  "embedding_dimensions": 1536,
+  "embedding_model": "text-embedding-3-small",
+  "generation_config_sha256": "81c8c469f8dd81d03f3ac4b4a30be738be16a2ec8d880d3b701b9d3f3f231e7b",
+  "generation_run_id": "7855ccaf-6f7b-44c4-ba73-263a29e3af1d",
+  "parser_version": "corpus-heading-sanitized-v2",
+  "prompt_sha256": "901fa469229c79685bf157dbd600f5fb48604ae5332717d0da8a470757530810",
+  "review_bundle_sha256": "b78fe2e4d23a29e2a37d88a41cf56000daa3281030226590d5d7397c944ed852",
+  "review_status": "reviewed",
+  "version": "retrieval-ground-truth-v2",
+  "warnings": []
+}

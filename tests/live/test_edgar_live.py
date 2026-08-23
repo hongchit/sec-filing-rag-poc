@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-from sec_filing_rag.domain import REQUIRED_ITEMS, extract_sections, sanitize_filing_html
-from sec_filing_rag.sec import EdgarGateway, configure_edgartools
+from sec_filing_rag.domain.filings import REQUIRED_ITEMS, extract_sections, sanitize_filing_html
+from sec_filing_rag.integrations.sec import EdgarGateway, configure_edgartools
 
 pytestmark = [
     pytest.mark.live_edgar,

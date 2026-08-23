@@ -19,8 +19,15 @@ def test_corpus_status_groups_correlated_company_key() -> None:
 
 def test_clean_schema_has_historical_state_default_pointer_and_no_cross_database_fk() -> None:
     migration = Path("migrations/versions/0001_schema.sql").read_text(encoding="utf-8")
-    assert "CREATE TABLE public.preparation_request" in migration
-    assert "preparation_request_id uuid" in migration
+    assert "CREATE TABLE public.filing_batch" in migration
+    assert "CREATE TABLE public.filing_batch_item" in migration
+    assert "CREATE TABLE bronze.filing_acquisition" in migration
+    assert "preparation_request" not in migration
+    assert "preparation_status" not in migration
+    assert "confirmation_state" not in migration
+    assert "requested_item" not in migration
+    assert "preparation_request_id" not in migration
+    assert not Path("migrations/versions/0002_filing_batches.sql").exists()
     assert "kestra_execution_id text" in migration
     assert "one_default_corpus_per_company" in migration
     assert "UNIQUE (filing_id, compatibility_key)" in migration

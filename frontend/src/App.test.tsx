@@ -6,5 +6,5 @@ import { App } from './main';
 test('renders health shell', () => {
   vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
   render(<App />);
-  expect(screen.getByRole('heading', {name: 'Ingestion foundation'})).toBeInTheDocument();
+  expect(screen.getByRole('heading', {name: 'Ingestion and retrieval foundation'})).toBeInTheDocument();
 });

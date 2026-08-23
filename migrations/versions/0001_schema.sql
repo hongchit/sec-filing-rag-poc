@@ -11,8 +11,9 @@ CREATE TYPE public.stage_status AS ENUM ('pending','running','succeeded','failed
 CREATE TYPE public.coverage_status AS ENUM ('present','legitimately_absent','failed','not_assessed');
 CREATE TYPE public.corpus_lifecycle AS ENUM ('building','ready','failed','retired');
 CREATE TYPE public.usage_status AS ENUM ('reported','unavailable','failed');
-CREATE TYPE public.preparation_status AS ENUM ('pending','submitted','running','succeeded','submission_failed','failed');
-CREATE TYPE public.confirmation_state AS ENUM ('not_required','confirmed');
+CREATE TYPE public.filing_batch_mode AS ENUM ('latest','exact_year');
+CREATE TYPE public.filing_batch_status AS ENUM ('submitted','running','succeeded','partial_failure','failed');
+CREATE TYPE public.filing_batch_item_status AS ENUM ('pending','selecting','acquiring','processing','succeeded','skipped','failed');
 
 CREATE TABLE public.configuration_version (
   id uuid PRIMARY KEY, kind text NOT NULL, path text NOT NULL, normalized_json jsonb NOT NULL,
@@ -24,26 +25,28 @@ CREATE TABLE public.company (
   resolution_status public.resolution_status NOT NULL DEFAULT 'pending', safe_error text,
   configuration_version_id uuid NOT NULL REFERENCES public.configuration_version(id), updated_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE TABLE public.preparation_request (
+CREATE TABLE public.filing_batch (
+  id uuid PRIMARY KEY, mode public.filing_batch_mode NOT NULL,
+  fiscal_year integer CHECK (fiscal_year IS NULL OR fiscal_year BETWEEN 1900 AND 9999),
+  status public.filing_batch_status NOT NULL DEFAULT 'submitted', request_id text,
+  kestra_execution_id text, safe_error text, created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(), finished_at timestamptz,
+  CHECK ((mode='latest' AND fiscal_year IS NULL) OR (mode='exact_year' AND fiscal_year IS NOT NULL))
+);
+CREATE TABLE bronze.filing_acquisition (
   id uuid PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id),
-  requested_year integer NOT NULL CHECK (requested_year BETWEEN 1900 AND 9999),
-  selected_accession text NOT NULL CHECK (selected_accession ~ '^[0-9]{10}-[0-9]{2}-[0-9]{6}$'), selected_fiscal_year integer NOT NULL CHECK (selected_fiscal_year BETWEEN 1900 AND 9999),
-  confirmation_required boolean NOT NULL, confirmation_state public.confirmation_state NOT NULL,
-  status public.preparation_status NOT NULL DEFAULT 'pending', kestra_execution_id text,
-  corpus_version_id uuid, safe_error text, submitted_at timestamptz, finished_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
-  CHECK ((confirmation_required AND confirmation_state = 'confirmed') OR
-         (NOT confirmation_required AND confirmation_state = 'not_required')),
-  UNIQUE (id, company_id)
+  accession text NOT NULL CHECK (accession ~ '^[0-9]{10}-[0-9]{2}-[0-9]{6}$'),
+  payload jsonb NOT NULL, content bytea NOT NULL, media_type text NOT NULL CHECK (media_type='text/html'),
+  content_sha256 char(64) NOT NULL, content_length bigint NOT NULL CHECK (content_length=octet_length(content)),
+  acquired_at timestamptz NOT NULL DEFAULT now(), UNIQUE (company_id, accession, content_sha256)
 );
 CREATE TABLE public.ingestion_run (
-  id uuid PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id), requested_item text NOT NULL,
-  trigger text NOT NULL CHECK (trigger IN ('manual','schedule','api','historical','test')), compatibility_key char(64) NOT NULL,
-  preparation_request_id uuid, kestra_execution_id text,
+  id uuid PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id),
+  trigger text NOT NULL CHECK (trigger IN ('latest','exact_year','test')), compatibility_key char(64) NOT NULL,
+  kestra_execution_id text,
   status public.run_status NOT NULL DEFAULT 'pending', stage text NOT NULL DEFAULT 'created',
   section_count integer NOT NULL DEFAULT 0 CHECK (section_count >= 0), chunk_count integer NOT NULL DEFAULT 0 CHECK (chunk_count >= 0),
-  started_at timestamptz, finished_at timestamptz, safe_error text, created_at timestamptz NOT NULL DEFAULT now(),
-  FOREIGN KEY (preparation_request_id,company_id) REFERENCES public.preparation_request(id,company_id)
+  started_at timestamptz, finished_at timestamptz, safe_error text, created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE public.ingestion_stage (
   id bigserial PRIMARY KEY, ingestion_run_id uuid NOT NULL REFERENCES public.ingestion_run(id), stage text NOT NULL,
@@ -98,8 +101,16 @@ CREATE TABLE silver.corpus_version (
   status public.corpus_lifecycle NOT NULL DEFAULT 'building', created_at timestamptz NOT NULL DEFAULT now(), ready_at timestamptz,
   UNIQUE (filing_id, compatibility_key)
 );
-ALTER TABLE public.preparation_request ADD CONSTRAINT preparation_corpus_fk
-  FOREIGN KEY (corpus_version_id) REFERENCES silver.corpus_version(id);
+CREATE TABLE public.filing_batch_item (
+  id uuid PRIMARY KEY, batch_id uuid NOT NULL REFERENCES public.filing_batch(id),
+  company_id uuid NOT NULL REFERENCES public.company(id), position integer NOT NULL CHECK (position >= 0),
+  status public.filing_batch_item_status NOT NULL DEFAULT 'pending',
+  selected_accession text CHECK (selected_accession IS NULL OR selected_accession ~ '^[0-9]{10}-[0-9]{2}-[0-9]{6}$'),
+  acquisition_id uuid REFERENCES bronze.filing_acquisition(id), corpus_version_id uuid REFERENCES silver.corpus_version(id),
+  safe_error text, started_at timestamptz, finished_at timestamptz, updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (batch_id, position), UNIQUE (batch_id, company_id)
+);
+CREATE INDEX filing_batch_item_order ON public.filing_batch_item(batch_id, position);
 CREATE TABLE silver.section (
   id uuid PRIMARY KEY, corpus_version_id uuid NOT NULL REFERENCES silver.corpus_version(id), filing_id uuid NOT NULL REFERENCES silver.filing(id),
   item text NOT NULL, coverage_status public.coverage_status NOT NULL, text_content text, source_start integer, source_end integer,

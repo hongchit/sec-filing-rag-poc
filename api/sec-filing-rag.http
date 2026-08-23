@@ -1,52 +1,196 @@
 @baseUrl = http://{{$processEnv APP_HOST}}:{{$processEnv APP_PORT}}
 @internalToken = {{$processEnv INGESTION_API_TOKEN}}
-@batchId = 00000000-0000-0000-0000-000000000000
-@itemId = 00000000-0000-0000-0000-000000000000
+@contentType = application/json
 
-### Latest filings for every enabled company
+########################################################
+### Request: GET /api/health
+### Summary: Health
+### Description: Check application database readiness.
+########################################################
+
+
+GET {{baseUrl}}/api/health
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+##################################################################
+### Request: GET /api/companies
+### Summary: Companies
+### Description: List configured companies and corpus readiness.
+##################################################################
+
+
+GET {{baseUrl}}/api/companies
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+###################################################################################
+### Request: GET /api/companies/{ticker}/status
+### Summary: Company Status
+### Description: Inspect application-owned corpus status without querying Kestra.
+###################################################################################
+
+### Path Parameter: GetCompanyStatus_ticker
+@GetCompanyStatus_ticker = str
+
+
+GET {{baseUrl}}/api/companies/{{GetCompanyStatus_ticker}}/status
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+########################################################################################################################
+### Request: POST /api/filing-batches
+### Summary: Create Batch
+### Description: Submit all enabled companies or an explicit ordered ticker subset for latest or exact-year ingestion.
+########################################################################################################################
+
+
 POST {{baseUrl}}/api/filing-batches
-Content-Type: application/json
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
 
-{}
+{
+  "fiscal_year": 0,
+  "tickers": ["item"]
+}
 
-### Exact fiscal year
-POST {{baseUrl}}/api/filing-batches
-Content-Type: application/json
+###########################################################################################
+### Request: POST /api/companies/{ticker}/filing-preparations
+### Summary: Create Preparation
+### Description: Submit one configured company for latest or exact fiscal-year ingestion.
+###########################################################################################
 
-{"fiscal_year": 2024}
+### Path Parameter: PostCreateCompanyFilingPreparation_ticker
+@PostCreateCompanyFilingPreparation_ticker = str
 
-### Explicit ticker subset
-POST {{baseUrl}}/api/filing-batches
-Content-Type: application/json
 
-{"tickers": ["AAPL", "MSFT"]}
+POST {{baseUrl}}/api/companies/{{PostCreateCompanyFilingPreparation_ticker}}/filing-preparations
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
 
-### Single-company preparation
-POST {{baseUrl}}/api/companies/AAPL/filing-preparations
-Content-Type: application/json
+{
+  "fiscal_year": 0
+}
 
-{"fiscal_year": 2024}
+##############################################################################
+### Request: GET /api/filing-batches/{batch_id}
+### Summary: Get Batch
+### Description: Read authoritative overall and per-company workflow status.
+##############################################################################
 
-### Batch status
-GET {{baseUrl}}/api/filing-batches/{{batchId}}
+### Path Parameter: GetFilingBatch_batch_id
+@GetFilingBatch_batch_id = str
 
-### Internal selection
-POST {{baseUrl}}/internal/providers/filing-items/{{itemId}}/selection
-Authorization: Bearer {{internalToken}}
-Content-Type: application/json
 
-{}
+GET {{baseUrl}}/api/filing-batches/{{GetFilingBatch_batch_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
 
-### Internal acquisition
-POST {{baseUrl}}/internal/providers/filing-items/{{itemId}}/acquisitions
-Authorization: Bearer {{internalToken}}
-Content-Type: application/json
 
-{}
+######################################################
+### Request: GET /internal/filing-batches/{batch_id}
+### Summary: Get Execution Batch
+######################################################
 
-### Internal corpus execution
-POST {{baseUrl}}/internal/corpus-executions/{{itemId}}
-Authorization: Bearer {{internalToken}}
-Content-Type: application/json
+### Path Parameter: GetFilingBatchExecution_batch_id
+@GetFilingBatchExecution_batch_id = str
 
-{}
+
+GET {{baseUrl}}/internal/filing-batches/{{GetFilingBatchExecution_batch_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+####################################################################################
+### Request: POST /internal/filing-items/{item_id}/failures
+### Summary: Fail Item
+### Description: Record a safe terminal item failure after an orchestration error.
+####################################################################################
+
+### Path Parameter: PostFailFilingBatchItem_item_id
+@PostFailFilingBatchItem_item_id = str
+
+
+POST {{baseUrl}}/internal/filing-items/{{PostFailFilingBatchItem_item_id}}/failures
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "error": "example",
+  "kestra_execution_id": "example"
+}
+
+################################################################################
+### Request: POST /internal/filing-batches/{batch_id}/finalizations
+### Summary: Finalize
+### Description: Finalize aggregate state and fail any stranded running items.
+################################################################################
+
+### Path Parameter: PostFinalizeFilingBatch_batch_id
+@PostFinalizeFilingBatch_batch_id = str
+
+
+POST {{baseUrl}}/internal/filing-batches/{{PostFinalizeFilingBatch_batch_id}}/finalizations
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "kestra_execution_id": "example"
+}
+
+####################################################################################
+### Request: POST /internal/providers/filing-items/{item_id}/selection
+### Summary: Select
+### Description: Select the latest original 10-K or an exact SEC report-date year.
+####################################################################################
+
+### Path Parameter: PostSelectFilingForBatchItem_item_id
+@PostSelectFilingForBatchItem_item_id = str
+
+
+POST {{baseUrl}}/internal/providers/filing-items/{{PostSelectFilingForBatchItem_item_id}}/selection
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "kestra_execution_id": "example"
+}
+
+#######################################################################################################
+### Request: POST /internal/providers/filing-items/{item_id}/acquisitions
+### Summary: Acquire
+### Description: Validate and persist selected filing HTML; return only a safe acquisition reference.
+#######################################################################################################
+
+### Path Parameter: PostAcquireSelectedFiling_item_id
+@PostAcquireSelectedFiling_item_id = str
+
+
+POST {{baseUrl}}/internal/providers/filing-items/{{PostAcquireSelectedFiling_item_id}}/acquisitions
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "kestra_execution_id": "example"
+}
+
+###############################################################################################
+### Request: POST /internal/corpus-executions/{item_id}
+### Summary: Process
+### Description: Build a corpus from a persisted acquisition and promote only in latest mode.
+###############################################################################################
+
+### Path Parameter: PostExecuteCorpusForBatchItem_item_id
+@PostExecuteCorpusForBatchItem_item_id = str
+
+
+POST {{baseUrl}}/internal/corpus-executions/{{PostExecuteCorpusForBatchItem_item_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "kestra_execution_id": "example"
+}

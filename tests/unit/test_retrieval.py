@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from sec_filing_rag.evaluation import (
+from sec_filing_rag.evaluation.service import (
     CorpusManifest,
     EvaluationCase,
     hit_rate,
@@ -17,7 +17,7 @@ from sec_filing_rag.evaluation import (
     select_winner,
     validate_review_gate,
 )
-from sec_filing_rag.retrieval import (
+from sec_filing_rag.retrieval.service import (
     Candidate,
     RetrievalQuery,
     RetrievalResult,
@@ -232,7 +232,7 @@ def test_migration_has_pinned_bm25_contract_and_prefilter_indexes() -> None:
 
 
 def test_repository_paths_parameterize_values_and_share_identical_filters() -> None:
-    from sec_filing_rag.retrieval import CorpusIdentity, RetrievalRepository
+    from sec_filing_rag.retrieval.service import CorpusIdentity, RetrievalRepository
 
     rows = [
         {
@@ -269,14 +269,14 @@ def test_repository_paths_parameterize_values_and_share_identical_filters() -> N
     assert common in keyword_sql and common in vector_sql
     assert "supply chain" not in keyword_sql
     assert keyword_params[1:7] == vector_params[1:7]
-    assert "to_bm25query(%s,'search_document_lexical_bm25')" in keyword_sql
+    assert "to_bm25query(%s,'gold.search_document_lexical_bm25')" in keyword_sql
     assert "<=> %s::vector" in vector_sql
 
 
 def test_query_embedder_persists_reported_unavailable_and_failed_usage() -> None:
     from types import SimpleNamespace
 
-    from sec_filing_rag.retrieval import OpenAIQueryEmbedder
+    from sec_filing_rag.retrieval.service import OpenAIQueryEmbedder
 
     class Embeddings:
         def __init__(self, response: object) -> None:
