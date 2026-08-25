@@ -36,9 +36,9 @@ def test_kestra_submission_uses_basic_auth_and_multipart_inputs() -> None:
 
 @respx.mock
 def test_kestra_errors_are_sanitized() -> None:
-    respx.post(
-        "http://kestra:8080/api/v1/main/executions/sec_filings.ingestion/filing_batch"
-    ).mock(side_effect=httpx.ConnectTimeout("server-password timed out"))
+    respx.post("http://kestra:8080/api/v1/main/executions/sec_filings.ingestion/filing_batch").mock(
+        side_effect=httpx.ConnectTimeout("server-password timed out")
+    )
     with pytest.raises(KestraSubmissionError) as caught:
         gateway().submit_batch(batch_id="batch-1")
     assert "server-password" not in str(caught.value)

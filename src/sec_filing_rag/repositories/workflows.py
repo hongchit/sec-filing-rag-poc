@@ -7,7 +7,12 @@ from datetime import date, datetime
 from typing import Any
 
 from ..domain.filings import safe_error
-from ..integrations.sec import AcquiredFiling, EdgarCompanySnapshot, EdgarFilingDocument, EdgarFilingMetadata
+from ..integrations.sec import (
+    AcquiredFiling,
+    EdgarCompanySnapshot,
+    EdgarFilingDocument,
+    EdgarFilingMetadata,
+)
 from .database import Database
 
 
@@ -126,7 +131,9 @@ class WorkflowRepository:
         payload = {
             "company": asdict(acquired.company),
             "filing": asdict(acquired.filing),
-            "document": {key: value for key, value in asdict(acquired.document).items() if key != "content"},
+            "document": {
+                key: value for key, value in asdict(acquired.document).items() if key != "content"
+            },
         }
         acquisition_id = uuid.uuid4()
         with self.database.transaction() as connection:
@@ -155,7 +162,8 @@ class WorkflowRepository:
     def load_acquisition(self, acquisition_id: uuid.UUID) -> AcquiredFiling:
         with self.database.transaction() as connection:
             row = connection.execute(
-                "SELECT payload,content FROM bronze.filing_acquisition WHERE id=%s", (acquisition_id,)
+                "SELECT payload,content FROM bronze.filing_acquisition WHERE id=%s",
+                (acquisition_id,),
             ).fetchone()
         if row is None:
             raise ValueError("unknown acquisition")
@@ -202,7 +210,8 @@ class WorkflowRepository:
             counts = {row["status"]: row["count"] for row in rows}
             success = counts.get("succeeded", 0)
             incomplete = sum(
-                counts.get(value, 0) for value in ("pending", "selecting", "acquiring", "processing")
+                counts.get(value, 0)
+                for value in ("pending", "selecting", "acquiring", "processing")
             )
             if incomplete:
                 connection.execute(

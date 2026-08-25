@@ -9,7 +9,9 @@ from sec_filing_rag.integrations.sec import EdgarGateway, configure_edgartools
 
 pytestmark = [
     pytest.mark.live_edgar,
-    pytest.mark.skipif(os.getenv("LIVE_EDGAR") != "1", reason="set LIVE_EDGAR=1 to run SEC regressions"),
+    pytest.mark.skipif(
+        os.getenv("LIVE_EDGAR") != "1", reason="set LIVE_EDGAR=1 to run SEC regressions"
+    ),
 ]
 
 EXPECTED = {
@@ -45,7 +47,9 @@ def test_exact_filing_bytes_metadata_and_six_item_extraction(
     assert acquired.document.sha256 == checksum
     assert acquired.filing.report_date and acquired.filing.homepage_url
     assert acquired.filing.filing_url and acquired.filing.text_url
-    sections = extract_sections(sanitize_filing_html(acquired.document.content, max_chars=20_000_000))
+    sections = extract_sections(
+        sanitize_filing_html(acquired.document.content, max_chars=20_000_000)
+    )
     assert tuple(sections) == REQUIRED_ITEMS
     assert all(section.status not in {"failed", "not_assessed"} for section in sections.values())
 

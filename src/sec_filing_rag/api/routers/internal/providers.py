@@ -50,7 +50,9 @@ def acquire(
     service: Annotated[FilingExecutionService, Depends(execution_service)],
 ) -> AcquisitionResponse:
     try:
-        acquisition_id, accession, checksum, size = service.acquire(item_id, payload.kestra_execution_id)
+        acquisition_id, accession, checksum, size = service.acquire(
+            item_id, payload.kestra_execution_id
+        )
         return AcquisitionResponse(
             acquisition_id=acquisition_id, accession=accession, checksum=checksum, size=size
         )

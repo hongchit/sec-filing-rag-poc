@@ -71,7 +71,11 @@ def test_score_normalization_and_weighted_fusion() -> None:
     vector = [candidate("b", 1, 0.9), candidate("c", 2, 0.1)]
     assert normalize_scores(keyword) == {"a": 1.0, "b": 0.0}
     fused = weighted_hybrid(keyword, vector, 0.5)
-    assert [(value.chunk_id, value.score) for value in fused] == [("a", 0.5), ("b", 0.5), ("c", 0.0)]
+    assert [(value.chunk_id, value.score) for value in fused] == [
+        ("a", 0.5),
+        ("b", 0.5),
+        ("c", 0.0),
+    ]
 
 
 def test_flat_normalization_is_one_and_ties_use_rank_then_chunk_id() -> None:
@@ -101,8 +105,18 @@ def test_metrics_and_winner_tie_breaks() -> None:
     assert reciprocal_rank(values, frozenset({"relevant"})) == 0.5
     assert reciprocal_rank(values, frozenset({"missing"})) == 0
     rows = [
-        {"mrr": 0.5, "hit_rate": 0.8, "median_latency_ms": 2, "configuration": {"strategy": "vector"}},
-        {"mrr": 0.5, "hit_rate": 0.8, "median_latency_ms": 1, "configuration": {"strategy": "keyword"}},
+        {
+            "mrr": 0.5,
+            "hit_rate": 0.8,
+            "median_latency_ms": 2,
+            "configuration": {"strategy": "vector"},
+        },
+        {
+            "mrr": 0.5,
+            "hit_rate": 0.8,
+            "median_latency_ms": 1,
+            "configuration": {"strategy": "keyword"},
+        },
     ]
     assert select_winner(rows)["configuration"]["strategy"] == "keyword"
 
@@ -184,8 +198,16 @@ def test_partial_dataset_loads_and_manifest_matches_exact_corpus(tmp_path: Path)
             "corpus_snapshot_sha256": "e" * 64,
             "generation_run_id": str(uuid.uuid4()),
             "corpora": [
-                {"ticker": "AAPL", "accession": "old-accession", "corpus_version_id": first_version},
-                {"ticker": "AAPL", "accession": "new-accession", "corpus_version_id": second_version},
+                {
+                    "ticker": "AAPL",
+                    "accession": "old-accession",
+                    "corpus_version_id": first_version,
+                },
+                {
+                    "ticker": "AAPL",
+                    "accession": "new-accession",
+                    "corpus_version_id": second_version,
+                },
             ],
             "coverage": {"accepted_questions": 1},
             "warnings": [{"code": "question_count"}],

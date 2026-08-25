@@ -75,7 +75,9 @@ def create_preparation(
         if not TICKER_RE.fullmatch(normalized):
             raise ValueError("invalid ticker")
         return _submit(
-            FilingBatchRequest(tickers=[normalized], fiscal_year=payload.fiscal_year), request, service
+            FilingBatchRequest(tickers=[normalized], fiscal_year=payload.fiscal_year),
+            request,
+            service,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None

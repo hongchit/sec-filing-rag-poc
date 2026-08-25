@@ -16,7 +16,9 @@ from ..domain.filings import REQUIRED_ITEMS, safe_error, sha256_bytes
 from ..repositories.database import Database
 
 TICKERS = ("AAPL", "MSFT", "NVDA")
-Goal = Literal["business", "key_risks", "management_analysis", "market_risk", "legal_and_regulatory_risk"]
+Goal = Literal[
+    "business", "key_risks", "management_analysis", "market_risk", "legal_and_regulatory_risk"
+]
 QueryType = Literal["exact_keyword", "semantic_paraphrase"]
 Decision = Literal["pending", "accepted", "rejected"]
 ITEM_TITLES = {
@@ -30,7 +32,9 @@ ITEM_TITLES = {
 
 
 def canonical_sha256(value: Any) -> str:
-    return sha256_bytes(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode())
+    return sha256_bytes(
+        json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode()
+    )
 
 
 class GenerationConfiguration(BaseModel):
@@ -238,7 +242,9 @@ class GroundTruthRepository:
             row = dict(raw)
             corpora.setdefault(
                 row["corpus_version_id"],
-                CorpusSnapshot.model_validate({key: row[key] for key in CorpusSnapshot.model_fields}),
+                CorpusSnapshot.model_validate(
+                    {key: row[key] for key in CorpusSnapshot.model_fields}
+                ),
             )
             if row["chunk_id"] is not None:
                 chunks.append(row)
@@ -263,7 +269,9 @@ class GroundTruthRepository:
         )
         return ordered_corpora, chunks
 
-    def start_run(self, run_id: uuid.UUID, config: GenerationConfiguration, prompt_sha: str) -> None:
+    def start_run(
+        self, run_id: uuid.UUID, config: GenerationConfiguration, prompt_sha: str
+    ) -> None:
         with self.database.transaction() as connection:
             connection.execute(
                 "INSERT INTO public.ground_truth_generation_run(id,model,prompt_version,sampling_seed,configuration,configuration_sha256,prompt_sha256) VALUES (%s,%s,%s,%s,%s,%s,%s)",
@@ -303,7 +311,9 @@ class GroundTruthRepository:
         error: str | None,
     ) -> None:
         input_tokens = getattr(usage, "prompt_tokens", None) or getattr(usage, "input_tokens", None)
-        output_tokens = getattr(usage, "completion_tokens", None) or getattr(usage, "output_tokens", None)
+        output_tokens = getattr(usage, "completion_tokens", None) or getattr(
+            usage, "output_tokens", None
+        )
         total_tokens = getattr(usage, "total_tokens", None)
         status = "failed" if error else ("reported" if total_tokens is not None else "unavailable")
         normalized = error or "succeeded"
@@ -334,9 +344,12 @@ class GroundTruthRepository:
                 if (
                     row is None
                     or str(row["sha256"]) != chunk.chunk_sha256
-                    or sha256_bytes(str(row["text_content"]).encode()) != sha256_bytes(chunk.text.encode())
+                    or sha256_bytes(str(row["text_content"]).encode())
+                    != sha256_bytes(chunk.text.encode())
                 ):
-                    raise ValueError(f"source chunk changed or is no longer ready: {chunk.chunk_id}")
+                    raise ValueError(
+                        f"source chunk changed or is no longer ready: {chunk.chunk_id}"
+                    )
 
 
 class Assessor(Protocol):
@@ -353,7 +366,12 @@ class OpenAIAssessor:
         timeout: float,
         max_retries: int = 2,
     ) -> None:
-        self.repository, self.config, self.prompt, self.max_retries = repository, config, prompt, max_retries
+        self.repository, self.config, self.prompt, self.max_retries = (
+            repository,
+            config,
+            prompt,
+            max_retries,
+        )
         self.client = OpenAI(api_key=api_key, timeout=timeout)
 
     def close(self) -> None:
@@ -388,7 +406,10 @@ class OpenAIAssessor:
             try:
                 response = self.client.beta.chat.completions.parse(
                     model=self.config.model,
-                    messages=[{"role": "system", "content": self.prompt}, {"role": "user", "content": user}],
+                    messages=[
+                        {"role": "system", "content": self.prompt},
+                        {"role": "user", "content": user},
+                    ],
                     response_format=LLMChunkAssessment,
                 )
                 usage = getattr(response, "usage", None)
@@ -433,7 +454,9 @@ def stable_question_id(chunk_id: str, question: GeneratedQuestion) -> str:
 
 def _review_chunk(row: dict[str, Any], result: LLMChunkAssessment) -> ReviewChunk:
     questions = [
-        ReviewQuestion(id=stable_question_id(str(row["chunk_id"]), question), **question.model_dump())
+        ReviewQuestion(
+            id=stable_question_id(str(row["chunk_id"]), question), **question.model_dump()
+        )
         for question in result.questions
     ]
     return ReviewChunk(
@@ -476,7 +499,9 @@ def generate_bundle(
         raise
     strata = [(ticker, item) for ticker in TICKERS for item in REQUIRED_ITEMS]
 
-    def process(stratum: tuple[str, str]) -> tuple[tuple[str, str], list[ReviewChunk], list[dict[str, Any]]]:
+    def process(
+        stratum: tuple[str, str],
+    ) -> tuple[tuple[str, str], list[ReviewChunk], list[dict[str, Any]]]:
         # Bound screening independently for every company and Item stratum.
         candidates = deterministic_rank(
             [row for row in rows if (row["ticker"], row["item"]) == stratum], config.sampling_seed
@@ -521,7 +546,11 @@ def generate_bundle(
                 )
         # Concurrent completion order varies; artifact order remains deterministic.
         chunks.sort(
-            key=lambda chunk: (TICKERS.index(chunk.ticker), REQUIRED_ITEMS.index(chunk.item), chunk.chunk_id)
+            key=lambda chunk: (
+                TICKERS.index(chunk.ticker),
+                REQUIRED_ITEMS.index(chunk.item),
+                chunk.chunk_id,
+            )
         )
         bundle = ReviewBundle(
             generation_run_id=run_id,
@@ -537,7 +566,9 @@ def generate_bundle(
             chunks=chunks,
         )
         repository.finish_run(
-            run_id, snapshot_sha=snapshot_sha, bundle_sha=canonical_sha256(bundle.model_dump(mode="json"))
+            run_id,
+            snapshot_sha=snapshot_sha,
+            bundle_sha=canonical_sha256(bundle.model_dump(mode="json")),
         )
         return bundle
     except Exception as exc:
@@ -567,7 +598,9 @@ def validate_review(bundle: ReviewBundle, *, require_complete: bool = False) -> 
     expected_strata = {(ticker, item) for ticker in TICKERS for item in REQUIRED_ITEMS}
     actual_strata = {(summary.ticker, summary.item) for summary in bundle.generation_summary}
     if actual_strata != expected_strata or len(bundle.generation_summary) != len(expected_strata):
-        raise ValueError("review bundle generation summary does not cover each stratum exactly once")
+        raise ValueError(
+            "review bundle generation summary does not cover each stratum exactly once"
+        )
     if require_complete:
         pending = [
             chunk.chunk_id
@@ -588,7 +621,9 @@ def coverage_metadata(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
         record["goal"] == "legal_and_regulatory_risk" or record["allowed_items"] == ["3"]
         for record in records
     )
-    nonlegal = sum(record["goal"] == "key_risks" and record["allowed_items"] != ["3"] for record in records)
+    nonlegal = sum(
+        record["goal"] == "key_risks" and record["allowed_items"] != ["3"] for record in records
+    )
     coverage = {
         "accepted_questions": len(records),
         "companies": len(companies),
@@ -600,8 +635,16 @@ def coverage_metadata(records: list[dict[str, Any]]) -> tuple[dict[str, Any], li
     }
     checks: list[tuple[str, bool, dict[str, Any]]] = [
         ("question_count", len(records) >= 30, {"actual": len(records), "target": 30}),
-        ("company_coverage", companies == set(TICKERS), {"missing": sorted(set(TICKERS) - companies)}),
-        ("item_coverage", items == set(REQUIRED_ITEMS), {"missing": sorted(set(REQUIRED_ITEMS) - items)}),
+        (
+            "company_coverage",
+            companies == set(TICKERS),
+            {"missing": sorted(set(TICKERS) - companies)},
+        ),
+        (
+            "item_coverage",
+            items == set(REQUIRED_ITEMS),
+            {"missing": sorted(set(REQUIRED_ITEMS) - items)},
+        ),
         ("goal_coverage", len(goals) == 5, {"actual": len(goals), "target": 5}),
         (
             "query_type_coverage",
@@ -652,11 +695,18 @@ def finalize_bundle(
         raise ValueError("finalized retrieval evaluation requires at least one accepted question")
     coverage, warnings = coverage_metadata(records)
     corpus_contracts = {
-        (corpus.parser_version, corpus.chunking_version, corpus.embedding_model, corpus.embedding_dimensions)
+        (
+            corpus.parser_version,
+            corpus.chunking_version,
+            corpus.embedding_model,
+            corpus.embedding_dimensions,
+        )
         for corpus in bundle.corpora
     }
     if len(corpus_contracts) != 1:
-        raise ValueError("snapshotted corpora have incompatible parser, chunking, or embedding metadata")
+        raise ValueError(
+            "snapshotted corpora have incompatible parser, chunking, or embedding metadata"
+        )
     prompt_hash = sha256_bytes(prompt_path.read_bytes())
     config_hash = sha256_bytes(config_path.read_bytes())
     serialized = "".join(
@@ -688,5 +738,7 @@ def finalize_bundle(
         ],
     }
     dataset_path.write_text(serialized, encoding="utf-8")
-    manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+    )
     return records, manifest

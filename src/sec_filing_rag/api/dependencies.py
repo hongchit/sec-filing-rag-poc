@@ -9,6 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ..core.config import Settings
 from ..core.resources import AppResources
+from ..evaluation.dashboard import EvaluationDashboardService
 from ..integrations.kestra import KestraGateway
 from ..integrations.sec import EdgarGateway, configure_edgartools
 from ..repositories.companies import CompanyRepository
@@ -47,6 +48,12 @@ def ingestion_repository(db: Annotated[Database, Depends(database)]) -> Ingestio
 
 def workflow_repository(db: Annotated[Database, Depends(database)]) -> WorkflowRepository:
     return WorkflowRepository(db)
+
+
+def evaluation_dashboard(
+    db: Annotated[Database, Depends(database)], config: Annotated[Settings, Depends(settings)]
+) -> EvaluationDashboardService:
+    return EvaluationDashboardService(db, config)
 
 
 def provider_gateway() -> EdgarGateway:
@@ -97,7 +104,11 @@ def authorize_internal(
 ) -> None:
     expected = config.ingestion_api_token
     supplied = (
-        credentials.credentials if credentials is not None and credentials.scheme.lower() == "bearer" else ""
+        credentials.credentials
+        if credentials is not None and credentials.scheme.lower() == "bearer"
+        else ""
     )
     if not hmac.compare_digest(supplied, expected):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid ingestion token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid ingestion token"
+        )

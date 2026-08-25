@@ -148,6 +148,74 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/retrieval-evaluations/current:
+    get:
+      tags:
+      - retrieval-evaluations
+      summary: Current
+      description: Read the validated current retrieval evaluation and official leaderboard.
+      operationId: getCurrentRetrievalEvaluation
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationSummary'
+  /api/retrieval-evaluations/current/configurations/{configuration_id}/cases:
+    get:
+      tags:
+      - retrieval-evaluations
+      summary: Cases
+      description: Inspect every reviewed question and ranked chunk for one stable configuration.
+      operationId: getCurrentRetrievalEvaluationCases
+      parameters:
+      - name: configuration_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Configuration Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationCases'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/retrieval-evaluations/current/chunks/{chunk_id}:
+    get:
+      tags:
+      - retrieval-evaluations
+      summary: Chunk
+      description: Lazy-load full text and provenance for a chunk referenced by the current evaluation.
+      operationId: getCurrentRetrievalEvaluationChunk
+      parameters:
+      - name: chunk_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Chunk Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationChunk'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /internal/filing-batches/{batch_id}:
     get:
       tags:
@@ -613,6 +681,123 @@ components:
       - item_id
       - status
       title: CorpusExecutionResponse
+    EvaluationCases:
+      properties:
+        configuration_id:
+          type: string
+          title: Configuration Id
+        cases:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Cases
+        facets:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+          title: Facets
+        warnings:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Warnings
+      type: object
+      required:
+      - configuration_id
+      - cases
+      - facets
+      - warnings
+      title: EvaluationCases
+    EvaluationChunk:
+      properties:
+        chunk_id:
+          type: string
+          title: Chunk Id
+        text:
+          type: string
+          title: Text
+        preview:
+          type: string
+          title: Preview
+        citation:
+          type: string
+          title: Citation
+        ticker:
+          type: string
+          title: Ticker
+        item:
+          type: string
+          title: Item
+        accession:
+          type: string
+          title: Accession
+        source_url:
+          type: string
+          title: Source Url
+        provenance:
+          additionalProperties: true
+          type: object
+          title: Provenance
+      type: object
+      required:
+      - chunk_id
+      - text
+      - preview
+      - citation
+      - ticker
+      - item
+      - accession
+      - source_url
+      - provenance
+      title: EvaluationChunk
+    EvaluationSummary:
+      properties:
+        run:
+          additionalProperties: true
+          type: object
+          title: Run
+        coverage:
+          additionalProperties: true
+          type: object
+          title: Coverage
+        warnings:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Warnings
+        selected_default_id:
+          type: string
+          title: Selected Default Id
+        strategy_best:
+          additionalProperties:
+            type: string
+          type: object
+          title: Strategy Best
+        configurations:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Configurations
+        lineage:
+          additionalProperties: true
+          type: object
+          title: Lineage
+      type: object
+      required:
+      - run
+      - coverage
+      - warnings
+      - selected_default_id
+      - strategy_best
+      - configurations
+      - lineage
+      title: EvaluationSummary
     FilingBatchAccepted:
       properties:
         batch_id:

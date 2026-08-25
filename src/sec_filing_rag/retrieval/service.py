@@ -64,7 +64,10 @@ class RetrievalConfiguration(BaseModel):
         if self.default is None:
             return self
         default = self.default
-        if default.candidate_count not in self.candidate_counts or default.top_k not in self.top_k_values:
+        if (
+            default.candidate_count not in self.candidate_counts
+            or default.top_k not in self.top_k_values
+        ):
             raise ValueError("default counts must occur in the evaluation grid")
         if default.strategy == "weighted_hybrid" and default.alpha not in self.hybrid_alphas:
             raise ValueError("default hybrid alpha must occur in the evaluation grid")
@@ -160,11 +163,18 @@ def normalize_scores(candidates: list[Candidate]) -> dict[str, float]:
     low, high = min(scores), max(scores)
     if high == low:
         return {candidate.result.chunk_id: 1.0 for candidate in candidates}
-    return {candidate.result.chunk_id: (candidate.score - low) / (high - low) for candidate in candidates}
+    return {
+        candidate.result.chunk_id: (candidate.score - low) / (high - low)
+        for candidate in candidates
+    }
 
 
 def _fuse(
-    keyword: list[Candidate], vector: list[Candidate], strategy: RetrievalStrategy, alpha: float, rrf_k: int
+    keyword: list[Candidate],
+    vector: list[Candidate],
+    strategy: RetrievalStrategy,
+    alpha: float,
+    rrf_k: int,
 ) -> list[RetrievalResult]:
     by_id = {candidate.result.chunk_id: candidate.result for candidate in keyword + vector}
     keyword_rank = {candidate.result.chunk_id: candidate.rank for candidate in keyword}
@@ -173,7 +183,9 @@ def _fuse(
     scored: list[tuple[float, int, str]] = []
     for chunk_id in by_id:
         if strategy == "weighted_hybrid":
-            score = alpha * vector_score.get(chunk_id, 0.0) + (1 - alpha) * keyword_score.get(chunk_id, 0.0)
+            score = alpha * vector_score.get(chunk_id, 0.0) + (1 - alpha) * keyword_score.get(
+                chunk_id, 0.0
+            )
         else:
             score = sum(
                 1 / (rrf_k + rank + 1)
@@ -190,7 +202,9 @@ def _fuse(
     ]
 
 
-def weighted_hybrid(keyword: list[Candidate], vector: list[Candidate], alpha: float) -> list[RetrievalResult]:
+def weighted_hybrid(
+    keyword: list[Candidate], vector: list[Candidate], alpha: float
+) -> list[RetrievalResult]:
     return _fuse(keyword, vector, "weighted_hybrid", alpha, 60)
 
 
@@ -205,7 +219,9 @@ class QueryEmbedder(Protocol):
 
 
 class OpenAIQueryEmbedder:
-    def __init__(self, database: Database, api_key: str, model: str, dimensions: int, timeout: float) -> None:
+    def __init__(
+        self, database: Database, api_key: str, model: str, dimensions: int, timeout: float
+    ) -> None:
         self.database, self.model, self.dimensions = database, model, dimensions
         self.client = OpenAI(api_key=api_key, timeout=timeout)
 
@@ -250,9 +266,7 @@ class OpenAIQueryEmbedder:
 
 
 class RetrievalRepository:
-    _SELECT = (
-        "SELECT gd.chunk_id,c.ticker,f.accession,gd.item,gd.text_content,gd.citation_handle,gd.provenance,"
-    )
+    _SELECT = "SELECT gd.chunk_id,c.ticker,f.accession,gd.item,gd.text_content,gd.citation_handle,gd.provenance,"
     # BM25 and vector search share the exact corpus, company, accession, and Item filters.
     _FILTERS = (
         " FROM gold.search_document gd JOIN public.company c ON c.id=gd.company_id "
@@ -278,7 +292,9 @@ class RetrievalRepository:
             config.embedding_model,
             config.embedding_dimensions,
         ):
-            raise ValueError("retrieval configuration and corpus embedding metadata are incompatible")
+            raise ValueError(
+                "retrieval configuration and corpus embedding metadata are incompatible"
+            )
         return CorpusIdentity(**dict(row))
 
     @staticmethod
@@ -303,7 +319,11 @@ class RetrievalRepository:
             + BM25_INDEX
             + "'),gd.chunk_id LIMIT %s"
         )
-        params = (query.question,) + self._params(identity, query) + (query.question, query.candidate_count)
+        params = (
+            (query.question,)
+            + self._params(identity, query)
+            + (query.question, query.candidate_count)
+        )
         return self._candidates(statement, params, "keyword")
 
     def vector(
@@ -343,7 +363,10 @@ class RetrievalRepository:
 
 class RetrievalService:
     def __init__(
-        self, repository: RetrievalRepository, embedder: QueryEmbedder, config: RetrievalConfiguration
+        self,
+        repository: RetrievalRepository,
+        embedder: QueryEmbedder,
+        config: RetrievalConfiguration,
     ) -> None:
         self.repository, self.embedder, self.config = repository, embedder, config
 
@@ -361,7 +384,9 @@ class RetrievalService:
             keyword = self.repository.keyword(query, identity)
         if query.strategy in {"vector", "weighted_hybrid", "rrf"}:
             vector_embedding = (
-                embedding if embedding is not None else self.embedder.embed(query.question, evaluation_run_id)
+                embedding
+                if embedding is not None
+                else self.embedder.embed(query.question, evaluation_run_id)
             )
             vector = self.repository.vector(query, identity, vector_embedding)
         if query.strategy == "keyword":

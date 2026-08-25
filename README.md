@@ -38,16 +38,36 @@ curl --fail-with-body -i http://127.0.0.1:8000/api/companies/AAPL/status
 
 A missing exact year is skipped, never replaced by a neighbor. Exact-year corpora never become default. Latest mode skips an already-active compatible corpus and promotes a compatible ready historical corpus without re-embedding.
 
+## Formatting and linting
+
+Format and automatically fix Python and frontend code from the repository root:
+
+```bash
+uv run ruff check --fix .
+uv run ruff format .
+npm --prefix frontend run lint:fix
+npm --prefix frontend run format
+```
+
+Verify formatting, linting, and types without changing files:
+
+```bash
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy
+npm --prefix frontend run check
+```
+
 ## Generated artifacts and verification
 
 ```bash
 uv run sec-rag-export-openapi
 uv run sec-rag-generate-http
+uv run ruff format --check .
 uv run ruff check .
 uv run mypy
 EDGAR_LOCAL_DATA_DIR=/tmp/edgar-cache uv run pytest
-npm --prefix frontend test -- --run
-npm --prefix frontend run build
+npm --prefix frontend run check
 bash -n .devcontainer/post-create.sh .devcontainer/post-start.sh
 docker compose --env-file .env -f .devcontainer/docker-compose.yml config --quiet
 uv run sec-rag-export-openapi --check
@@ -66,4 +86,3 @@ Generated contracts live in `api/openapi.yaml` and `api/sec-filing-rag.http`. Re
 - [Glossary](docs/glossary.md): project terminology.
 - [Corpus learnings](docs/corpus-learnings.md): filing edge cases and regression rationale.
 - [Ground-truth review](evaluation/REVIEW.md): corpus preparation through retrieval evaluation.
-

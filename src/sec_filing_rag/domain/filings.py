@@ -109,10 +109,13 @@ _HEADING_PREFIX = (
     r"(?im)^[ \t]*(?:part" + _HEADING_SPACE + r"[ivx]+[ \t]*[-–—:]?[ \t]*)?item" + _HEADING_SPACE
 )
 _GENERIC_HEADING = re.compile(
-    _HEADING_PREFIX + r"(?P<item>1[0-6]|[1-9])(?P<suffix>[A-C]?)(?:[ \t]*[.\-–—:])?(?:[ \t]+|[ \t]*$)"
+    _HEADING_PREFIX
+    + r"(?P<item>1[0-6]|[1-9])(?P<suffix>[A-C]?)(?:[ \t]*[.\-–—:])?(?:[ \t]+|[ \t]*$)"
 )
 _PART_HEADING = re.compile(r"(?im)^[ \t]*part\s+[ivx]+\b")
-_ABSENCE = re.compile(r"(?i)\b(?:not\s+applicable|none|no\s+(?:material\s+)?(?:legal\s+)?proceedings)\b")
+_ABSENCE = re.compile(
+    r"(?i)\b(?:not\s+applicable|none|no\s+(?:material\s+)?(?:legal\s+)?proceedings)\b"
+)
 _MIN_BODY = {"1": 120, "1A": 120, "3": 40, "7": 120, "7A": 120, "8": 120}
 
 
@@ -120,7 +123,9 @@ def sanitize_filing_html(body: bytes, *, max_chars: int) -> str:
     """Return inert narrative text whose offsets are safe to use for citations."""
     # Remove active, hidden, and control content before calculating visible-text offsets.
     soup = BeautifulSoup(body, "html.parser")
-    for tag in soup.find_all(("script", "style", "noscript", "template", "svg", "iframe", "object", "embed")):
+    for tag in soup.find_all(
+        ("script", "style", "noscript", "template", "svg", "iframe", "object", "embed")
+    ):
         tag.decompose()
     for tag in list(soup.find_all(True)):
         if not isinstance(tag, Tag) or tag.attrs is None:
@@ -159,7 +164,11 @@ def _heading_pattern(item: str) -> re.Pattern[str]:
             words.append(r"[ \t\n]*".join(re.escape(character) for character in word))
     title = _HEADING_SPACE.join(words)
     return re.compile(
-        _HEADING_PREFIX + re.escape(item) + r"(?:[ \t]*[.\-–—:])?[ \t]*(?:\n[ \t]*){0,3}" + title + r"\b"
+        _HEADING_PREFIX
+        + re.escape(item)
+        + r"(?:[ \t]*[.\-–—:])?[ \t]*(?:\n[ \t]*){0,3}"
+        + title
+        + r"\b"
     )
 
 
@@ -171,7 +180,8 @@ def _next_boundary(text: str, start: int, item: str) -> re.Match[str] | None:
             match
             for match in _GENERIC_HEADING.finditer(text, start)
             if (match.group("item") + match.group("suffix").upper()) in _ORDERED_BOUNDARIES
-            and _ORDERED_BOUNDARIES.index(match.group("item") + match.group("suffix").upper()) > current
+            and _ORDERED_BOUNDARIES.index(match.group("item") + match.group("suffix").upper())
+            > current
         ),
         None,
     )
@@ -219,7 +229,9 @@ def extract_item(text: str, item: str, *, normalized: bool = False) -> Extracted
         return ExtractedSection("failed", error=safe_error(reason))
     choices.sort(key=lambda value: value[1] - value[0], reverse=True)
     if len(choices) > 1 and choices[1][1] - choices[1][0] >= (choices[0][1] - choices[0][0]) * 0.8:
-        return ExtractedSection("failed", error=safe_error(f"Item {item} has ambiguous section boundaries"))
+        return ExtractedSection(
+            "failed", error=safe_error(f"Item {item} has ambiguous section boundaries")
+        )
     start, end, body = choices[0]
     return ExtractedSection("present", body, start, end)
 

@@ -27,7 +27,9 @@ class EvaluationCase(BaseModel):
     review_status: Literal["reviewed"]
     question: str = Field(min_length=1, max_length=2000)
     ticker: Literal["AAPL", "MSFT", "NVDA"]
-    goal: Literal["business", "key_risks", "management_analysis", "market_risk", "legal_and_regulatory_risk"]
+    goal: Literal[
+        "business", "key_risks", "management_analysis", "market_risk", "legal_and_regulatory_risk"
+    ]
     query_type: Literal["exact_keyword", "semantic_paraphrase"]
     allowed_items: frozenset[str]
     accession: str
@@ -114,7 +116,9 @@ def validate_review_gate(
     config: RetrievalConfiguration,
 ) -> None:
     """Reject unreviewed, modified, or corpus-incompatible benchmark artifacts."""
-    if manifest.review_status != "reviewed" or any(case.review_status != "reviewed" for case in cases):
+    if manifest.review_status != "reviewed" or any(
+        case.review_status != "reviewed" for case in cases
+    ):
         raise ValueError("dataset and every case must be human-reviewed before benchmarking")
     if manifest.dataset_sha256 != dataset_sha256(dataset_path):
         raise ValueError("manifest dataset checksum does not match")
@@ -140,7 +144,12 @@ def validate_database_lineage(database: Database, cases: list[EvaluationCase]) -
                 "JOIN silver.filing f ON f.id=gd.filing_id JOIN silver.corpus_version cv "
                 "ON cv.id=gd.corpus_version_id WHERE gd.chunk_id=ANY(%s) AND c.ticker=%s "
                 "AND f.accession=%s AND cv.id=%s AND cv.status='ready'",
-                (sorted(case.relevant_chunk_ids), case.ticker, case.accession, case.corpus_version_id),
+                (
+                    sorted(case.relevant_chunk_ids),
+                    case.ticker,
+                    case.accession,
+                    case.corpus_version_id,
+                ),
             ).fetchall()
             if {str(row["chunk_id"]) for row in rows} != set(case.relevant_chunk_ids):
                 raise ValueError(f"{case.id} has missing or wrong-company relevant chunk lineage")
@@ -177,7 +186,8 @@ def approaches(config: RetrievalConfiguration) -> list[EvaluationApproach]:
                 for alpha in config.hybrid_alphas
             )
             output.extend(
-                EvaluationApproach("rrf", candidate_count, top_k, rrf_k=k) for k in config.rrf_k_values
+                EvaluationApproach("rrf", candidate_count, top_k, rrf_k=k)
+                for k in config.rrf_k_values
             )
     return output
 
@@ -201,7 +211,9 @@ def select_winner(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 class RetrievalEvaluator:
-    def __init__(self, database: Database, service: RetrievalService, config: RetrievalConfiguration) -> None:
+    def __init__(
+        self, database: Database, service: RetrievalService, config: RetrievalConfiguration
+    ) -> None:
         self.database, self.service, self.config = database, service, config
 
     def run(

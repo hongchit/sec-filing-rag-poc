@@ -30,7 +30,10 @@ from ..retrieval.service import (
 
 
 def _fail(error: BaseException | str) -> NoReturn:
-    print(json.dumps({"status": "failed", "error": safe_error(error)}, sort_keys=True), file=sys.stderr)
+    print(
+        json.dumps({"status": "failed", "error": safe_error(error)}, sort_keys=True),
+        file=sys.stderr,
+    )
     raise SystemExit(2)
 
 
@@ -52,7 +55,9 @@ def search_main() -> None:
     parser.add_argument("question")
     parser.add_argument("--ticker", required=True)
     parser.add_argument("--corpus-version-id", required=True)
-    parser.add_argument("--strategy", choices=("keyword", "vector", "weighted_hybrid", "rrf"), default=None)
+    parser.add_argument(
+        "--strategy", choices=("keyword", "vector", "weighted_hybrid", "rrf"), default=None
+    )
     parser.add_argument("--items", nargs="+")
     parser.add_argument("--candidate-count", type=int)
     parser.add_argument("--top-k", type=int)
@@ -66,7 +71,9 @@ def search_main() -> None:
         database, service = _service(settings)
         default = service.config.default
         if args.strategy is None and default is None:
-            raise ValueError("no measured default exists; pass --strategy before benchmark selection")
+            raise ValueError(
+                "no measured default exists; pass --strategy before benchmark selection"
+            )
         selected = default
         query = RetrievalQuery(
             question=args.question,
@@ -114,9 +121,13 @@ def _markdown(artifact: dict[str, Any], command: str) -> str:
 
 
 def evaluate_main() -> None:
-    parser = argparse.ArgumentParser(description="Validate or benchmark reviewed retrieval ground truth")
+    parser = argparse.ArgumentParser(
+        description="Validate or benchmark reviewed retrieval ground truth"
+    )
     parser.add_argument("--dataset", type=Path, default=Path("evaluation/retrieval-v1.jsonl"))
-    parser.add_argument("--manifest", type=Path, default=Path("evaluation/retrieval-v1-manifest.json"))
+    parser.add_argument(
+        "--manifest", type=Path, default=Path("evaluation/retrieval-v1-manifest.json")
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("evaluation/results"))
     parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
@@ -145,8 +156,13 @@ def evaluate_main() -> None:
             cases, dataset_sha256(args.dataset), manifest.coverage, manifest.warnings
         )
         args.output_dir.mkdir(parents=True, exist_ok=True)
-        json_path, markdown_path = args.output_dir / "retrieval-v1.json", args.output_dir / "retrieval-v1.md"
-        json_path.write_text(json.dumps(artifact, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        json_path, markdown_path = (
+            args.output_dir / "retrieval-v1.json",
+            args.output_dir / "retrieval-v1.md",
+        )
+        json_path.write_text(
+            json.dumps(artifact, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+        )
         command = (
             "uv run sec-rag-evaluate-retrieval --dataset evaluation/retrieval-v1.jsonl "
             "--manifest evaluation/retrieval-v1-manifest.json"

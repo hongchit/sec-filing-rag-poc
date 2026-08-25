@@ -45,7 +45,10 @@ class KestraGateway:
         for attempt in range(self.retries + 1):
             try:
                 response = self.client.post(
-                    self.url, files=fields, auth=(self.username, self.password), timeout=self.timeout
+                    self.url,
+                    files=fields,
+                    auth=(self.username, self.password),
+                    timeout=self.timeout,
                 )
                 response.raise_for_status()
                 execution_id = str(response.json().get("id", ""))
@@ -54,7 +57,9 @@ class KestraGateway:
                 return KestraExecution(execution_id)
             except (httpx.HTTPError, ValueError) as exc:
                 last_error = exc
-                retryable = not isinstance(exc, httpx.HTTPStatusError) or exc.response.status_code in {
+                retryable = not isinstance(
+                    exc, httpx.HTTPStatusError
+                ) or exc.response.status_code in {
                     429,
                     500,
                     502,
@@ -65,4 +70,6 @@ class KestraGateway:
                     break
                 time.sleep(min(2**attempt, 4))
         assert last_error is not None
-        raise KestraSubmissionError(safe_error(last_error, (self.username, self.password))) from None
+        raise KestraSubmissionError(
+            safe_error(last_error, (self.username, self.password))
+        ) from None

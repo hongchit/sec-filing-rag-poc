@@ -19,11 +19,35 @@
   "customizations": {"vscode": {"extensions": [
         "ms-python.python",
         "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
         "ms-ossdata.vscode-pgsql",
         "GitHub.vscode-github-actions",
         "humao.rest-client",
         "42Crunch.vscode-openapi"
-      ], "settings": {"python.terminal.useEnvFile": true, "python.envFile": "${workspaceFolder}/.env"}}},
+      ], "settings": {
+        "python.terminal.useEnvFile": true,
+        "python.envFile": "${workspaceFolder}/.env",
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+          }
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {"source.fixAll.eslint": "explicit"}
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {"source.fixAll.eslint": "explicit"}
+        }
+      }}},
   "postCreateCommand": ".devcontainer/post-create.sh",
   "postStartCommand": ".devcontainer/post-start.sh",
   "waitFor": "postCreateCommand",

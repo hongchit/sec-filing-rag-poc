@@ -25,33 +25,52 @@ from ..repositories.database import Database
 
 
 def fail(error: BaseException | str) -> NoReturn:
-    print(json.dumps({"status": "failed", "error": safe_error(error)}, sort_keys=True), file=sys.stderr)
+    print(
+        json.dumps({"status": "failed", "error": safe_error(error)}, sort_keys=True),
+        file=sys.stderr,
+    )
     raise SystemExit(2)
 
 
 def common_paths(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--review-bundle", type=Path, default=Path("evaluation/ground-truth-review-v1.json"))
+    parser.add_argument(
+        "--review-bundle", type=Path, default=Path("evaluation/ground-truth-review-v1.json")
+    )
     parser.add_argument("--config", type=Path, default=Path("config/ground-truth.json"))
-    parser.add_argument("--prompt", type=Path, default=Path("evaluation/prompts/investor-questions-v1.txt"))
+    parser.add_argument(
+        "--prompt", type=Path, default=Path("evaluation/prompts/investor-questions-v1.txt")
+    )
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate and human-review SEC retrieval ground truth")
+    parser = argparse.ArgumentParser(
+        description="Generate and human-review SEC retrieval ground truth"
+    )
     commands = parser.add_subparsers(dest="command", required=True)
-    generate = commands.add_parser("generate", help="snapshot ready corpora and generate a review bundle")
+    generate = commands.add_parser(
+        "generate", help="snapshot ready corpora and generate a review bundle"
+    )
     common_paths(generate)
     generate.add_argument(
         "--diagnostic", type=Path, default=Path("evaluation/ground-truth-generation-failure.json")
     )
     generate.add_argument("--run-id", type=uuid.UUID)
-    generate.add_argument("--resume", action="store_true", help="reuse a valid existing review bundle")
-    validate = commands.add_parser("validate-review", help="validate review-bundle structure and decisions")
+    generate.add_argument(
+        "--resume", action="store_true", help="reuse a valid existing review bundle"
+    )
+    validate = commands.add_parser(
+        "validate-review", help="validate review-bundle structure and decisions"
+    )
     common_paths(validate)
     validate.add_argument("--allow-pending", action="store_true")
-    finalize = commands.add_parser("finalize", help="create retrieval JSONL from accepted human reviews")
+    finalize = commands.add_parser(
+        "finalize", help="create retrieval JSONL from accepted human reviews"
+    )
     common_paths(finalize)
     finalize.add_argument("--dataset", type=Path, default=Path("evaluation/retrieval-v1.jsonl"))
-    finalize.add_argument("--manifest", type=Path, default=Path("evaluation/retrieval-v1-manifest.json"))
+    finalize.add_argument(
+        "--manifest", type=Path, default=Path("evaluation/retrieval-v1-manifest.json")
+    )
     args = parser.parse_args()
     database: Database | None = None
     assessor: OpenAIAssessor | None = None
@@ -60,14 +79,18 @@ def main() -> None:
         database = Database(settings.database_url)
         repository = GroundTruthRepository(database)
         if args.command == "generate":
-            config = GenerationConfiguration.model_validate_json(args.config.read_text(encoding="utf-8"))
+            config = GenerationConfiguration.model_validate_json(
+                args.config.read_text(encoding="utf-8")
+            )
             prompt = args.prompt.read_text(encoding="utf-8")
             prompt_sha = sha256_bytes(prompt.encode())
             if args.resume and args.review_bundle.exists():
                 existing = load_bundle(args.review_bundle)
                 validate_review(existing, require_complete=False)
                 corpora, _ = repository.snapshot()
-                snapshot_sha = canonical_sha256([corpus.model_dump(mode="json") for corpus in corpora])
+                snapshot_sha = canonical_sha256(
+                    [corpus.model_dump(mode="json") for corpus in corpora]
+                )
                 if (
                     existing.configuration != config
                     or existing.prompt_sha256 != prompt_sha

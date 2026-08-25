@@ -34,7 +34,9 @@ def test_clean_schema_has_historical_state_default_pointer_and_no_cross_database
     assert "kestra_postgres" not in migration
     assert "FOREIGN DATA" not in migration
 
-    initialization = Path(".devcontainer/postgres/init/00-extensions.sql").read_text(encoding="utf-8")
+    initialization = Path(".devcontainer/postgres/init/00-extensions.sql").read_text(
+        encoding="utf-8"
+    )
     compose = Path(".devcontainer/docker-compose.yml").read_text(encoding="utf-8")
     assert "CREATE EXTENSION IF NOT EXISTS vector" in initialization
     assert "CREATE EXTENSION IF NOT EXISTS pg_textsearch" in initialization

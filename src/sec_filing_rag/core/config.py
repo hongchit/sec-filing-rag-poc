@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     chunking_version: str = "character-v1"
     index_version: str = "vector-v1"
     retrieval_config_path: Path = Path("config/retrieval.json")
+    retrieval_evaluation_result_path: Path = Path("evaluation/results/retrieval-v1.json")
+    retrieval_evaluation_dataset_path: Path = Path("evaluation/retrieval-v1.jsonl")
+    retrieval_evaluation_manifest_path: Path = Path("evaluation/retrieval-v1-manifest.json")
 
     @field_validator("database_pool_max_size")
     @classmethod

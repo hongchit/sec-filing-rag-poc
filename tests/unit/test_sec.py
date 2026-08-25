@@ -100,7 +100,9 @@ def test_resolution_normalizes_enrichment_and_caches_company() -> None:
 
 
 def test_original_filter_latest_historical_order_dedup_and_cache() -> None:
-    old = filing("0000000001-24-000001", filing_date=date(2024, 2, 1), report_date=date(2023, 12, 31))
+    old = filing(
+        "0000000001-24-000001", filing_date=date(2024, 2, 1), report_date=date(2023, 12, 31)
+    )
     latest = filing("0000000001-26-000001")
     duplicate = filing("0000000001-26-000001", filing_date=date(2026, 1, 31))
     amendment = filing("0000000001-26-000002", form="10-K/A")
@@ -136,7 +138,9 @@ def test_accession_is_revalidated_and_metadata_is_normalized() -> None:
         ({"html": None}, "missing filing HTML"),
     ],
 )
-def test_missing_or_non_html_document_metadata_fails_safely(changes: dict[str, Any], message: str) -> None:
+def test_missing_or_non_html_document_metadata_fails_safely(
+    changes: dict[str, Any], message: str
+) -> None:
     value, _ = gateway(filings=[filing(**changes)])
     with pytest.raises(UpstreamServiceError):
         value.acquire("EX", max_bytes=1000)

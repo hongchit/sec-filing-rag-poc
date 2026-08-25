@@ -96,7 +96,9 @@ class IngestionRepository:
                 "finished_at=excluded.finished_at,safe_error=excluded.safe_error",
                 (run_id, stage, status, input_count, output_count, status, status, error),
             )
-            connection.execute("UPDATE public.ingestion_run SET stage=%s WHERE id=%s", (stage, run_id))
+            connection.execute(
+                "UPDATE public.ingestion_run SET stage=%s WHERE id=%s", (stage, run_id)
+            )
 
     def fail_run(self, run_id: uuid.UUID, stage: str, error: str) -> None:
         with self.connect() as connection:
@@ -139,7 +141,9 @@ class IngestionRepository:
             raise ValueError("unknown ingestion run")
         return str(row["compatibility_key"])
 
-    def ready_corpus(self, company_id: uuid.UUID, accession: str, key: str) -> dict[str, Any] | None:
+    def ready_corpus(
+        self, company_id: uuid.UUID, accession: str, key: str
+    ) -> dict[str, Any] | None:
         with self.connect() as connection:
             corpus = connection.execute(
                 "SELECT cv.id,COALESCE(max(lu.usage_status::text),'unavailable') AS usage,"
@@ -171,16 +175,22 @@ class IngestionRepository:
                 "is_active": corpus["is_active"],
             }
 
-    def activate_existing(self, company_id: uuid.UUID, corpus_id: uuid.UUID, run_id: uuid.UUID) -> None:
+    def activate_existing(
+        self, company_id: uuid.UUID, corpus_id: uuid.UUID, run_id: uuid.UUID
+    ) -> None:
         with self.connect() as connection:
-            connection.execute("SELECT id FROM public.company WHERE id=%s FOR UPDATE", (company_id,))
+            connection.execute(
+                "SELECT id FROM public.company WHERE id=%s FOR UPDATE", (company_id,)
+            )
             connection.execute(
                 "UPDATE public.corpus_activation SET is_default=false,deactivated_at=now() "
-                "WHERE company_id=%s AND is_default", (company_id,)
+                "WHERE company_id=%s AND is_default",
+                (company_id,),
             )
             connection.execute(
                 "INSERT INTO public.corpus_activation(company_id,corpus_version_id,ingestion_run_id) "
-                "VALUES (%s,%s,%s)", (company_id, corpus_id, run_id)
+                "VALUES (%s,%s,%s)",
+                (company_id, corpus_id, run_id),
             )
             connection.execute(
                 "UPDATE public.ingestion_run SET status='succeeded',stage='promoted',finished_at=now() WHERE id=%s",
@@ -244,7 +254,8 @@ class IngestionRepository:
                 ),
             )
             filing_row = connection.execute(
-                "SELECT id FROM silver.filing WHERE cik=%s AND accession=%s", (cik, filing.accession)
+                "SELECT id FROM silver.filing WHERE cik=%s AND accession=%s",
+                (cik, filing.accession),
             ).fetchone()
             filing_id = filing_row["id"]
             inserted = connection.execute(
@@ -370,9 +381,12 @@ class IngestionRepository:
                 (run_id, model, *usage),
             )
             self._validate_candidate(connection, corpus_id, model, dimensions)
-            connection.execute("SELECT id FROM public.company WHERE id=%s FOR UPDATE", (company_id,))
             connection.execute(
-                "UPDATE silver.corpus_version SET status='ready',ready_at=now() WHERE id=%s", (corpus_id,)
+                "SELECT id FROM public.company WHERE id=%s FOR UPDATE", (company_id,)
+            )
+            connection.execute(
+                "UPDATE silver.corpus_version SET status='ready',ready_at=now() WHERE id=%s",
+                (corpus_id,),
             )
             if promote_default:
                 connection.execute(
@@ -398,7 +412,9 @@ class IngestionRepository:
             )
         return corpus_id
 
-    def _validate_candidate(self, connection: Any, corpus_id: uuid.UUID, model: str, dimensions: int) -> None:
+    def _validate_candidate(
+        self, connection: Any, corpus_id: uuid.UUID, model: str, dimensions: int
+    ) -> None:
         # Redundant lineage validation is intentional: promotion fails closed at the DB boundary.
         rows = connection.execute(
             "SELECT s.item,s.coverage_status::text AS status,s.safe_error,count(DISTINCT ch.id)::integer AS chunks,"
@@ -436,7 +452,9 @@ class IngestionRepository:
             if row["status"] == "legitimately_absent" and (row["chunks"] or not row["safe_error"]):
                 raise ValueError(f"Item {row['item']} has invalid absent coverage")
 
-    def _company_snapshot(self, connection: Any, acquired: AcquiredFiling, identity_hash: str) -> uuid.UUID:
+    def _company_snapshot(
+        self, connection: Any, acquired: AcquiredFiling, identity_hash: str
+    ) -> uuid.UUID:
         company = acquired.company
         metadata = {
             "requested_ticker": company.requested_ticker,
@@ -477,7 +495,8 @@ class IngestionRepository:
             ),
         )
         result = connection.execute(
-            "SELECT id FROM bronze.edgar_company_snapshot WHERE canonical_metadata_sha256=%s", (digest,)
+            "SELECT id FROM bronze.edgar_company_snapshot WHERE canonical_metadata_sha256=%s",
+            (digest,),
         ).fetchone()["id"]
         return uuid.UUID(str(result))
 
@@ -536,7 +555,8 @@ class IngestionRepository:
             ),
         )
         result = connection.execute(
-            "SELECT id FROM bronze.edgar_filing_snapshot WHERE canonical_metadata_sha256=%s", (digest,)
+            "SELECT id FROM bronze.edgar_filing_snapshot WHERE canonical_metadata_sha256=%s",
+            (digest,),
         ).fetchone()["id"]
         return uuid.UUID(str(result))
 
@@ -568,9 +588,11 @@ class IngestionRepository:
             ),
         )
         result = connection.execute(
-            "SELECT id FROM bronze.edgar_filing_document WHERE content_sha256=%s", (document.sha256,)
+            "SELECT id FROM bronze.edgar_filing_document WHERE content_sha256=%s",
+            (document.sha256,),
         ).fetchone()["id"]
         return uuid.UUID(str(result))
+
 
 def migration_files() -> list[Path]:
     root = Path(__file__).resolve().parents[3] / "migrations" / "versions"
@@ -595,5 +617,6 @@ def apply_migrations(database_url: str) -> None:
                 continue
             connection.execute(sql.SQL(body.decode()))
             connection.execute(
-                "INSERT INTO public.schema_migration(name,sha256) VALUES (%s,%s)", (path.name, digest)
+                "INSERT INTO public.schema_migration(name,sha256) VALUES (%s,%s)",
+                (path.name, digest),
             )

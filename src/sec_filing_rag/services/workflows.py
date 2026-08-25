@@ -75,20 +75,34 @@ class FilingExecutionService:
         if context["mode"] == "latest":
             selected = max(
                 (candidate for candidate in candidates if candidate.report_date is not None),
-                key=lambda candidate: (candidate.report_date, candidate.filing_date, candidate.accession),
+                key=lambda candidate: (
+                    candidate.report_date,
+                    candidate.filing_date,
+                    candidate.accession,
+                ),
             )
         else:
-            exact = [candidate for candidate in candidates if candidate.fiscal_year == context["fiscal_year"]]
+            exact = [
+                candidate
+                for candidate in candidates
+                if candidate.fiscal_year == context["fiscal_year"]
+            ]
             if not exact:
                 self.repository.transition(
-                    item_id, "skipped", error=f"no original 10-K for fiscal year {context['fiscal_year']}"
+                    item_id,
+                    "skipped",
+                    error=f"no original 10-K for fiscal year {context['fiscal_year']}",
                 )
                 return None, context["fiscal_year"]
-            selected = max(exact, key=lambda candidate: (candidate.filing_date, candidate.accession))
+            selected = max(
+                exact, key=lambda candidate: (candidate.filing_date, candidate.accession)
+            )
         self.repository.transition(item_id, "acquiring", accession=selected.accession)
         return selected.accession, selected.fiscal_year
 
-    def acquire(self, item_id: uuid.UUID, execution_id: str | None) -> tuple[uuid.UUID, str, str, int]:
+    def acquire(
+        self, item_id: uuid.UUID, execution_id: str | None
+    ) -> tuple[uuid.UUID, str, str, int]:
         context = self.repository.item_context(item_id)
         if context["selected_accession"] is None:
             raise ValueError("filing item has no selected accession")
@@ -128,7 +142,9 @@ class FilingExecutionService:
         self.repository.transition(item_id, "processing", execution_id=execution_id)
         acquired = self.repository.load_acquisition(context["acquisition_id"])
         result = self.pipeline.process_acquisition(
-            ticker=context["ticker"], acquired=acquired, mode=context["mode"],
+            ticker=context["ticker"],
+            acquired=acquired,
+            mode=context["mode"],
             kestra_execution_id=execution_id,
         )
         if result.outcome == "failed":

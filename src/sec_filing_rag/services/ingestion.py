@@ -51,7 +51,9 @@ class IngestionPipeline:
             dimensions=self.settings.openai_embedding_dimensions,
             index=self.settings.index_version,
         )
-        run_id, company_id = self.store.start_run(ticker, mode, provisional_key, kestra_execution_id)
+        run_id, company_id = self.store.start_run(
+            ticker, mode, provisional_key, kestra_execution_id
+        )
         stage = "source-validation"
         try:
             self.store.stage(run_id, stage, "running", input_count=1)
@@ -114,10 +116,14 @@ class IngestionPipeline:
             }
             self.store.stage(run_id, stage, "succeeded", output_count=len(sections))
             unusable = [
-                item for item in REQUIRED_ITEMS if sections[item].status in {"failed", "not_assessed"}
+                item
+                for item in REQUIRED_ITEMS
+                if sections[item].status in {"failed", "not_assessed"}
             ]
             if unusable:
-                raise ValueError("corpus extraction incomplete for required items: " + ", ".join(unusable))
+                raise ValueError(
+                    "corpus extraction incomplete for required items: " + ", ".join(unusable)
+                )
 
             stage = "embedding"
             flat_chunks = [chunk for item in REQUIRED_ITEMS for chunk in chunks[item]]
@@ -198,4 +204,6 @@ class IngestionPipeline:
                 ),
             )
             self.store.fail_run(run_id, stage, error)
-            return CorpusResult(run_id, "failed", None, {}, 0, 0, 0, "failed", "previous_preserved", error)
+            return CorpusResult(
+                run_id, "failed", None, {}, 0, 0, 0, "failed", "previous_preserved", error
+            )

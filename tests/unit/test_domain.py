@@ -15,13 +15,19 @@ from sec_filing_rag.domain.filings import (
 
 
 def test_company_configuration_normalizes_and_preserves_order() -> None:
-    config = CompanyConfiguration.model_validate({"companies": [{"ticker": "msft"}, {"ticker": " AAPL "}]})
+    config = CompanyConfiguration.model_validate(
+        {"companies": [{"ticker": "msft"}, {"ticker": " AAPL "}]}
+    )
     assert [entry.ticker for entry in config.companies] == ["MSFT", "AAPL"]
     assert config.sha256() == CompanyConfiguration.model_validate(config.normalized()).sha256()
 
 
-@pytest.mark.parametrize("companies", [[{"ticker": "AAPL"}, {"ticker": "aapl"}], [{"ticker": "bad ticker"}]])
-def test_company_configuration_rejects_duplicates_and_invalid(companies: list[dict[str, str]]) -> None:
+@pytest.mark.parametrize(
+    "companies", [[{"ticker": "AAPL"}, {"ticker": "aapl"}], [{"ticker": "bad ticker"}]]
+)
+def test_company_configuration_rejects_duplicates_and_invalid(
+    companies: list[dict[str, str]],
+) -> None:
     with pytest.raises(ValidationError):
         CompanyConfiguration.model_validate({"companies": companies})
 
@@ -72,7 +78,9 @@ def test_all_six_items_are_extracted_in_required_order() -> None:
 
 def test_explicit_bounded_absence_and_missing_heading_are_distinct() -> None:
     absent = extract_item("Item 3. Legal Proceedings\nNot applicable.\nItem 4. Mine Safety", "3")
-    missing = extract_item("Item 2. Properties\n" + "Narrative. " * 30 + "\nItem 4. Mine Safety", "3")
+    missing = extract_item(
+        "Item 2. Properties\n" + "Narrative. " * 30 + "\nItem 4. Mine Safety", "3"
+    )
     assert absent.status == "legitimately_absent"
     assert absent.error and "not applicable" in absent.error
     assert missing.status == "failed"

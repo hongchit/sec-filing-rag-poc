@@ -78,7 +78,9 @@ class ApiClient:
             anyio.to_thread.run_sync = direct
             try:
                 transport = httpx.ASGITransport(app=self.app)
-                async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as api:
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as api:
                     return await api.request(method, path, **kwargs)
             finally:
                 anyio.to_thread.run_sync = original
@@ -128,7 +130,9 @@ def test_public_batch_shapes_and_validation(tmp_path: Path) -> None:
     assert {"active_corpus", "historical_corpora", "coverage", "latest_run"} <= company.keys()
 
 
-def test_internal_routes_are_bearer_protected_and_obsolete_routes_are_absent(tmp_path: Path) -> None:
+def test_internal_routes_are_bearer_protected_and_obsolete_routes_are_absent(
+    tmp_path: Path,
+) -> None:
     api = client(tmp_path)
     item_id = uuid.uuid4()
     path = f"/internal/providers/filing-items/{item_id}/selection"
@@ -144,4 +148,9 @@ def test_routers_are_mounted_only_in_their_namespaces() -> None:
     routes = {route.path for route in create_app().routes}
     assert "/api/filing-batches" in routes
     assert "/internal/corpus-executions/{item_id}" in routes
-    assert all(path.startswith(("/api", "/internal", "/openapi", "/docs", "/redoc")) for path in routes)
+    assert "/api/retrieval-evaluations/current" in routes
+    assert "/api/retrieval-evaluations/current/configurations/{configuration_id}/cases" in routes
+    assert "/api/retrieval-evaluations/current/chunks/{chunk_id}" in routes
+    assert all(
+        path.startswith(("/api", "/internal", "/openapi", "/docs", "/redoc")) for path in routes
+    )

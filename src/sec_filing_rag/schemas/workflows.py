@@ -10,7 +10,9 @@ from ..core.config import TICKER_RE
 
 WorkflowMode = Literal["latest", "exact_year"]
 BatchStatus = Literal["submitted", "running", "succeeded", "partial_failure", "failed"]
-ItemStatus = Literal["pending", "selecting", "acquiring", "processing", "succeeded", "skipped", "failed"]
+ItemStatus = Literal[
+    "pending", "selecting", "acquiring", "processing", "succeeded", "skipped", "failed"
+]
 
 
 class FilingPreparationRequest(BaseModel):

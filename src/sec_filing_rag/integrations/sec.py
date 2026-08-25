@@ -105,11 +105,15 @@ class _SdkFacade:
         rows = filings.to_pandas().to_dict(orient="records")
         accessions = {_text(row.get("accession_number") or row.get("accession")) for row in rows}
         return (
-            filing for filing in filings if _text(getattr(filing, "accession_number", None)) in accessions
+            filing
+            for filing in filings
+            if _text(getattr(filing, "accession_number", None)) in accessions
         )
 
 
-def configure_edgartools(identity: str, rate_limit: int = 6, access_mode: str = "CAUTION") -> EdgarFacade:
+def configure_edgartools(
+    identity: str, rate_limit: int = 6, access_mode: str = "CAUTION"
+) -> EdgarFacade:
     """Set provider controls before the first SDK import, when EdgarTools reads its environment."""
     os.environ["EDGAR_IDENTITY"] = identity
     os.environ["EDGAR_RATE_LIMIT_PER_SEC"] = str(rate_limit)
@@ -131,7 +135,9 @@ class EdgarGateway:
         self._facade = facade
         # Operation-local caches prevent duplicate provider resolution and discovery work.
         self._companies: dict[str, tuple[EdgarCompanySnapshot, Any]] = {}
-        self._filings: dict[tuple[str, bool, str | None], list[tuple[EdgarFilingMetadata, Any]]] = {}
+        self._filings: dict[
+            tuple[str, bool, str | None], list[tuple[EdgarFilingMetadata, Any]]
+        ] = {}
         self._candidates: dict[str, list[FilingCandidate]] = {}
 
     @staticmethod
@@ -168,14 +174,17 @@ class EdgarGateway:
                 normalized,
                 cik,
                 _required(
-                    getattr(company, "name", None) or row.get("company") or row.get("title"), "company name"
+                    getattr(company, "name", None) or row.get("company") or row.get("title"),
+                    "company name",
                 ),
                 _strings(getattr(company, "tickers", None) or [normalized]),
                 _strings(getattr(company, "exchanges", None)),
                 _optional(getattr(company, "sic", None)),
                 _optional(getattr(company, "industry", None)),
                 _optional(getattr(company, "fiscal_year_end", None)),
-                _optional(getattr(company, "filer_category", None) or getattr(company, "filer_type", None)),
+                _optional(
+                    getattr(company, "filer_category", None) or getattr(company, "filer_type", None)
+                ),
                 _boolean(getattr(company, "is_company", None)),
             )
         except Exception as exc:
@@ -190,7 +199,9 @@ class EdgarGateway:
         try:
             values = self._facade.filings(self._companies[company.cik][1], full=True)
             candidates = [
-                self._candidate(value) for value in values if _text(getattr(value, "form", None)) == "10-K"
+                self._candidate(value)
+                for value in values
+                if _text(getattr(value, "form", None)) == "10-K"
             ]
         except Exception as exc:
             if isinstance(exc, UpstreamServiceError):
@@ -215,7 +226,9 @@ class EdgarGateway:
         self._candidates[company.cik] = filings
         return company.cik, company.name, filings
 
-    def acquire(self, ticker: str, *, accession: str | None = None, max_bytes: int) -> AcquiredFiling:
+    def acquire(
+        self, ticker: str, *, accession: str | None = None, max_bytes: int
+    ) -> AcquiredFiling:
         company = self.resolve(ticker)
         pairs = self._load(company, full=accession is not None, accession=accession)
         if accession is None:
@@ -275,7 +288,10 @@ class EdgarGateway:
                 (self._metadata(value), value)
                 for value in values
                 if _text(getattr(value, "form", None)) == "10-K"
-                and (accession is None or _text(getattr(value, "accession_number", None)) == accession)
+                and (
+                    accession is None
+                    or _text(getattr(value, "accession_number", None)) == accession
+                )
             ]
         except Exception as exc:
             raise self._upstream("EdgarTools filing discovery failed", exc) from exc

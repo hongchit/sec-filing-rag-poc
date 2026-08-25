@@ -33,7 +33,9 @@ def test_structured_output_requires_one_exact_and_two_semantic_questions() -> No
         question="What was revenue?", goal="management_analysis", query_type="exact_keyword"
     )
     semantic1 = GeneratedQuestion(
-        question="How did sales develop?", goal="management_analysis", query_type="semantic_paraphrase"
+        question="How did sales develop?",
+        goal="management_analysis",
+        query_type="semantic_paraphrase",
     )
     semantic2 = GeneratedQuestion(
         question="What explains the top-line change?",
@@ -41,13 +43,20 @@ def test_structured_output_requires_one_exact_and_two_semantic_questions() -> No
         query_type="semantic_paraphrase",
     )
     assert LLMChunkAssessment(
-        meaningful=True, explanation="Useful financial discussion.", questions=[exact, semantic1, semantic2]
+        meaningful=True,
+        explanation="Useful financial discussion.",
+        questions=[exact, semantic1, semantic2],
     ).meaningful
     assert (
-        LLMChunkAssessment(meaningful=False, explanation="Navigation debris.", questions=[]).questions == []
+        LLMChunkAssessment(
+            meaningful=False, explanation="Navigation debris.", questions=[]
+        ).questions
+        == []
     )
     with pytest.raises(ValidationError, match="one exact and two semantic"):
-        LLMChunkAssessment(meaningful=True, explanation="Useful.", questions=[exact, exact, semantic1])
+        LLMChunkAssessment(
+            meaningful=True, explanation="Useful.", questions=[exact, exact, semantic1]
+        )
 
 
 def test_question_validation_and_stable_id() -> None:
@@ -56,7 +65,9 @@ def test_question_validation_and_stable_id() -> None:
     )
     assert stable_question_id("a" * 64, question) == stable_question_id("a" * 64, question)
     with pytest.raises(ValidationError, match="prohibited"):
-        GeneratedQuestion(question="What does the chunk say?", goal="business", query_type="exact_keyword")
+        GeneratedQuestion(
+            question="What does the chunk say?", goal="business", query_type="exact_keyword"
+        )
     with pytest.raises(ValidationError, match="question mark"):
         GeneratedQuestion(question="Describe revenue", goal="business", query_type="exact_keyword")
 
@@ -106,7 +117,9 @@ def test_partial_generation_records_empty_and_rejected_strata_and_caps_screening
                 )
                 for ticker in ("AAPL", "MSFT", "NVDA")
             ]
-            rows = [{"ticker": "AAPL", "item": "1", "chunk_id": f"{index:064x}"} for index in range(6)]
+            rows = [
+                {"ticker": "AAPL", "item": "1", "chunk_id": f"{index:064x}"} for index in range(6)
+            ]
             return corpora, rows
 
     class RejectingAssessor:
@@ -129,10 +142,14 @@ def test_partial_generation_records_empty_and_rejected_strata_and_caps_screening
     )
     bundle = generate_bundle(repository, assessor, config, "a" * 64)  # type: ignore[arg-type]
     aapl_business = next(
-        summary for summary in bundle.generation_summary if (summary.ticker, summary.item) == ("AAPL", "1")
+        summary
+        for summary in bundle.generation_summary
+        if (summary.ticker, summary.item) == ("AAPL", "1")
     )
     empty = next(
-        summary for summary in bundle.generation_summary if (summary.ticker, summary.item) == ("MSFT", "1A")
+        summary
+        for summary in bundle.generation_summary
+        if (summary.ticker, summary.item) == ("MSFT", "1A")
     )
     assert assessor.calls == 5
     assert (aapl_business.available_chunks, aapl_business.screened_chunks) == (6, 5)
