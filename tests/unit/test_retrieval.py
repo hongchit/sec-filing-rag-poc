@@ -125,7 +125,18 @@ def test_tracked_configuration_grid_and_finalized_schema() -> None:
     config = load_retrieval_configuration(Path("config/retrieval.json"))
     assert config.candidate_counts == [10, 20, 50]
     assert config.top_k_values == [5, 10]
-    assert config.default is None
+    assert config.default is not None
+    assert config.default.model_dump() == {
+        "strategy": "weighted_hybrid",
+        "candidate_count": 10,
+        "top_k": 10,
+        "alpha": 0.25,
+        "rrf_k": 60,
+        "reason": (
+            "Accepted retrieval-v1 winner: MRR 0.9395424836601307, Hit Rate 1.0, "
+            "zero misses, complete coverage, and no warnings."
+        ),
+    }
     case = {
         "id": "gtq-0123456789abcdef",
         "review_status": "reviewed",

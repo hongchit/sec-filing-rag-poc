@@ -14,6 +14,25 @@ The process has three distinct outcomes:
 | Finalize | Convert accepted questions into immutable retrieval cases with checksums, lineage, coverage, and warnings | `evaluation/retrieval-v1.jsonl` and `evaluation/retrieval-v1-manifest.json` |
 | Evaluate | Compare retrieval strategies against the same reviewed cases and select the best measured configuration | `evaluation/results/retrieval-v1.json` and `evaluation/results/retrieval-v1.md` |
 
+### Accepted retrieval-v1 baseline
+
+The retrieval-v1 benchmark is accepted as the application default. Its dataset
+SHA-256 is
+`16758fdf6a1ab74b06772244ae8217f4530f006fb4aabfc78accee76ba06ad10`.
+The 102 reviewed questions cover AAPL, MSFT, and NVDA; all five research goals;
+all six required Items; both query types; and legal and non-legal risk cases.
+The manifest and result contain no coverage warnings or execution failures.
+
+The selected configuration is weighted hybrid with `candidate_count=10`,
+`top_k=10`, and `alpha=0.25`. It achieved MRR `0.9395424836601307`, Hit Rate
+`1.0`, zero misses, and median retrieval latency of approximately `7.38 ms`.
+Eleven cases returned their first relevant chunk below rank one; their
+per-question rankings remain in the result JSON for regression review. This
+configuration is accepted because it follows the documented selection order,
+provides complete measured recall at top ten, and has complete benchmark
+coverage without warnings. A benchmark rerun is required when its corpus,
+ground truth, embedding contract, retrieval grid, or retrieval logic changes.
+
 An operationally successful end-to-end run therefore requires all of the following:
 
 - ground-truth generation and strict review validation succeed;

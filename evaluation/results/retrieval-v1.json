@@ -1,5 +1,5 @@
 {
-  "configuration_sha256": "59016d8818da6895f27ced84c86b61fba0d2165782e0b4b3e0c9c1cf3bcd595b",
+  "configuration_sha256": "d8da2fe291a5cf63e3cadfca84bd2fd0ee6ff8ebe882af403b5d03c2412d8088",
   "course_commit": "bc7b6aad6b92a5611d3d37bf7521a363f3b9d398",
   "coverage": {
     "accepted_questions": 102,
@@ -11,7 +11,7 @@
     "query_types": 2
   },
   "dataset_sha256": "16758fdf6a1ab74b06772244ae8217f4530f006fb4aabfc78accee76ba06ad10",
-  "evaluation_run_id": "55ec052d-952e-45ae-b577-f4bcca0929b4",
+  "evaluation_run_id": "63c9e11b-4365-45c7-ad28-ed62e6bf9790",
   "failures": [],
   "results": [
     {
@@ -23,7 +23,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 2.0946455001649156,
+      "median_latency_ms": 2.4482499998157436,
       "mrr": 0.9191176470588235,
       "questions": [
         {
@@ -1066,7 +1066,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 4.841458499868168,
+      "median_latency_ms": 5.398082999818143,
       "mrr": 0.8794117647058823,
       "questions": [
         {
@@ -2109,7 +2109,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 6.486937499630585,
+      "median_latency_ms": 7.709437499670457,
       "mrr": 0.9379084967320261,
       "questions": [
         {
@@ -3152,7 +3152,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.875624999793217,
+      "median_latency_ms": 8.11506250011007,
       "mrr": 0.9374183006535947,
       "questions": [
         {
@@ -4195,7 +4195,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 6.902125000124215,
+      "median_latency_ms": 7.940291999602778,
       "mrr": 0.9101307189542484,
       "questions": [
         {
@@ -5238,7 +5238,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.089291500051331,
+      "median_latency_ms": 7.766062500195403,
       "mrr": 0.9174836601307189,
       "questions": [
         {
@@ -6281,7 +6281,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.300895999833301,
+      "median_latency_ms": 8.031832999677135,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -7324,7 +7324,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.2981875000550644,
+      "median_latency_ms": 7.719645499946637,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -8367,7 +8367,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 2.1307505003278493,
+      "median_latency_ms": 2.5994789998549095,
       "mrr": 0.9205182072829131,
       "questions": [
         {
@@ -9605,7 +9605,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 4.6607290000793,
+      "median_latency_ms": 5.247833000339597,
       "mrr": 0.8805010893246188,
       "questions": [
         {
@@ -10843,7 +10843,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.591041999854497,
+      "median_latency_ms": 7.377353999800107,
       "mrr": 0.9395424836601307,
       "questions": [
         {
@@ -12081,7 +12081,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.589312499727384,
+      "median_latency_ms": 8.427520499935781,
       "mrr": 0.9374183006535947,
       "questions": [
         {
@@ -13319,7 +13319,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.889458000387094,
+      "median_latency_ms": 7.803250000506523,
       "mrr": 0.9117647058823529,
       "questions": [
         {
@@ -14557,7 +14557,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.562228999882791,
+      "median_latency_ms": 7.512125000175729,
       "mrr": 0.9174836601307189,
       "questions": [
         {
@@ -15795,7 +15795,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.398125000032451,
+      "median_latency_ms": 7.487041999866051,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -17033,7 +17033,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.696437499613239,
+      "median_latency_ms": 7.562854500065441,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -18271,7 +18271,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 2.0692079997388646,
+      "median_latency_ms": 2.4631459996271587,
       "mrr": 0.9191176470588235,
       "questions": [
         {
@@ -19314,7 +19314,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 4.799791500317951,
+      "median_latency_ms": 5.369708000216633,
       "mrr": 0.8794117647058823,
       "questions": [
         {
@@ -20357,7 +20357,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 6.743542000094749,
+      "median_latency_ms": 7.744416499917861,
       "mrr": 0.9379084967320261,
       "questions": [
         {
@@ -21400,7 +21400,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.845854499715642,
+      "median_latency_ms": 7.713896000495879,
       "mrr": 0.9374183006535947,
       "questions": [
         {
@@ -22443,7 +22443,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 6.520228499539371,
+      "median_latency_ms": 7.44662499982951,
       "mrr": 0.9150326797385621,
       "questions": [
         {
@@ -23486,7 +23486,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.739520500559593,
+      "median_latency_ms": 7.60781249982756,
       "mrr": 0.9174836601307189,
       "questions": [
         {
@@ -24529,7 +24529,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.900667000081739,
+      "median_latency_ms": 7.89916700023241,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -25572,7 +25572,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.0648959999743965,
+      "median_latency_ms": 7.53677049988255,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -26615,7 +26615,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 2.2032500000932487,
+      "median_latency_ms": 2.6178335001532105,
       "mrr": 0.9205182072829131,
       "questions": [
         {
@@ -27853,7 +27853,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 5.193708499973582,
+      "median_latency_ms": 5.370604500058107,
       "mrr": 0.8805010893246188,
       "questions": [
         {
@@ -29091,7 +29091,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.516708500133973,
+      "median_latency_ms": 7.47004150025532,
       "mrr": 0.9395424836601307,
       "questions": [
         {
@@ -30329,7 +30329,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.6242290001573565,
+      "median_latency_ms": 8.027750000110245,
       "mrr": 0.9374183006535947,
       "questions": [
         {
@@ -31567,7 +31567,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.150146000185487,
+      "median_latency_ms": 7.518000499658228,
       "mrr": 0.9166666666666666,
       "questions": [
         {
@@ -32805,7 +32805,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.627395999657892,
+      "median_latency_ms": 7.27922900023259,
       "mrr": 0.9174836601307189,
       "questions": [
         {
@@ -34043,7 +34043,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.14229150025858,
+      "median_latency_ms": 7.704645499870821,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -35281,7 +35281,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.613229000071442,
+      "median_latency_ms": 8.27708349970635,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -36519,7 +36519,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 2.3569380000481033,
+      "median_latency_ms": 2.532645999963279,
       "mrr": 0.9191176470588235,
       "questions": [
         {
@@ -37562,7 +37562,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 5.603833000350278,
+      "median_latency_ms": 5.300833000092098,
       "mrr": 0.8794117647058823,
       "questions": [
         {
@@ -38605,7 +38605,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 7.261499499691126,
+      "median_latency_ms": 7.590729499952431,
       "mrr": 0.9330065359477124,
       "questions": [
         {
@@ -39648,7 +39648,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.809145500028535,
+      "median_latency_ms": 7.817666499704501,
       "mrr": 0.9382352941176471,
       "questions": [
         {
@@ -40691,7 +40691,7 @@
         "top_k": 5
       },
       "hit_rate": 0.9901960784313726,
-      "median_latency_ms": 6.516937500236963,
+      "median_latency_ms": 7.637041999714711,
       "mrr": 0.9199346405228758,
       "questions": [
         {
@@ -41734,7 +41734,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.592666499727784,
+      "median_latency_ms": 7.574084000225412,
       "mrr": 0.9174836601307189,
       "questions": [
         {
@@ -42777,7 +42777,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.6182704999846464,
+      "median_latency_ms": 7.738645500012353,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -43820,7 +43820,7 @@
         "top_k": 5
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.594541499907791,
+      "median_latency_ms": 7.808979499714042,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -44863,7 +44863,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 2.2364380001818063,
+      "median_latency_ms": 2.5314999998045096,
       "mrr": 0.9205182072829131,
       "questions": [
         {
@@ -46101,7 +46101,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 4.906896000193228,
+      "median_latency_ms": 5.354021499897499,
       "mrr": 0.8805010893246188,
       "questions": [
         {
@@ -47339,7 +47339,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.745958499981498,
+      "median_latency_ms": 7.591666999815061,
       "mrr": 0.9346405228758169,
       "questions": [
         {
@@ -48577,7 +48577,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.797145499807812,
+      "median_latency_ms": 7.594395999603876,
       "mrr": 0.9382352941176471,
       "questions": [
         {
@@ -49815,7 +49815,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.955145499887294,
+      "median_latency_ms": 7.739812499494292,
       "mrr": 0.9215686274509803,
       "questions": [
         {
@@ -50639,8 +50639,8 @@
             "1895bfd6e7f630364ebadc300352c03eb35906179576267c77e27619cb49cbdf",
             "ef86034f460117c18d6f775a946b4e17e80fdc7b6d9f5dbb34a45845a7b24ffe",
             "f9970fa4bf2d1efa5e622b0eb525ea85717f03b5c034622270cfd76e964b41c4",
-            "cd984f12c132f0f1b3f6253f00c0a71e8be80d9832dd0ef45a6f3b492b3fe30d",
-            "d0399ac6696226ff687b28a95f1b06ace6cc70bd344d717429f1916224c56872"
+            "d0399ac6696226ff687b28a95f1b06ace6cc70bd344d717429f1916224c56872",
+            "cd984f12c132f0f1b3f6253f00c0a71e8be80d9832dd0ef45a6f3b492b3fe30d"
           ],
           "hit": 1.0,
           "reciprocal_rank": 1.0
@@ -51053,7 +51053,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.47756299986213,
+      "median_latency_ms": 7.50541700017493,
       "mrr": 0.9174836601307189,
       "questions": [
         {
@@ -52291,7 +52291,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 7.153875500080176,
+      "median_latency_ms": 7.7475625002989545,
       "mrr": 0.9169934640522875,
       "questions": [
         {
@@ -53529,7 +53529,7 @@
         "top_k": 10
       },
       "hit_rate": 1.0,
-      "median_latency_ms": 6.857062000108272,
+      "median_latency_ms": 7.455561999904603,
       "mrr": 0.9169934640522875,
       "questions": [
         {
