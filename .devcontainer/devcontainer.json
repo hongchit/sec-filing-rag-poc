@@ -48,7 +48,10 @@
           "editor.codeActionsOnSave": {"source.fixAll.eslint": "explicit"}
         }
       }}},
-  "postCreateCommand": ".devcontainer/post-create.sh",
+  "postCreateCommand": [
+    ".devcontainer/post-create.sh",
+    "${containerWorkspaceFolder}"
+  ],
   "postStartCommand": ".devcontainer/post-start.sh",
   "waitFor": "postCreateCommand",
   "forwardPorts": [8000, 5173, 5432, 18082]
