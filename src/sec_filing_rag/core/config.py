@@ -76,6 +76,8 @@ class Settings(BaseSettings):
     openai_api_key: str
     openai_embedding_model: str = "text-embedding-3-small"
     openai_embedding_dimensions: int = Field(default=1536, gt=0)
+    openai_chat_model: str = "gpt-5.4-mini"
+    openai_judge_model: str | None = None
     openai_timeout_seconds: float = Field(default=30, gt=0, le=120)
     chunk_size_chars: int = Field(default=2400, ge=500, le=8000)
     chunk_overlap_chars: int = Field(default=240, ge=0, le=1000)
@@ -86,6 +88,11 @@ class Settings(BaseSettings):
     retrieval_evaluation_result_path: Path = Path("evaluation/results/retrieval-v1.json")
     retrieval_evaluation_dataset_path: Path = Path("evaluation/retrieval-v1.jsonl")
     retrieval_evaluation_manifest_path: Path = Path("evaluation/retrieval-v1-manifest.json")
+    generation_config_path: Path = Path("config/generation.json")
+
+    @property
+    def resolved_judge_model(self) -> str:
+        return self.openai_judge_model or self.openai_chat_model
 
     @field_validator("database_pool_max_size")
     @classmethod

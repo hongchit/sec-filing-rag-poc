@@ -58,6 +58,17 @@ def generate_http(*, check: bool = False) -> None:
         if len(generated) != 1:
             raise SystemExit("httpgenerator did not produce exactly one REST Client file")
         content = generated[0].read_text(encoding="utf-8").rstrip() + "\n"
+        generated_header = "@baseUrl = {{baseUrl}}\n"
+        # The httpgenerator tool does not support environment variable substitution in the
+        # generated file, so we need to replace the baseUrl and internalToken with environment
+        # variable references.
+        environment_header = (
+            "@baseUrl = http://{{$processEnv APP_HOST}}:{{$processEnv APP_PORT}}\n"
+            "@internalToken = {{$processEnv INGESTION_API_TOKEN}}\n"
+        )
+        if not content.startswith(generated_header):
+            raise SystemExit("httpgenerator produced an unexpected header")
+        content = environment_header + content.removeprefix(generated_header)
         _write_or_check(HTTP_PATH, content, check=check)
 
 

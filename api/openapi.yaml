@@ -148,6 +148,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/feedback:
+    post:
+      tags:
+      - feedback
+      summary: Save Feedback
+      operationId: save_feedback_api_feedback_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/retrieval-evaluations/current:
     get:
       tags:
@@ -210,6 +235,136 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EvaluationChunk'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/research:
+    post:
+      tags:
+      - research
+      summary: Create Research
+      operationId: create_research_api_research_post
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Idempotency-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/research/stream:
+    post:
+      tags:
+      - research
+      summary: Stream Research
+      operationId: stream_research_api_research_stream_post
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Idempotency-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchCreate'
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/research/history:
+    get:
+      tags:
+      - research
+      summary: Research History
+      operationId: research_history_api_research_history_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 20
+          title: Limit
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cursor
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchHistory'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/research/{research_id}:
+    get:
+      tags:
+      - research
+      summary: Get Research
+      operationId: get_research_api_research__research_id__get
+      parameters:
+      - name: research_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Research Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchResponse'
         '422':
           description: Validation Error
           content:
@@ -500,6 +655,31 @@ components:
       - report_date
       - source_url
       title: ActiveCorpus
+    AnswerParagraph:
+      properties:
+        text:
+          type: string
+          minLength: 1
+          title: Text
+        kind:
+          type: string
+          enum:
+          - filing_fact
+          - interpretation
+          title: Kind
+        citations:
+          items:
+            type: string
+          type: array
+          minItems: 1
+          title: Citations
+      additionalProperties: false
+      type: object
+      required:
+      - text
+      - kind
+      - citations
+      title: AnswerParagraph
     BatchFinalizationRequest:
       properties:
         kestra_execution_id:
@@ -798,6 +978,79 @@ components:
       - configurations
       - lineage
       title: EvaluationSummary
+    FeedbackCreate:
+      properties:
+        result_type:
+          type: string
+          const: research_answer
+          title: Result Type
+        result_id:
+          type: string
+          format: uuid
+          title: Result Id
+        rating:
+          type: string
+          enum:
+          - up
+          - down
+          title: Rating
+        comment:
+          anyOf:
+          - type: string
+            maxLength: 1000
+          - type: 'null'
+          title: Comment
+      additionalProperties: false
+      type: object
+      required:
+      - result_type
+      - result_id
+      - rating
+      title: FeedbackCreate
+    FeedbackResponse:
+      properties:
+        result_type:
+          type: string
+          const: research_answer
+          title: Result Type
+        result_id:
+          type: string
+          format: uuid
+          title: Result Id
+        rating:
+          type: string
+          enum:
+          - up
+          - down
+          title: Rating
+        comment:
+          anyOf:
+          - type: string
+            maxLength: 1000
+          - type: 'null'
+          title: Comment
+        id:
+          type: string
+          format: uuid
+          title: Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      additionalProperties: false
+      type: object
+      required:
+      - result_type
+      - result_id
+      - rating
+      - id
+      - created_at
+      - updated_at
+      title: FeedbackResponse
     FilingBatchAccepted:
       properties:
         batch_id:
@@ -1146,6 +1399,317 @@ components:
       - status
       - stage
       title: LatestRun
+    ResearchCreate:
+      properties:
+        ticker:
+          type: string
+          title: Ticker
+        corpus_version_id:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+        goal:
+          type: string
+          enum:
+          - business
+          - key_risks
+          - management_analysis
+          - market_risk
+          - legal_regulatory_risk
+          title: Goal
+        question:
+          type: string
+          title: Question
+        allowed_items:
+          anyOf:
+          - items:
+              type: string
+            type: array
+            uniqueItems: true
+          - type: 'null'
+          title: Allowed Items
+      additionalProperties: false
+      type: object
+      required:
+      - ticker
+      - corpus_version_id
+      - goal
+      - question
+      title: ResearchCreate
+    ResearchEvidence:
+      properties:
+        rank:
+          type: integer
+          title: Rank
+        chunk_id:
+          type: string
+          title: Chunk Id
+        citation_handle:
+          type: string
+          title: Citation Handle
+        ticker:
+          type: string
+          title: Ticker
+        accession:
+          type: string
+          title: Accession
+        item:
+          type: string
+          title: Item
+        excerpt:
+          type: string
+          title: Excerpt
+        source_start:
+          type: integer
+          title: Source Start
+        source_end:
+          type: integer
+          title: Source End
+        source_anchor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Anchor
+        source_url:
+          type: string
+          title: Source Url
+        strategy:
+          type: string
+          title: Strategy
+        score:
+          type: number
+          title: Score
+      type: object
+      required:
+      - rank
+      - chunk_id
+      - citation_handle
+      - ticker
+      - accession
+      - item
+      - excerpt
+      - source_start
+      - source_end
+      - source_url
+      - strategy
+      - score
+      title: ResearchEvidence
+    ResearchHistory:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ResearchResponse'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+      type: object
+      required:
+      - items
+      title: ResearchHistory
+    ResearchResponse:
+      properties:
+        research_id:
+          type: string
+          format: uuid
+          title: Research Id
+        ticker:
+          type: string
+          title: Ticker
+        corpus_version_id:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+        goal:
+          type: string
+          enum:
+          - business
+          - key_risks
+          - management_analysis
+          - market_risk
+          - legal_regulatory_risk
+          title: Goal
+        question:
+          type: string
+          title: Question
+        allowed_items:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Allowed Items
+        status:
+          type: string
+          title: Status
+        prompt_id:
+          type: string
+          title: Prompt Id
+        chat_model:
+          type: string
+          title: Chat Model
+        safe_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safe Error
+        answer:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/AnswerParagraph'
+            type: array
+          - type: 'null'
+          title: Answer
+        limitations:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Limitations
+        insufficient_evidence:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Insufficient Evidence
+        policy_refusal:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Policy Refusal
+        evidence:
+          items:
+            $ref: '#/components/schemas/ResearchEvidence'
+          type: array
+          title: Evidence
+        usage:
+          $ref: '#/components/schemas/ResearchUsage'
+        run_details:
+          $ref: '#/components/schemas/RunDetails'
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        finished_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Finished At
+      type: object
+      required:
+      - research_id
+      - ticker
+      - corpus_version_id
+      - goal
+      - question
+      - status
+      - prompt_id
+      - chat_model
+      - evidence
+      - usage
+      - run_details
+      - created_at
+      title: ResearchResponse
+    ResearchUsage:
+      properties:
+        query_embedding_input:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Query Embedding Input
+        answer_generation_input:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Answer Generation Input
+        answer_generation_output:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Answer Generation Output
+        complete_request_total:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Complete Request Total
+        provider_calls:
+          type: integer
+          title: Provider Calls
+      type: object
+      required:
+      - provider_calls
+      title: ResearchUsage
+    RunDetails:
+      properties:
+        accession:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Accession
+        corpus_version_id:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+        retrieval_configuration_sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Retrieval Configuration Sha256
+        generation_configuration_sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Generation Configuration Sha256
+        prompt_sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Sha256
+        prompt_id:
+          type: string
+          title: Prompt Id
+        chat_model:
+          type: string
+          title: Chat Model
+        strategy:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Strategy
+        alpha:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Alpha
+        evidence_count:
+          type: integer
+          title: Evidence Count
+        attempts:
+          type: integer
+          title: Attempts
+        latency_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Latency Ms
+        operations:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Operations
+      type: object
+      required:
+      - corpus_version_id
+      - prompt_id
+      - chat_model
+      - evidence_count
+      - attempts
+      title: RunDetails
     StatusResponse:
       properties:
         status:

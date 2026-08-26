@@ -19,7 +19,7 @@ The process has three distinct outcomes:
 The retrieval-v1 benchmark is accepted as the application default. Its dataset
 SHA-256 is
 `16758fdf6a1ab74b06772244ae8217f4530f006fb4aabfc78accee76ba06ad10`.
-The 102 reviewed questions cover AAPL, MSFT, and NVDA; all five research goals;
+The 96 reviewed questions cover AAPL, MSFT, and NVDA; all five research goals;
 all six required Items; both query types; and legal and non-legal risk cases.
 The manifest and result contain no coverage warnings or execution failures.
 

@@ -14,7 +14,9 @@ npm --prefix frontend run dev
 
 Import `workflows/filing_batch.yaml` through the Kestra UI at <http://127.0.0.1:18082>. The API is on port 8000, frontend 5173, application PostgreSQL 5432, and Kestra 18082 (management 18083).
 
-The schema is intentionally fresh-start-only. If an existing application volume has either old migration, use the destructive reset in [operations](docs/operations.md) before migrating; there is no compatibility upgrade.
+Database migrations are immutable and incremental. Fresh installations apply every numbered file;
+existing installations apply only new files, with checksums protecting already-applied migrations.
+See [operations](docs/operations.md) for migration and recovery procedures.
 
 ## Submit and poll
 

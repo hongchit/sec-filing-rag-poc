@@ -19,15 +19,13 @@ const renderApp = () =>
     </ThemeProvider>,
   );
 
-test('renders health shell', () => {
+test('redirects the root route to the research workspace', () => {
   vi.stubGlobal(
     'fetch',
     vi.fn(() => new Promise(() => {})),
   );
   renderApp();
-  expect(
-    screen.getByRole('heading', { name: 'Ingestion and retrieval foundation' }),
-  ).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Investor research' })).toBeInTheDocument();
 });
 
 test('help popovers dismiss with Escape and outside click', async () => {

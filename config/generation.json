@@ -1,0 +1,17 @@
+{
+  "version": "generation-v2",
+  "promoted_prompt_id": "structured-investor-v1",
+  "promotion_reason": "The evaluated Step 6 winner remains active; refusal-aware v2 candidates require the 96-case live benchmark before promotion.",
+  "context_max_chars": 30000,
+  "max_paragraphs": 8,
+  "max_paragraph_chars": 4000,
+  "max_limitations": 5,
+  "max_limitation_chars": 500,
+  "max_retries": 2,
+  "prompts": [
+    {"id": "basic-grounded-v1", "path": "prompts/basic-grounded-v1.txt"},
+    {"id": "structured-investor-v1", "path": "prompts/structured-investor-v1.txt"},
+    {"id": "basic-grounded-v2", "path": "prompts/basic-grounded-v2.txt"},
+    {"id": "structured-investor-v2", "path": "prompts/structured-investor-v2.txt"}
+  ]
+}

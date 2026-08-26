@@ -1,6 +1,6 @@
 # Retrieval evaluation
 
-- Dataset SHA-256: `16758fdf6a1ab74b06772244ae8217f4530f006fb4aabfc78accee76ba06ad10`
+- Dataset SHA-256: `a63a2c3c9f6ff2c0cfcb3317f3450cd04c3c26579958437a732835b699d8188f`
 - Configuration SHA-256: `d8da2fe291a5cf63e3cadfca84bd2fd0ee6ff8ebe882af403b5d03c2412d8088`
 - Course commit: `bc7b6aad6b92a5611d3d37bf7521a363f3b9d398`
 - Selected default: `{"alpha": 0.25, "candidate_count": 10, "rrf_k": 60, "strategy": "weighted_hybrid", "top_k": 10}`

@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, Protocol, cast
 
@@ -215,20 +216,40 @@ def reciprocal_rank_fusion(
 
 
 class QueryEmbedder(Protocol):
-    def embed(self, text: str, evaluation_run_id: uuid.UUID | None = None) -> list[float]: ...
+    def embed(
+        self,
+        text: str,
+        evaluation_run_id: uuid.UUID | None = None,
+        research_id: uuid.UUID | None = None,
+    ) -> list[float]: ...
 
 
 class OpenAIQueryEmbedder:
     def __init__(
-        self, database: Database, api_key: str, model: str, dimensions: int, timeout: float
+        self,
+        database: Database,
+        api_key: str,
+        model: str,
+        dimensions: int,
+        timeout: float,
+        *,
+        client: OpenAI | None = None,
     ) -> None:
         self.database, self.model, self.dimensions = database, model, dimensions
-        self.client = OpenAI(api_key=api_key, timeout=timeout)
+        self.client = client or OpenAI(api_key=api_key, timeout=timeout)
+        self._owns_client = client is None
 
     def close(self) -> None:
-        self.client.close()
+        if self._owns_client:
+            self.client.close()
 
-    def embed(self, text: str, evaluation_run_id: uuid.UUID | None = None) -> list[float]:
+    def embed(
+        self,
+        text: str,
+        evaluation_run_id: uuid.UUID | None = None,
+        research_id: uuid.UUID | None = None,
+    ) -> list[float]:
+        provider_started_at = datetime.now(UTC)
         started = time.monotonic()
         status, normalized, input_tokens, total_tokens = "failed", "failed", None, None
         try:
@@ -250,15 +271,18 @@ class OpenAIQueryEmbedder:
         finally:
             with self.database.transaction() as connection:
                 connection.execute(
-                    "INSERT INTO public.llm_usage(evaluation_run_id,operation,model,input_tokens,"
-                    "output_tokens,total_tokens,latency_ms,usage_status,normalized_status) "
-                    "VALUES (%s,'query_embedding',%s,%s,NULL,%s,%s,%s,%s)",
+                    "INSERT INTO public.llm_usage(evaluation_run_id,research_id,operation,model,input_tokens,"
+                    "output_tokens,total_tokens,latency_ms,attempt,retry_count,provider_started_at,provider_finished_at,usage_status,normalized_status) "
+                    "VALUES (%s,%s,'query_embedding',%s,%s,NULL,%s,%s,1,0,%s,%s,%s,%s)",
                     (
                         evaluation_run_id,
+                        research_id,
                         self.model,
                         input_tokens,
                         total_tokens,
                         int((time.monotonic() - started) * 1000),
+                        provider_started_at,
+                        datetime.now(UTC),
                         status,
                         normalized,
                     ),
@@ -376,6 +400,7 @@ class RetrievalService:
         *,
         embedding: list[float] | None = None,
         evaluation_run_id: uuid.UUID | None = None,
+        research_id: uuid.UUID | None = None,
     ) -> list[RetrievalResult]:
         identity = self.repository.identity(query, self.config)
         keyword: list[Candidate] = []
@@ -386,7 +411,7 @@ class RetrievalService:
             vector_embedding = (
                 embedding
                 if embedding is not None
-                else self.embedder.embed(query.question, evaluation_run_id)
+                else self.embedder.embed(query.question, evaluation_run_id, research_id)
             )
             vector = self.repository.vector(query, identity, vector_embedding)
         if query.strategy == "keyword":

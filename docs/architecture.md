@@ -7,7 +7,7 @@ flowchart LR
   A -->|multipart batch_id + Basic auth| K[Kestra 1.3]
   K -->|Bearer token; IDs only| A
   A -->|SDK calls| E[EdgarTools / SEC]
-  A -->|embedding calls| O[OpenAI]
+  A -->|embedding, structured answer, and judge calls| O[OpenAI]
   A <--> D[(Application PostgreSQL)]
   K <--> KD[(Kestra PostgreSQL)]
 ```
@@ -30,10 +30,22 @@ EdgarTools metadata and exact UTF-8 HTML bytes enter immutable bronze snapshots;
 - `services`: persisted batch execution and corpus processing.
 - `retrieval`, `ground_truth`, `evaluation`, `cli`: search, dataset generation/review, benchmarking, migrations, and artifact generation.
 - `workflows/filing_batch.yaml`: the only ingestion flow.
-- `migrations/versions/0001_schema.sql`: the complete disposable application schema.
+- `migrations/versions`: immutable incremental database migrations; `0001` is the Step 6 baseline.
 
 ## Capabilities and invariants
 
 The implementation supports configured ordered batches; latest and exact report-year selection; missing-year skips; retained historical corpora; compatible-corpus reuse and latest promotion; six required Items (1, 1A, 3, 7, 7A, 8); bounded sanitization; deterministic checksum-bound chunk IDs; embedding usage capture; transactional candidate validation; active-corpus retrieval; and reviewed evaluation.
 
 Invariants: Python owns all business decisions; Kestra receives references only; original `10-K` excludes amendments; fiscal year means `report_date.year`; acquisition precedes corpus work; one filing/compatibility pair identifies a corpus; incomplete extraction cannot activate; exact-year mode cannot move the default; one company has at most one default; failures preserve the previous ready/default corpus; status never requires querying Kestra.
+
+## Research answers
+
+Research is the home experience at `/research`, with durable result and cursor-paginated history
+routes. `POST /api/research` retains its synchronous `201` contract. `POST /api/research/stream`
+runs the same persisted service in a producer thread and emits observed SSE stages; disconnecting a
+client never cancels the research. Both accept an optional UUID `Idempotency-Key`: a terminal replay
+returns the stored result, a changed-input replay conflicts, and a running replay supplies the
+existing ID for polling. Evidence is stored as chunk lineage and hydrated at read time. Responses
+expose typed sources, reproducibility hashes, operation attempts/latency, and nullable usage totals.
+Validated policy refusal is independent of evidence insufficiency, and substantive paragraphs still
+require in-corpus citation handles.

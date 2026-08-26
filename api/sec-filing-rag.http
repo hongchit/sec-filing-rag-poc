@@ -90,6 +90,127 @@ Content-Type: {{contentType}}
 Authorization: {{internalToken}}
 
 
+#################################
+### Request: POST /api/feedback
+### Summary: Save Feedback
+#################################
+
+
+POST {{baseUrl}}/api/feedback
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "result_type": "example",
+  "result_id": "example",
+  "rating": "example"
+}
+
+############################################################################################
+### Request: GET /api/retrieval-evaluations/current
+### Summary: Current
+### Description: Read the validated current retrieval evaluation and official leaderboard.
+############################################################################################
+
+
+GET {{baseUrl}}/api/retrieval-evaluations/current
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+#################################################################################################
+### Request: GET /api/retrieval-evaluations/current/configurations/{configuration_id}/cases
+### Summary: Cases
+### Description: Inspect every reviewed question and ranked chunk for one stable configuration.
+#################################################################################################
+
+### Path Parameter: GetCurrentRetrievalEvaluationCases_configuration_id
+@GetCurrentRetrievalEvaluationCases_configuration_id = str
+
+
+GET {{baseUrl}}/api/retrieval-evaluations/current/configurations/{{GetCurrentRetrievalEvaluationCases_configuration_id}}/cases
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+#######################################################################################################
+### Request: GET /api/retrieval-evaluations/current/chunks/{chunk_id}
+### Summary: Chunk
+### Description: Lazy-load full text and provenance for a chunk referenced by the current evaluation.
+#######################################################################################################
+
+### Path Parameter: GetCurrentRetrievalEvaluationChunk_chunk_id
+@GetCurrentRetrievalEvaluationChunk_chunk_id = str
+
+
+GET {{baseUrl}}/api/retrieval-evaluations/current/chunks/{{GetCurrentRetrievalEvaluationChunk_chunk_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+#################################
+### Request: POST /api/research
+### Summary: Create Research
+#################################
+
+
+POST {{baseUrl}}/api/research
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "ticker": "example",
+  "corpus_version_id": "example",
+  "goal": "example"
+}
+
+########################################
+### Request: POST /api/research/stream
+### Summary: Stream Research
+########################################
+
+
+POST {{baseUrl}}/api/research/stream
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "ticker": "example",
+  "corpus_version_id": "example",
+  "goal": "example"
+}
+
+########################################
+### Request: GET /api/research/history
+### Summary: Research History
+########################################
+
+### Query Parameter: GetResearch_history_api_research_history_get_limit
+@GetResearch_history_api_research_history_get_limit = 0
+
+### Query Parameter: GetResearch_history_api_research_history_get_cursor
+@GetResearch_history_api_research_history_get_cursor = str
+
+
+GET {{baseUrl}}/api/research/history?limit={{GetResearch_history_api_research_history_get_limit}}&cursor={{GetResearch_history_api_research_history_get_cursor}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+##############################################
+### Request: GET /api/research/{research_id}
+### Summary: Get Research
+##############################################
+
+### Path Parameter: Get_research_api_research__research_id__get_research_id
+@Get_research_api_research__research_id__get_research_id = str
+
+
+GET {{baseUrl}}/api/research/{{Get_research_api_research__research_id__get_research_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
 ######################################################
 ### Request: GET /internal/filing-batches/{batch_id}
 ### Summary: Get Execution Batch

@@ -1,5 +1,10 @@
 from pathlib import Path
 
+import pytest
+
+from sec_filing_rag.cli import migrate
+from sec_filing_rag.repositories.corpus import AppliedMigrationChangedError
+
 
 def test_devcontainer_runs_migrations_after_each_start() -> None:
     configuration = Path(".devcontainer/devcontainer.json").read_text(encoding="utf-8")
@@ -8,6 +13,35 @@ def test_devcontainer_runs_migrations_after_each_start() -> None:
     assert "pg_isready" in script
     assert script.count("uv run sec-rag-migrate") == 1
     assert "max_attempts=30" in script
+
+
+def test_migration_checksum_mismatch_is_actionable_and_secret_safe(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stored = "a" * 64
+    current = "b" * 64
+    database_url = "postgresql://private-user:private-password@db/private-database"
+
+    def changed(_: str) -> None:
+        raise AppliedMigrationChangedError("0001_schema.sql", stored, current)
+
+    monkeypatch.setattr(migrate, "apply_migrations", changed)
+
+    with pytest.raises(SystemExit) as raised:
+        migrate._migrate(database_url)
+
+    message = capsys.readouterr().err
+    assert raised.value.code == 1
+    assert "Migration integrity check failed for 0001_schema.sql" in message
+    assert f"stored database SHA-256={stored}" in message
+    assert f"current file SHA-256={current}" in message
+    assert "transaction was rolled back" in message
+    assert "no migration changes were committed" in message
+    assert "docs/operations.md#reset-only-the-application-database-destructive" in message
+    assert "Do not edit public.schema_migration manually" in message
+    assert database_url not in message
+    assert "private-user" not in message
+    assert "private-password" not in message
 
 
 def test_corpus_status_groups_correlated_company_key() -> None:

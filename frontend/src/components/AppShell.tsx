@@ -14,7 +14,7 @@ export function AppShell({
         <Toolbar>
           <Typography
             component={RouterLink}
-            to="/"
+            to="/research"
             variant="h6"
             color="inherit"
             sx={{ textDecoration: 'none', fontWeight: 750, flexGrow: 1 }}
@@ -22,11 +22,19 @@ export function AppShell({
             SEC Filing RAG
           </Typography>
           <Box component="nav" aria-label="Primary" sx={{ display: 'flex', gap: 3 }}>
-            <Typography component={RouterLink} to="/" color="inherit">
-              System health
+            <Typography component={RouterLink} to="/research" color="inherit">
+              Research
             </Typography>
             <Typography component={RouterLink} to="/evaluation" color="inherit">
               Retrieval evaluation
+            </Typography>
+            <Typography
+              component={RouterLink}
+              to="/diagnostics/health"
+              color="inherit"
+              sx={{ opacity: 0.8 }}
+            >
+              Diagnostics
             </Typography>
           </Box>
         </Toolbar>

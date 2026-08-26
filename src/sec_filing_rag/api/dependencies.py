@@ -10,13 +10,25 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ..core.config import Settings
 from ..core.resources import AppResources
 from ..evaluation.dashboard import EvaluationDashboardService
+from ..generation.service import (
+    OpenAIAnswerProvider,
+    ResearchService,
+    load_generation_configuration,
+)
 from ..integrations.kestra import KestraGateway
 from ..integrations.sec import EdgarGateway, configure_edgartools
 from ..repositories.companies import CompanyRepository
 from ..repositories.corpus import IngestionRepository
 from ..repositories.database import Database
+from ..repositories.research import ResearchRepository
 from ..repositories.system import SystemRepository
 from ..repositories.workflows import WorkflowRepository
+from ..retrieval.service import (
+    OpenAIQueryEmbedder,
+    RetrievalRepository,
+    RetrievalService,
+    load_retrieval_configuration,
+)
 from ..services.ingestion import IngestionPipeline
 from ..services.workflows import FilingBatchService, FilingExecutionService
 
@@ -93,6 +105,31 @@ def execution_service(
     config = settings()
     pipeline = IngestionPipeline(config, ingestion, app_resources.openai)
     return FilingExecutionService(config, repository, provider, pipeline)
+
+
+def research_service(
+    db: Annotated[Database, Depends(database)],
+    app_resources: Annotated[AppResources, Depends(resources)],
+    config: Annotated[Settings, Depends(settings)],
+) -> ResearchService:
+    retrieval_config = load_retrieval_configuration(config.retrieval_config_path)
+    generation_config = load_generation_configuration(config.generation_config_path)
+    embedder = OpenAIQueryEmbedder(
+        db,
+        config.openai_api_key,
+        retrieval_config.embedding_model,
+        retrieval_config.embedding_dimensions,
+        config.openai_timeout_seconds,
+        client=app_resources.openai,
+    )
+    retrieval = RetrievalService(RetrievalRepository(db), embedder, retrieval_config)
+    return ResearchService(
+        ResearchRepository(db),
+        retrieval,
+        OpenAIAnswerProvider(app_resources.openai),
+        generation_config,
+        config.openai_chat_model,
+    )
 
 
 _internal_bearer = HTTPBearer(auto_error=False, scheme_name="InternalBearer")

@@ -184,4 +184,45 @@ ALTER TABLE public.llm_usage ADD CONSTRAINT llm_usage_single_owner CHECK (
  (ground_truth_generation_run_id IS NOT NULL)::integer <= 1);
 ALTER TABLE public.llm_usage ADD COLUMN retry_count integer NOT NULL DEFAULT 0 CHECK (retry_count >= 0);
 
+CREATE TYPE public.research_status AS ENUM ('running','succeeded','failed');
+CREATE TABLE public.research_request (
+ id uuid PRIMARY KEY, company_id uuid NOT NULL REFERENCES public.company(id),
+ corpus_version_id uuid NOT NULL REFERENCES silver.corpus_version(id), ticker text NOT NULL,
+ goal text NOT NULL CHECK (goal IN ('business','key_risks','management_analysis','market_risk','legal_regulatory_risk')),
+ question text NOT NULL CHECK (length(question) BETWEEN 1 AND 2000 AND btrim(question) <> ''),
+ allowed_items text[], status public.research_status NOT NULL DEFAULT 'running', prompt_id text NOT NULL,
+ chat_model text NOT NULL, safe_error text, created_at timestamptz NOT NULL DEFAULT now(), finished_at timestamptz,
+ CHECK (allowed_items IS NULL OR cardinality(allowed_items) > 0)
+);
+CREATE TABLE public.research_result (
+ research_id uuid PRIMARY KEY REFERENCES public.research_request(id), answer jsonb NOT NULL,
+ limitations jsonb NOT NULL, insufficient_evidence boolean NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE public.research_evidence (
+ research_id uuid NOT NULL REFERENCES public.research_request(id), rank integer NOT NULL CHECK (rank > 0),
+ chunk_id char(64) NOT NULL REFERENCES silver.chunk(id), strategy text NOT NULL, score double precision NOT NULL,
+ citation_handle text NOT NULL, ticker text NOT NULL, accession text NOT NULL, item text NOT NULL,
+ provenance jsonb NOT NULL, PRIMARY KEY (research_id,rank), UNIQUE (research_id,chunk_id)
+);
+CREATE TYPE public.generation_evaluation_status AS ENUM ('running','succeeded','failed');
+CREATE TABLE public.generation_evaluation_run (
+ id uuid PRIMARY KEY, status public.generation_evaluation_status NOT NULL DEFAULT 'running',
+ dataset_sha256 char(64) NOT NULL, corpus_snapshot_sha256 char(64) NOT NULL,
+ retrieval_configuration_sha256 char(64) NOT NULL, generation_configuration_sha256 char(64) NOT NULL,
+ chat_model text NOT NULL, judge_model text NOT NULL, selected_prompt_id text, selection_rationale jsonb,
+ safe_error text, started_at timestamptz NOT NULL DEFAULT now(), finished_at timestamptz
+);
+ALTER TABLE public.llm_usage ADD COLUMN research_id uuid REFERENCES public.research_request(id);
+ALTER TABLE public.llm_usage ADD COLUMN generation_evaluation_run_id uuid REFERENCES public.generation_evaluation_run(id);
+ALTER TABLE public.llm_usage ADD COLUMN attempt integer NOT NULL DEFAULT 1 CHECK (attempt > 0);
+ALTER TABLE public.llm_usage ADD COLUMN provider_started_at timestamptz;
+ALTER TABLE public.llm_usage ADD COLUMN provider_finished_at timestamptz;
+ALTER TABLE public.llm_usage DROP CONSTRAINT llm_usage_single_owner;
+ALTER TABLE public.llm_usage ADD CONSTRAINT llm_usage_single_owner CHECK (
+ (ingestion_run_id IS NOT NULL)::integer + (evaluation_run_id IS NOT NULL)::integer +
+ (ground_truth_generation_run_id IS NOT NULL)::integer + (research_id IS NOT NULL)::integer +
+ (generation_evaluation_run_id IS NOT NULL)::integer <= 1);
+CREATE INDEX research_request_company_created ON public.research_request(company_id,created_at DESC);
+CREATE INDEX research_evidence_chunk ON public.research_evidence(chunk_id);
+
 COMMIT;

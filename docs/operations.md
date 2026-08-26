@@ -31,16 +31,46 @@ psql "$DATABASE_URL" -c "select id,trigger,status,stage,section_count,chunk_coun
 psql "$DATABASE_URL" -c "select ticker,accession,item,coverage_status,chunk_count,search_document_count from gold.corpus_status order by ticker,item"
 ```
 
-## Destructive fresh-start reset
+## Reset only the application database (destructive)
 
-The consolidated `0001_schema.sql` intentionally has no upgrade path from initialized old volumes. The following deletes both application data and Kestra history. Stop the Dev Container first, confirm the Compose project is this repository, and run from the repository root:
+Apply migrations with `uv run sec-rag-migrate`. Never edit an applied numbered migration; add the
+next migration instead. A checksum mismatch means an immutable migration changed after application
+and must be restored, not that migration history should be edited manually.
+
+The reset below permanently deletes application PostgreSQL data. It preserves Kestra history and storage, Codex state, Cargo tools, and shared caches. Stop the Dev Container first. From the repository root on the host, verify the managed Compose project and exact application volume before removing anything:
 
 ```bash
-docker compose --env-file .env -f .devcontainer/docker-compose.yml down --volumes
+compose_project=sec-filing-rag-poc_devcontainer
+app_db_volume="${compose_project}_postgres-data"
+docker volume inspect --format '{{ index .Labels "com.docker.compose.project" }}|{{ index .Labels "com.docker.compose.volume" }}' "$app_db_volume"
 ```
 
-Reopen/rebuild the Dev Container, run the migration, and re-import the flow. The removed named volumes are not recoverable unless separately backed up.
+The inspection must print `sec-filing-rag-poc_devcontainer|postgres-data`. Stop if the volume is absent or either label differs. Then stop the stack without deleting its volumes and remove only the verified application volume:
+
+```bash
+docker compose --project-name "$compose_project" -f .devcontainer/docker-compose.yml down
+docker volume rm "$app_db_volume"
+```
+
+Do not use `down --volumes`; it removes unrelated persistent project state. Reopen the Dev Container so PostgreSQL recreates the application volume and the post-start hook applies the current schema. Kestra data was retained, so its flow does not need to be re-imported unless the workflow definition changed independently. The removed application volume is not recoverable unless separately backed up.
 
 ## Artifacts, verification, and acceptance
 
 Regenerate/check OpenAPI and REST Client files with `sec-rag-export-openapi` and `sec-rag-generate-http`. Use the README's **Formatting and linting** section for the canonical fix and non-mutating verification commands, then run its full verification command set. Live acceptance requires working SEC/OpenAI/Kestra credentials: submit one latest batch and one exact-year batch, poll both terminal, confirm six coverage rows and matching present chunk/search counts, then confirm the exact-year corpus is listed as historical and did not change `active_corpus`. Live SEC tests are opt-in (`pytest -m live_edgar`).
+
+## Generation evaluation and promotion
+
+Generation evaluation uses the 96 reviewed baseline cases with two prompts. This incurs meaningful
+OpenAI cost: confirm models, account limits, and the full workload before a live run. Never place
+keys, private filing data, or provider payloads in artifacts or logs.
+
+The tracked generation contract is `config/generation.json`; templates live under `prompts/`. Validate a completed artifact and render its summary with:
+
+```bash
+sec-rag-evaluate-generation evaluation/results/generation-v1.json --markdown evaluation/results/generation-v1.md
+```
+
+The validator requires 96 cases and rejects a selected prompt that failed the 100% valid-handle or
+zero-cross-corpus guardrails. Refusal-aware prompt/configuration versions must be benchmarked as new
+artifacts; promote only the measured eligible winner and update hashes, documentation, and runtime
+default together.

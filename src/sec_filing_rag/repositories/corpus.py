@@ -599,6 +599,21 @@ def migration_files() -> list[Path]:
     return sorted(root.glob("*.sql"))
 
 
+class AppliedMigrationChangedError(RuntimeError):
+    def __init__(self, name: str, stored_sha256: str, file_sha256: str) -> None:
+        self.name = name
+        self.stored_sha256 = stored_sha256
+        self.file_sha256 = file_sha256
+        super().__init__(
+            f"Migration integrity check failed for {name}: "
+            f"stored database SHA-256={stored_sha256}; current file SHA-256={file_sha256}. "
+            "Applied migrations are immutable, so the transaction was rolled back and no "
+            "migration changes were committed. This repository uses a fresh-start-only schema. "
+            "Follow docs/operations.md#reset-only-the-application-database-destructive. "
+            "Do not edit public.schema_migration manually."
+        )
+
+
 def apply_migrations(database_url: str) -> None:
     with psycopg.connect(database_url) as connection:
         connection.execute(
@@ -613,7 +628,7 @@ def apply_migrations(database_url: str) -> None:
             ).fetchone()
             if existing:
                 if existing[0] != digest:
-                    raise RuntimeError(f"applied migration changed: {path.name}")
+                    raise AppliedMigrationChangedError(path.name, existing[0], digest)
                 continue
             connection.execute(sql.SQL(body.decode()))
             connection.execute(
