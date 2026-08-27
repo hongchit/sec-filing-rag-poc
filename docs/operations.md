@@ -1,5 +1,37 @@
 # Operations
 
+## Startup validation and recovery
+
+```mermaid
+flowchart TD
+  F[Startup failure] --> C{Structured event}
+  C -->|startup_configuration_invalid| E[Correct settings or tracked files]
+  C -->|startup_database_unavailable| D[Restore database connectivity]
+  C -->|startup_schema_invalid| M[Run uv run sec-rag-migrate]
+  E --> R[Restart]
+  D --> R
+  M --> R
+```
+
+| Category | Rule | Stable code | Secret | Safe remediation |
+|---|---|---|---|---|
+| Credentials | present, non-placeholder | `placeholder_value` | yes | replace the named environment setting |
+| Companies | valid file and enabled unique ticker | `no_enabled_companies` | no | enable a ticker |
+| Retrieval | default selected; model/dimensions match | `embedding_configuration_mismatch` | no | align tracked/runtime settings |
+| Generation | promoted/referenced prompts readable | `prompt_file_invalid` | no | restore the prompt file |
+| Pricing | USD/1M and exact active-model coverage | `generation_price_missing` | no | add required rates and restart |
+| Database | reachable within startup timeout | `startup_database_unavailable` | URL is secret | restore connectivity |
+| Schema | all migrations and checksums current | `startup_schema_invalid` | no | run `uv run sec-rag-migrate` |
+
+Events never include supplied values, credential-bearing URLs, `.env` content, or provider/private data.
+Third-party OpenAI, SEC, and Kestra reachability is a bounded runtime concern, not a startup gate.
+
+Pricing lives in `config/model-pricing-v1.json` as USD per 1,000,000 tokens. Embeddings require input
+pricing; generation requires input and output pricing. Restart after changes; historical requests retain
+their snapshot. The decimal estimate includes every attempt and retry. It is unavailable for legacy
+requests or if any chargeable provider operation lacks usage. Zero reported tokens are valid. Budgets,
+quotas, discounts, billing reconciliation, and invoice matching remain excluded.
+
 ## Setup, configuration, and ports
 
 Open the repository in its Dev Container. The create hook installs locked Python dependencies, `httpgenerator` 1.1.0, frontend dependencies, and Codex. Copy `.env.example` to `.env`; do not commit it. Variables fall into SEC identity/rate and input bounds, OpenAI model/key, application/runtime/chunking, application PostgreSQL/pool, Kestra client/basic auth, and the base64 Kestra secret containing the same raw internal bearer token.

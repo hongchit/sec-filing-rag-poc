@@ -1,7 +1,7 @@
 {
-  "version": "generation-v2",
-  "promoted_prompt_id": "structured-investor-v1",
-  "promotion_reason": "The evaluated Step 6 winner remains active; refusal-aware v2 candidates require the 96-case live benchmark before promotion.",
+  "version": "generation-v3",
+  "promoted_prompt_id": "guardrailed-10k-v3",
+  "promotion_reason": "Single-call answer generation and documented MVP disposition classification.",
   "context_max_chars": 30000,
   "max_paragraphs": 8,
   "max_paragraph_chars": 4000,
@@ -12,6 +12,7 @@
     {"id": "basic-grounded-v1", "path": "prompts/basic-grounded-v1.txt"},
     {"id": "structured-investor-v1", "path": "prompts/structured-investor-v1.txt"},
     {"id": "basic-grounded-v2", "path": "prompts/basic-grounded-v2.txt"},
-    {"id": "structured-investor-v2", "path": "prompts/structured-investor-v2.txt"}
+    {"id": "structured-investor-v2", "path": "prompts/structured-investor-v2.txt"},
+    {"id": "guardrailed-10k-v3", "path": "prompts/guardrailed-10k-v3.txt"}
   ]
 }

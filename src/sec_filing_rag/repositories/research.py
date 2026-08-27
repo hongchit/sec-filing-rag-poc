@@ -5,7 +5,10 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from ..core.pricing import estimate_charge
 from ..generation.service import (
+    INVESTMENT_ADVICE_MESSAGE,
+    OUT_OF_SCOPE_MESSAGE,
     GeneratedAnswer,
     IdempotencyConflict,
     ProviderUsage,
@@ -62,6 +65,7 @@ class ResearchRepository:
         retrieval_configuration_sha256: str | None = None,
         generation_configuration_sha256: str | None = None,
         prompt_sha256: str | None = None,
+        pricing_snapshot: dict[str, Any] | None = None,
     ) -> uuid.UUID:
         research_id = uuid.uuid4()
         with self.database.transaction() as connection:
@@ -74,8 +78,8 @@ class ResearchRepository:
             if row is None:
                 raise ValueError("unknown company, non-ready corpus, or corpus/company mismatch")
             connection.execute(
-                "INSERT INTO public.research_request(id,company_id,corpus_version_id,ticker,goal,question,allowed_items,status,prompt_id,chat_model,idempotency_key,retrieval_configuration_sha256,generation_configuration_sha256,prompt_sha256,accession) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,'running',%s,%s,%s,%s,%s,%s,%s)",
+                "INSERT INTO public.research_request(id,company_id,corpus_version_id,ticker,goal,question,allowed_items,status,prompt_id,chat_model,idempotency_key,retrieval_configuration_sha256,generation_configuration_sha256,prompt_sha256,accession,pricing_snapshot) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,'running',%s,%s,%s,%s,%s,%s,%s,%s)",
                 (
                     research_id,
                     row["company_id"],
@@ -91,6 +95,7 @@ class ResearchRepository:
                     generation_configuration_sha256,
                     prompt_sha256,
                     row["accession"],
+                    json.dumps(pricing_snapshot) if pricing_snapshot is not None else None,
                 ),
             )
         return research_id
@@ -152,19 +157,28 @@ class ResearchRepository:
             )
 
     def succeed(self, research_id: uuid.UUID, answer: GeneratedAnswer) -> dict[str, Any]:
+        rejection_message = (
+            INVESTMENT_ADVICE_MESSAGE
+            if answer.disposition == "investment_advice"
+            else OUT_OF_SCOPE_MESSAGE
+            if answer.disposition == "out_of_scope"
+            else None
+        )
         with self.database.transaction() as connection:
             connection.execute(
                 "UPDATE public.research_request SET status='succeeded',finished_at=now() WHERE id=%s",
                 (research_id,),
             )
             connection.execute(
-                "INSERT INTO public.research_result(research_id,answer,insufficient_evidence,limitations,policy_refusal) VALUES (%s,%s,%s,%s,%s)",
+                "INSERT INTO public.research_result(research_id,answer,insufficient_evidence,limitations,policy_refusal,disposition,rejection_message) VALUES (%s,%s,%s,%s,%s,%s,%s)",
                 (
                     research_id,
                     json.dumps([item.model_dump(mode="json") for item in answer.paragraphs]),
                     answer.insufficient_evidence,
                     json.dumps(answer.limitations),
                     answer.policy_refusal,
+                    answer.disposition,
+                    rejection_message,
                 ),
             )
         value = self.get(research_id)
@@ -182,7 +196,7 @@ class ResearchRepository:
     def get(self, research_id: uuid.UUID) -> dict[str, Any] | None:
         with self.database.transaction() as connection:
             row = connection.execute(
-                "SELECT rr.id AS research_id,rr.ticker,rr.corpus_version_id,rr.goal,rr.question,rr.allowed_items,rr.status,rr.prompt_id,rr.chat_model,rr.safe_error,rr.created_at,rr.finished_at,rr.accession,rr.retrieval_configuration_sha256,rr.generation_configuration_sha256,rr.prompt_sha256,res.answer,res.limitations,res.insufficient_evidence,res.policy_refusal "
+                "SELECT rr.id AS research_id,rr.ticker,rr.corpus_version_id,rr.goal,rr.question,rr.allowed_items,rr.status,rr.prompt_id,rr.chat_model,rr.safe_error,rr.created_at,rr.finished_at,rr.accession,rr.retrieval_configuration_sha256,rr.generation_configuration_sha256,rr.prompt_sha256,rr.pricing_snapshot,res.answer,res.limitations,res.insufficient_evidence,res.policy_refusal,res.disposition,res.rejection_message "
                 "FROM public.research_request rr LEFT JOIN public.research_result res ON res.research_id=rr.id WHERE rr.id=%s",
                 (research_id,),
             ).fetchone()
@@ -229,6 +243,14 @@ class ResearchRepository:
             else None,
             "provider_calls": len(op_values),
         }
+        pricing_snapshot = value.pop("pricing_snapshot")
+        estimate_status, estimated_charge = estimate_charge(pricing_snapshot, op_values)
+        value["estimate_status"] = estimate_status
+        value["estimated_charge_usd"] = estimated_charge
+        if value.get("disposition") in ("investment_advice", "out_of_scope"):
+            value["answer"] = []
+            value["limitations"] = []
+            value["evidence"] = []
         strategy = value["evidence"][0]["strategy"] if value["evidence"] else None
         value["run_details"] = {
             "accession": value.pop("accession"),
@@ -250,6 +272,8 @@ class ResearchRepository:
             )
             or None,
             "operations": op_values,
+            "pricing_version": pricing_snapshot.get("version") if pricing_snapshot else None,
+            "pricing_sha256": pricing_snapshot.get("sha256") if pricing_snapshot else None,
         }
         return value
 

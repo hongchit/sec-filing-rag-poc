@@ -85,6 +85,16 @@ export function ResearchResult() {
       </AppShell>
     );
   const usage = value.usage;
+  const rejected =
+    value.disposition === 'investment_advice' || value.disposition === 'out_of_scope';
+  const charge = value.estimated_charge_usd
+    ? Number(value.estimated_charge_usd).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 6,
+      })
+    : 'unavailable';
   return (
     <AppShell>
       <Stack spacing={3}>
@@ -94,65 +104,68 @@ export function ResearchResult() {
           </Typography>
           <Typography variant="h1">{value.question}</Typography>
         </Box>
-        {value.policy_refusal && (
-          <Alert severity="warning">
-            This request asks for an investment recommendation or prediction. The response is
-            limited to supported filing facts.
-          </Alert>
-        )}
-        {value.insufficient_evidence && (
+        {rejected && <Alert severity="warning">{value.rejection_message}</Alert>}
+        {!rejected && value.insufficient_evidence && (
           <Alert severity="warning">
             The retrieved filing evidence is insufficient for a complete answer.
           </Alert>
         )}
-        {value.limitations?.map((item) => (
-          <Alert key={item} severity="info">
-            {item}
-          </Alert>
-        ))}
-        <Stack spacing={2}>
-          {value.answer?.map((paragraph, index) => (
-            <Paper key={index} sx={{ p: 3 }}>
-              <Chip
-                size="small"
-                label={paragraph.kind === 'filing_fact' ? 'Filing fact' : 'Interpretation'}
-              />
-              <Typography sx={{ my: 1 }}>{paragraph.text}</Typography>
-              {paragraph.citations.map((handle) => (
-                <Button key={handle} size="small" onClick={() => cite(handle)}>
-                  {handle}
-                </Button>
-              ))}
-            </Paper>
+        {!rejected &&
+          value.limitations?.map((item) => (
+            <Alert key={item} severity="info">
+              {item}
+            </Alert>
           ))}
-        </Stack>
+        {!rejected && (
+          <Stack spacing={2}>
+            {value.answer?.map((paragraph, index) => (
+              <Paper key={index} sx={{ p: 3 }}>
+                <Chip
+                  size="small"
+                  label={paragraph.kind === 'filing_fact' ? 'Filing fact' : 'Interpretation'}
+                />
+                <Typography sx={{ my: 1 }}>{paragraph.text}</Typography>
+                {paragraph.citations.map((handle) => (
+                  <Button key={handle} size="small" onClick={() => cite(handle)}>
+                    {handle}
+                  </Button>
+                ))}
+              </Paper>
+            ))}
+          </Stack>
+        )}
         <Typography variant="body2">
-          Usage: embedding {usage.query_embedding_input ?? 'unavailable'} · answer in{' '}
+          Token usage: embedding {usage.query_embedding_input ?? 'unavailable'} · answer in{' '}
           {usage.answer_generation_input ?? 'unavailable'} · answer out{' '}
           {usage.answer_generation_output ?? 'unavailable'} · total{' '}
-          {usage.complete_request_total ?? 'unavailable'}
+          <strong>{usage.complete_request_total ?? 'unavailable'}</strong>
         </Typography>
-        <Box>
-          <Typography variant="h2">Sources</Typography>
-          {value.evidence.map((source) => (
-            <Paper
-              key={source.chunk_id}
-              ref={(node) => {
-                refs.current[source.citation_handle] = node;
-              }}
-              tabIndex={-1}
-              sx={{ p: 2, mt: 1 }}
-            >
-              <Typography variant="subtitle2">
-                #{source.rank} · Item {source.item} · {source.citation_handle}
-              </Typography>
-              <Typography>{source.excerpt}</Typography>
-              <Button component="a" href={source.source_url} target="_blank" rel="noreferrer">
-                View on EDGAR
-              </Button>
-            </Paper>
-          ))}
-        </Box>
+        <Typography variant="body2">
+          Estimated charge: <strong>{charge}</strong>
+        </Typography>
+        {!rejected && (
+          <Box>
+            <Typography variant="h2">Sources</Typography>
+            {value.evidence.map((source) => (
+              <Paper
+                key={source.chunk_id}
+                ref={(node) => {
+                  refs.current[source.citation_handle] = node;
+                }}
+                tabIndex={-1}
+                sx={{ p: 2, mt: 1 }}
+              >
+                <Typography variant="subtitle2">
+                  #{source.rank} · Item {source.item} · {source.citation_handle}
+                </Typography>
+                <Typography>{source.excerpt}</Typography>
+                <Button component="a" href={source.source_url} target="_blank" rel="noreferrer">
+                  View on EDGAR
+                </Button>
+              </Paper>
+            ))}
+          </Box>
+        )}
         <Box>
           <Button onClick={() => setDetails((v) => !v)} aria-expanded={details}>
             Run details

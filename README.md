@@ -1,5 +1,13 @@
 # SEC Filing RAG proof of concept
 
+The backend fails fast before serving routes: it validates essential settings, all tracked runtime
+files, exact active-model pricing, database connectivity, migration checksums, and required relations.
+Run `uv run sec-rag-migrate` before startup. OpenAI, SEC, and Kestra are not probed for availability.
+
+The single answer call classifies results as `answered`, `investment_advice`, or `out_of_scope`.
+Rejected results retain usage and lineage but expose only deterministic application-owned messages.
+Estimated charges use provider-reported usage and a request-time pricing snapshot; they are not invoices.
+
 This repository implements a local, API-initiated pipeline for original SEC 10-K filings. It supports persisted multi-company batches, latest and exact report-year selection, historical corpora, six-Item extraction, deterministic chunks, OpenAI embeddings, keyword/vector/hybrid retrieval, and reviewed retrieval evaluation. FastAPI owns business state and policy; Kestra runs one sequential `filing_batch` flow. The React frontend is currently only a health shell, not an ingestion or search UI.
 
 ## Quick start

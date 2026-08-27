@@ -1,6 +1,27 @@
 # Architecture
 
 ```mermaid
+flowchart TD
+  A[Load settings and tracked files] --> B{Valid and fully priced?}
+  B -- no --> X[startup_configuration_invalid / abort]
+  B -- yes --> C[Open application database]
+  C --> D{Migrations current and checksums valid?}
+  D -- no --> Y[startup_schema_invalid / abort]
+  D -- yes --> E[Create remaining clients] --> F[startup_succeeded / serve]
+```
+
+```mermaid
+flowchart LR
+  Q[Question] --> R[Embed and retrieve] --> G[One structured generation call]
+  G --> A[answered]
+  G --> I[investment_advice]
+  G --> O[out_of_scope]
+  A --> P[Persist usage and estimate]
+  I --> P
+  O --> P
+```
+
+```mermaid
 flowchart LR
   U[Operator or client] -->|public HTTP| A[FastAPI]
   F[React health shell] -->|public health HTTP| A

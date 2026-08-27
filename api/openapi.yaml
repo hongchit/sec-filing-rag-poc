@@ -1580,6 +1580,32 @@ components:
           - type: boolean
           - type: 'null'
           title: Policy Refusal
+        disposition:
+          anyOf:
+          - type: string
+            enum:
+            - answered
+            - investment_advice
+            - out_of_scope
+          - type: 'null'
+          title: Disposition
+        rejection_message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Rejection Message
+        estimated_charge_usd:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Estimated Charge Usd
+        estimate_status:
+          type: string
+          enum:
+          - available
+          - unavailable
+          title: Estimate Status
+          default: unavailable
         evidence:
           items:
             $ref: '#/components/schemas/ResearchEvidence'
@@ -1702,6 +1728,16 @@ components:
             type: object
           type: array
           title: Operations
+        pricing_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pricing Version
+        pricing_sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pricing Sha256
       type: object
       required:
       - corpus_version_id

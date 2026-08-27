@@ -51,7 +51,7 @@ def load_companies(path: Path) -> CompanyConfiguration:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    database_url: str = "postgresql://postgres:postgres@db:5432/sec_filings"
+    database_url: str = "postgresql://__required__:__required__@localhost/__required__"
     database_pool_min_size: int = Field(default=1, ge=1)
     database_pool_max_size: int = Field(default=10, ge=1)
     database_pool_timeout_seconds: float = Field(default=10, gt=0, le=60)
@@ -69,8 +69,8 @@ class Settings(BaseSettings):
     kestra_api_url: str = "http://kestra:8080/api/v1/main"
     kestra_namespace: str = "sec_filings.ingestion"
     kestra_batch_flow_id: str = "filing_batch"
-    kestra_basic_auth_username: str = "admin@example.com"
-    kestra_basic_auth_password: str = Field(default="ChangeMe1234", min_length=8)
+    kestra_basic_auth_username: str = "__required__"
+    kestra_basic_auth_password: str = Field(default="__required__", min_length=8)
     kestra_timeout_seconds: float = Field(default=10, gt=0, le=60)
     kestra_max_retries: int = Field(default=2, ge=0, le=5)
     openai_api_key: str
@@ -89,6 +89,7 @@ class Settings(BaseSettings):
     retrieval_evaluation_dataset_path: Path = Path("evaluation/retrieval-v1.jsonl")
     retrieval_evaluation_manifest_path: Path = Path("evaluation/retrieval-v1-manifest.json")
     generation_config_path: Path = Path("config/generation.json")
+    model_pricing_config_path: Path = Path("config/model-pricing-v1.json")
 
     @property
     def resolved_judge_model(self) -> str:

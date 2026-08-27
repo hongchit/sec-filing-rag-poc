@@ -8,6 +8,7 @@ from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ..core.config import Settings
+from ..core.pricing import load_pricing_configuration
 from ..core.resources import AppResources
 from ..evaluation.dashboard import EvaluationDashboardService
 from ..generation.service import (
@@ -114,6 +115,7 @@ def research_service(
 ) -> ResearchService:
     retrieval_config = load_retrieval_configuration(config.retrieval_config_path)
     generation_config = load_generation_configuration(config.generation_config_path)
+    pricing_config = load_pricing_configuration(config.model_pricing_config_path)
     embedder = OpenAIQueryEmbedder(
         db,
         config.openai_api_key,
@@ -129,6 +131,8 @@ def research_service(
         OpenAIAnswerProvider(app_resources.openai),
         generation_config,
         config.openai_chat_model,
+        pricing_config,
+        config.openai_embedding_model,
     )
 
 

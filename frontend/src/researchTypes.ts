@@ -39,6 +39,10 @@ export type Research = {
   limitations?: string[];
   insufficient_evidence?: boolean;
   policy_refusal?: boolean;
+  disposition?: 'answered' | 'investment_advice' | 'out_of_scope';
+  rejection_message?: string;
+  estimated_charge_usd?: string | null;
+  estimate_status: 'available' | 'unavailable';
   evidence: Evidence[];
   usage: {
     query_embedding_input: number | null;

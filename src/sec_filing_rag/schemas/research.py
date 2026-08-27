@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ..generation.service import AnswerParagraph, ResearchGoal
+from ..generation.service import AnswerParagraph, Disposition, ResearchGoal
 
 
 class ResearchCreate(BaseModel):
@@ -56,6 +56,8 @@ class RunDetails(BaseModel):
     attempts: int
     latency_ms: int | None = None
     operations: list[dict[str, Any]] = Field(default_factory=list)
+    pricing_version: str | None = None
+    pricing_sha256: str | None = None
 
 
 class ResearchResponse(BaseModel):
@@ -73,6 +75,10 @@ class ResearchResponse(BaseModel):
     limitations: list[str] | None = None
     insufficient_evidence: bool | None = None
     policy_refusal: bool | None = None
+    disposition: Disposition | None = None
+    rejection_message: str | None = None
+    estimated_charge_usd: str | None = None
+    estimate_status: Literal["available", "unavailable"] = "unavailable"
     evidence: list[ResearchEvidence]
     usage: ResearchUsage
     run_details: RunDetails

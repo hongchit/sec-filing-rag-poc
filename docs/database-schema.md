@@ -1,8 +1,18 @@
 # Database schema
 
 `migrations/versions/0001_schema.sql` is the frozen Step 6 baseline and
-`0002_research_workspace.sql` adds the Step 7 workspace. Migrations are immutable, incremental,
+`0002_research_workspace.sql` adds the Step 7 workspace, and `0003_guardrails_pricing.sql` adds a
+request pricing snapshot plus result disposition and deterministic rejection message. Existing
+policy refusals backfill to `investment_advice`; all other results backfill to `answered`.
+Migrations are immutable, incremental,
 and applied in filename order. The migrator records each checksum in `public.schema_migration`.
+
+```mermaid
+flowchart LR
+  C[Current pricing configuration] --> S[Request pricing snapshot]
+  S --> U[All research usage attempts] --> E[Decimal USD estimate]
+  C2[Later pricing] -. new requests only .-> S
+```
 
 ## Public control and audit tables
 

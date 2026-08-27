@@ -1,0 +1,14 @@
+{
+  "version": "model-pricing-v1",
+  "currency": "USD",
+  "token_unit": 1000000,
+  "models": {
+    "text-embedding-3-small": {
+      "input_usd_per_million_tokens": "0.02"
+    },
+    "gpt-5.4-mini": {
+      "input_usd_per_million_tokens": "0.75",
+      "output_usd_per_million_tokens": "4.50"
+    }
+  }
+}

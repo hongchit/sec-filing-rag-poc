@@ -10,6 +10,7 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from ..core.pricing import PricingConfiguration
 from ..domain.filings import SUPPORTED_ITEMS, safe_error, sha256_bytes
 from ..retrieval.service import RetrievalQuery, RetrievalResult, RetrievalService
 
@@ -18,6 +19,15 @@ ResearchGoal = Literal[
     "business", "key_risks", "management_analysis", "market_risk", "legal_regulatory_risk"
 ]
 ParagraphKind = Literal["filing_fact", "interpretation"]
+Disposition = Literal["answered", "investment_advice", "out_of_scope"]
+
+INVESTMENT_ADVICE_MESSAGE = (
+    "This tool cannot answer requests for investment recommendations, trades, price targets, "
+    "or price and return predictions. Ask a question about disclosures in the selected company's Form 10-K."
+)
+OUT_OF_SCOPE_MESSAGE = (
+    "This tool answers questions grounded in the selected company's supported original Form 10-K items."
+)
 
 GOAL_INSTRUCTIONS: dict[ResearchGoal, str] = {
     "business": "Explain the company's business, products, customers, and operating model.",
@@ -87,14 +97,23 @@ class GeneratedAnswer(BaseModel):
     paragraphs: list[AnswerParagraph]
     limitations: list[str]
     insufficient_evidence: bool
+    disposition: Disposition = "answered"
     policy_refusal: bool = False
 
     @model_validator(mode="after")
     def coherent_insufficiency(self) -> GeneratedAnswer:
+        if self.disposition != "answered":
+            if self.paragraphs or self.limitations or self.insufficient_evidence:
+                raise ValueError("rejected dispositions cannot contain answer content")
+            self.policy_refusal = self.disposition == "investment_advice"
+            return self
         if self.insufficient_evidence and not self.limitations:
             raise ValueError("insufficient evidence requires a limitation")
-        if self.policy_refusal and not self.limitations:
-            raise ValueError("policy refusal requires a limitation")
+        if self.policy_refusal:
+            self.disposition = "investment_advice"
+            self.paragraphs = []
+            self.limitations = []
+            self.insufficient_evidence = False
         return self
 
 
@@ -193,6 +212,10 @@ def validate_answer(
     ticker: str,
     accession: str,
 ) -> None:
+    if answer.disposition != "answered" and (
+        answer.paragraphs or answer.limitations or answer.insufficient_evidence
+    ):
+        raise ValueError("rejected dispositions cannot contain answer content")
     if len(answer.paragraphs) > config.max_paragraphs:
         raise ValueError("too many answer paragraphs")
     if len(answer.limitations) > config.max_limitations:
@@ -254,6 +277,7 @@ class ResearchRepository(Protocol):
         retrieval_configuration_sha256: str | None = None,
         generation_configuration_sha256: str | None = None,
         prompt_sha256: str | None = None,
+        pricing_snapshot: dict[str, Any] | None = None,
     ) -> uuid.UUID: ...
     def idempotent_result(
         self, key: uuid.UUID, request: ResearchRequest
@@ -289,12 +313,16 @@ class ResearchService:
         provider: AnswerProvider,
         config: GenerationConfiguration,
         model: str,
+        pricing: PricingConfiguration | None = None,
+        embedding_model: str | None = None,
     ) -> None:
         self.repository = repository
         self.retrieval = retrieval
         self.provider = provider
         self.config = config
         self.model = model
+        self.pricing = pricing
+        self.embedding_model = embedding_model
 
     def create(
         self,
@@ -312,6 +340,14 @@ class ResearchService:
                 return existing
         template, prompt_sha256 = self.config.prompt(prompt_id)
         try:
+            snapshot = (
+                self.pricing.snapshot(
+                    embedding_model=self.embedding_model or self.retrieval.config.embedding_model,
+                    chat_model=self.model,
+                )
+                if self.pricing is not None
+                else None
+            )
             research_id = self.repository.create(
                 request,
                 prompt_id=prompt_id,
@@ -320,6 +356,7 @@ class ResearchService:
                 retrieval_configuration_sha256=self.retrieval.config.sha256(),
                 generation_configuration_sha256=self.config.sha256(),
                 prompt_sha256=prompt_sha256,
+                pricing_snapshot=snapshot,
             )
         except TypeError:  # Compatibility for lightweight test repositories.
             research_id = self.repository.create(request, prompt_id=prompt_id, model=self.model)
@@ -350,9 +387,6 @@ class ResearchService:
             context, evidence = build_context(results, self.config.context_max_chars)
             self.repository.save_evidence(research_id, evidence)
             stage("retrieved", evidence=[item.__dict__ for item in evidence])
-            if not evidence:
-                stage("persisting")
-                return self.repository.succeed(research_id, deterministic_insufficient_answer())
             _, accession = self.repository.identity(research_id)
             stage("building_context")
             prompt = template.format(
@@ -367,6 +401,11 @@ class ResearchService:
                 usage = ProviderUsage(None, None, None)
                 try:
                     answer, usage = self.provider.generate(model=self.model, prompt=prompt)
+                    if answer.disposition != "answered":
+                        # Defense in depth: model-authored rejection content is never retained.
+                        answer.paragraphs = []
+                        answer.limitations = []
+                        answer.insufficient_evidence = False
                     stage("validating", attempt=attempt)
                     validate_answer(
                         answer, evidence, self.config, ticker=request.ticker, accession=accession

@@ -2,6 +2,14 @@
 
 This is the contract layer between [architecture](architecture.md) and the [corpus pipeline](corpus-pipeline.md). Public routes accept intent and expose application-owned state. Every internal route requires `Authorization: Bearer <INGESTION_API_TOKEN>` and exchanges references only.
 
+The answer schema requires `answered`, `investment_advice`, or `out_of_scope`. Advice includes trades,
+recommendations, valuation/targets, forecasts, sizing, hedging, and timing. Out-of-scope includes other
+companies, unsupported forms, news/market sources, XBRL/accounting calculations, technical analysis,
+and legal or tax advice. A supported selected-company 10-K question stays in scope despite imperfect
+goal-label alignment. Classification shares the generation call so empty retrieval can still separate
+rejection from insufficient evidence. Rejections are persisted for lineage and usage, while generated
+rejection text is discarded and public evidence is suppressed.
+
 ## Endpoint catalog
 
 | Method and path | Effect |

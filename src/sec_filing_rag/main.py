@@ -5,13 +5,15 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from pydantic import ValidationError
 
 from .api.dependencies import settings
 from .api.routers.internal import router as internal_router
 from .api.routers.public import router as public_router
 from .core.config import Settings
-from .core.observability import configure_logging, install_observability
-from .core.resources import AppResources, create_resources
+from .core.observability import LOGGER, configure_logging, install_observability
+from .core.resources import AppResources, StartupSchemaError, create_resources
+from .core.startup import StartupConfigurationError, safe_startup_event
 
 ResourceFactory = Callable[[Settings], AppResources]
 
@@ -21,9 +23,38 @@ def create_app(
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        selected = config or settings()
+        try:
+            selected = config or settings()
+        except ValidationError as exc:
+            configure_logging("INFO")
+            issues = [
+                {
+                    "code": "setting_invalid",
+                    "category": str(error.get("loc", ("settings",))[0]),
+                    "explanation": "A required setting is missing or invalid.",
+                    "remediation": "Correct the named environment setting.",
+                }
+                for error in exc.errors(include_input=False, include_context=False, include_url=False)
+            ]
+            LOGGER.error(safe_startup_event("startup_configuration_invalid", issues=issues))
+            raise RuntimeError("startup configuration is invalid") from None
         configure_logging(selected.log_level)
-        app.state.resources = resource_factory(selected)
+        try:
+            app.state.resources = resource_factory(selected)
+        except StartupConfigurationError as exc:
+            LOGGER.error(safe_startup_event("startup_configuration_invalid", issues=[issue.__dict__ for issue in exc.issues]))
+            raise RuntimeError("startup configuration is invalid") from None
+        except StartupSchemaError as exc:
+            LOGGER.error(safe_startup_event("startup_schema_invalid", explanation=str(exc)))
+            raise
+        except Exception:
+            LOGGER.error(safe_startup_event("startup_database_unavailable", explanation="Application database could not be opened."))
+            raise RuntimeError("application database is unavailable") from None
+        LOGGER.info(
+            safe_startup_event(
+                "startup_succeeded", **(getattr(app.state.resources, "startup_details", None) or {})
+            )
+        )
         try:
             yield
         finally:
@@ -42,6 +73,12 @@ app = create_app()
 
 
 def run() -> None:
-    config = settings()
+    try:
+        config = settings()
+    except ValidationError as exc:
+        configure_logging("INFO")
+        fields = sorted({str(error.get("loc", ("settings",))[0]) for error in exc.errors()})
+        LOGGER.error(safe_startup_event("startup_configuration_invalid", fields=fields))
+        raise SystemExit(1) from None
     configure_logging(config.log_level)
     uvicorn.run("sec_filing_rag.main:app", host=config.app_host, port=config.app_port)
