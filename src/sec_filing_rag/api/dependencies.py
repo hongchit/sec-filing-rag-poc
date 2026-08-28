@@ -20,6 +20,7 @@ from ..integrations.kestra import KestraGateway
 from ..integrations.sec import EdgarGateway, configure_edgartools
 from ..repositories.companies import CompanyRepository
 from ..repositories.corpus import IngestionRepository
+from ..repositories.corpus_reader import CorpusReaderRepository
 from ..repositories.database import Database
 from ..repositories.research import ResearchRepository
 from ..repositories.system import SystemRepository
@@ -57,6 +58,12 @@ def company_repository(db: Annotated[Database, Depends(database)]) -> CompanyRep
 
 def ingestion_repository(db: Annotated[Database, Depends(database)]) -> IngestionRepository:
     return IngestionRepository(db)
+
+
+def corpus_reader_repository(
+    db: Annotated[Database, Depends(database)],
+) -> CorpusReaderRepository:
+    return CorpusReaderRepository(db)
 
 
 def workflow_repository(db: Annotated[Database, Depends(database)]) -> WorkflowRepository:

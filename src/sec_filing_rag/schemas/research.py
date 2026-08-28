@@ -29,6 +29,7 @@ class ResearchUsage(BaseModel):
 class ResearchEvidence(BaseModel):
     rank: int
     chunk_id: str
+    corpus_version_id: uuid.UUID
     citation_handle: str
     ticker: str
     accession: str

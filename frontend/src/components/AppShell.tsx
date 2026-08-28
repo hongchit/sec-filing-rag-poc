@@ -25,6 +25,9 @@ export function AppShell({
             <Typography component={RouterLink} to="/research" color="inherit">
               Research
             </Typography>
+            <Typography component={RouterLink} to="/corpus" color="inherit">
+              Corpus
+            </Typography>
             <Typography component={RouterLink} to="/evaluation" color="inherit">
               Retrieval evaluation
             </Typography>

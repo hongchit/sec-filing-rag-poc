@@ -19,6 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { getJson } from '../api';
 import type { Chunk, EvaluationCase, FullChunk } from '../types';
 function ExpectedCard({
@@ -30,6 +31,7 @@ function ExpectedCard({
   onExpand: (id: string) => void;
   selected: boolean;
 }) {
+  const location = useLocation();
   const citation = chunk.citation || chunk.chunk_id;
   return (
     <Card
@@ -65,6 +67,21 @@ function ExpectedCard({
         ) : (
           <span />
         )}
+        {!chunk.missing && chunk.corpus_version_id && chunk.ticker && chunk.item && (
+          <Button
+            component={RouterLink}
+            to={`/corpus/${chunk.ticker}/${chunk.item}?corpus=${chunk.corpus_version_id}&chunk=${chunk.chunk_id}`}
+            state={{
+              origin: {
+                to: `${location.pathname}${location.search}`,
+                label: 'Evaluation evidence',
+              },
+            }}
+            size="small"
+          >
+            Open in corpus reader
+          </Button>
+        )}
         {!chunk.missing && (
           <Button size="small" aria-pressed={selected} onClick={() => onExpand(chunk.chunk_id)}>
             Read full text &amp; provenance
@@ -87,6 +104,7 @@ function RankedRow({
   onExpand: (id: string) => void;
   selected: boolean;
 }) {
+  const location = useLocation();
   const citation = chunk.citation || chunk.chunk_id;
   return (
     <Accordion
@@ -150,6 +168,21 @@ function RankedRow({
           ) : (
             <span />
           )}
+          {!chunk.missing && chunk.corpus_version_id && chunk.ticker && chunk.item && (
+            <Button
+              component={RouterLink}
+              to={`/corpus/${chunk.ticker}/${chunk.item}?corpus=${chunk.corpus_version_id}&chunk=${chunk.chunk_id}`}
+              state={{
+                origin: {
+                  to: `${location.pathname}${location.search}`,
+                  label: 'Evaluation evidence',
+                },
+              }}
+              size="small"
+            >
+              Open in corpus reader
+            </Button>
+          )}
           {!chunk.missing && (
             <Button size="small" aria-pressed={selected} onClick={() => onExpand(chunk.chunk_id)}>
               Read full text &amp; provenance
@@ -161,6 +194,7 @@ function RankedRow({
   );
 }
 export function EvidenceReview({ item }: { item: EvaluationCase }) {
+  const location = useLocation();
   const [selectedId, setSelectedId] = useState('');
   const [full, setFull] = useState<FullChunk | null>(null);
   const [loading, setLoading] = useState(false);
@@ -278,6 +312,20 @@ export function EvidenceReview({ item }: { item: EvaluationCase }) {
               <Link href={full.source_url} target="_blank" rel="noreferrer">
                 SEC filing source
               </Link>
+            )}
+            {full.corpus_version_id && full.ticker && full.item && (
+              <Button
+                component={RouterLink}
+                to={`/corpus/${full.ticker}/${full.item}?corpus=${full.corpus_version_id}&chunk=${full.chunk_id}`}
+                state={{
+                  origin: {
+                    to: `${location.pathname}${location.search}`,
+                    label: 'Evaluation evidence',
+                  },
+                }}
+              >
+                Open in corpus reader
+              </Button>
             )}
             <Typography sx={{ my: 2, whiteSpace: 'pre-wrap' }}>{full.text}</Typography>
             <Accordion>

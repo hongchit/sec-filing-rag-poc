@@ -63,6 +63,7 @@ class EvaluationCases(BaseModel):
 
 class EvaluationChunk(BaseModel):
     chunk_id: str
+    corpus_version_id: str
     text: str
     preview: str
     citation: str
@@ -204,7 +205,7 @@ class EvaluationDashboardService:
             return {}
         with self.database.transaction() as connection:
             rows = connection.execute(
-                "SELECT gd.chunk_id,gd.text_content,gd.citation_handle,gd.item,gd.provenance,c.ticker,"
+                "SELECT gd.chunk_id,gd.corpus_version_id,gd.text_content,gd.citation_handle,gd.item,gd.provenance,c.ticker,"
                 "f.accession,f.source_url FROM gold.search_document gd JOIN public.company c ON c.id=gd.company_id "
                 "JOIN silver.filing f ON f.id=gd.filing_id WHERE gd.chunk_id=ANY(%s)",
                 (sorted(ids),),
@@ -225,6 +226,7 @@ class EvaluationDashboardService:
             }
         return {
             "chunk_id": chunk_id,
+            "corpus_version_id": str(row["corpus_version_id"]),
             "missing": False,
             "rank": rank,
             "matched": matched,
@@ -332,6 +334,7 @@ class EvaluationDashboardService:
             raise ArtifactMissing("referenced chunk is missing")
         return EvaluationChunk(
             chunk_id=chunk_id,
+            corpus_version_id=str(row["corpus_version_id"]),
             text=str(row["text_content"]),
             preview=preview(str(row["text_content"])),
             citation=str(row["citation_handle"]),

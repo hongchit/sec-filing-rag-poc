@@ -203,7 +203,7 @@ class ResearchRepository:
             if row is None:
                 return None
             evidence = connection.execute(
-                "SELECT re.rank,re.chunk_id,re.strategy,re.score,ch.citation_handle,c.ticker,f.accession,s.item,ch.text_content AS excerpt,ch.source_start,ch.source_end,s.source_anchor,f.source_url "
+                "SELECT re.rank,re.chunk_id,re.strategy,re.score,ch.corpus_version_id,ch.citation_handle,c.ticker,f.accession,s.item,ch.text_content AS excerpt,ch.source_start,ch.source_end,s.source_anchor,f.source_url "
                 "FROM public.research_evidence re JOIN silver.chunk ch ON ch.id=re.chunk_id "
                 "JOIN silver.section s ON s.id=ch.section_id JOIN silver.corpus_version cv ON cv.id=ch.corpus_version_id "
                 "JOIN silver.filing f ON f.id=cv.filing_id JOIN public.company c ON c.id=f.company_id "

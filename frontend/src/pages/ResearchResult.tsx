@@ -162,6 +162,15 @@ export function ResearchResult() {
                 <Button component="a" href={source.source_url} target="_blank" rel="noreferrer">
                   View on EDGAR
                 </Button>
+                <Button
+                  component={Link}
+                  to={`/corpus/${source.ticker}/${source.item}?corpus=${source.corpus_version_id || value.corpus_version_id}&chunk=${source.chunk_id}`}
+                  state={{
+                    origin: { to: `/research/${value.research_id}`, label: 'Research result' },
+                  }}
+                >
+                  Read in context
+                </Button>
               </Paper>
             ))}
           </Box>

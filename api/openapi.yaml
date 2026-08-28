@@ -61,6 +61,109 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/corpus/versions/{corpus_version_id}:
+    get:
+      tags:
+      - corpus
+      summary: Version
+      operationId: getCorpusVersion
+      parameters:
+      - name: corpus_version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorpusVersion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/corpus/versions/{corpus_version_id}/items/{item}:
+    get:
+      tags:
+      - corpus
+      summary: Item Document
+      operationId: getCorpusItem
+      parameters:
+      - name: corpus_version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+      - name: item
+        in: path
+        required: true
+        schema:
+          enum:
+          - '1'
+          - 1A
+          - '3'
+          - '7'
+          - 7A
+          - '8'
+          type: string
+          title: Item
+      - name: chunk_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
+          title: Chunk Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorpusItemDocument'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/corpus/chunks/{chunk_id}/location:
+    get:
+      tags:
+      - corpus
+      summary: Chunk Location
+      operationId: getCorpusChunkLocation
+      parameters:
+      - name: chunk_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+          title: Chunk Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorpusChunkLocation'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/filing-batches:
     post:
       tags:
@@ -802,6 +905,93 @@ components:
       - enabled
       - resolution_status
       title: CompanySummary
+    CorpusChunkHighlight:
+      properties:
+        chunk_id:
+          type: string
+          title: Chunk Id
+        citation_handle:
+          type: string
+          title: Citation Handle
+        char_start:
+          type: integer
+          minimum: 0.0
+          title: Char Start
+        char_end:
+          type: integer
+          minimum: 0.0
+          title: Char End
+        paragraph_start:
+          type: integer
+          minimum: 1.0
+          title: Paragraph Start
+        paragraph_end:
+          type: integer
+          minimum: 1.0
+          title: Paragraph End
+        ranges:
+          items:
+            $ref: '#/components/schemas/HighlightRange'
+          type: array
+          title: Ranges
+      type: object
+      required:
+      - chunk_id
+      - citation_handle
+      - char_start
+      - char_end
+      - paragraph_start
+      - paragraph_end
+      - ranges
+      title: CorpusChunkHighlight
+    CorpusChunkLocation:
+      properties:
+        chunk_id:
+          type: string
+          title: Chunk Id
+        corpus_version_id:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+        ticker:
+          type: string
+          title: Ticker
+        item:
+          type: string
+          enum:
+          - '1'
+          - 1A
+          - '3'
+          - '7'
+          - 7A
+          - '8'
+          title: Item
+        paragraph_index:
+          type: integer
+          minimum: 1.0
+          title: Paragraph Index
+        char_start:
+          type: integer
+          minimum: 0.0
+          title: Char Start
+        char_end:
+          type: integer
+          minimum: 0.0
+          title: Char End
+        citation_handle:
+          type: string
+          title: Citation Handle
+      type: object
+      required:
+      - chunk_id
+      - corpus_version_id
+      - ticker
+      - item
+      - paragraph_index
+      - char_start
+      - char_end
+      - citation_handle
+      title: CorpusChunkLocation
     CorpusCoverage:
       properties:
         item:
@@ -861,6 +1051,184 @@ components:
       - item_id
       - status
       title: CorpusExecutionResponse
+    CorpusItemDocument:
+      properties:
+        corpus_version_id:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+        ticker:
+          type: string
+          title: Ticker
+        item:
+          type: string
+          enum:
+          - '1'
+          - 1A
+          - '3'
+          - '7'
+          - 7A
+          - '8'
+          title: Item
+        coverage_status:
+          type: string
+          title: Coverage Status
+        safe_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safe Error
+        source_url:
+          type: string
+          title: Source Url
+        paragraphs:
+          items:
+            $ref: '#/components/schemas/CorpusParagraph'
+          type: array
+          title: Paragraphs
+        highlight:
+          anyOf:
+          - $ref: '#/components/schemas/CorpusChunkHighlight'
+          - type: 'null'
+      type: object
+      required:
+      - corpus_version_id
+      - ticker
+      - item
+      - coverage_status
+      - source_url
+      - paragraphs
+      title: CorpusItemDocument
+    CorpusItemSummary:
+      properties:
+        item:
+          type: string
+          enum:
+          - '1'
+          - 1A
+          - '3'
+          - '7'
+          - 7A
+          - '8'
+          title: Item
+        coverage_status:
+          type: string
+          title: Coverage Status
+        safe_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safe Error
+        paragraph_count:
+          type: integer
+          minimum: 0.0
+          title: Paragraph Count
+        character_count:
+          type: integer
+          minimum: 0.0
+          title: Character Count
+        chunk_count:
+          type: integer
+          minimum: 0.0
+          title: Chunk Count
+      type: object
+      required:
+      - item
+      - coverage_status
+      - paragraph_count
+      - character_count
+      - chunk_count
+      title: CorpusItemSummary
+    CorpusParagraph:
+      properties:
+        index:
+          type: integer
+          minimum: 1.0
+          title: Index
+        start:
+          type: integer
+          minimum: 0.0
+          title: Start
+        end:
+          type: integer
+          minimum: 0.0
+          title: End
+        text:
+          type: string
+          title: Text
+        is_furniture:
+          type: boolean
+          title: Is Furniture
+          default: false
+      type: object
+      required:
+      - index
+      - start
+      - end
+      - text
+      title: CorpusParagraph
+    CorpusVersion:
+      properties:
+        corpus_version_id:
+          type: string
+          format: uuid
+          title: Corpus Version Id
+        ticker:
+          type: string
+          title: Ticker
+        company_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Company Name
+        accession:
+          type: string
+          title: Accession
+        form:
+          type: string
+          title: Form
+        filing_date:
+          type: string
+          format: date
+          title: Filing Date
+        report_date:
+          type: string
+          format: date
+          title: Report Date
+        source_url:
+          type: string
+          title: Source Url
+        ready_at:
+          type: string
+          format: date-time
+          title: Ready At
+        is_active:
+          type: boolean
+          title: Is Active
+        active_corpus_version_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Active Corpus Version Id
+        items:
+          items:
+            $ref: '#/components/schemas/CorpusItemSummary'
+          type: array
+          title: Items
+      type: object
+      required:
+      - corpus_version_id
+      - ticker
+      - accession
+      - form
+      - filing_date
+      - report_date
+      - source_url
+      - ready_at
+      - is_active
+      - items
+      title: CorpusVersion
     EvaluationCases:
       properties:
         configuration_id:
@@ -897,6 +1265,9 @@ components:
         chunk_id:
           type: string
           title: Chunk Id
+        corpus_version_id:
+          type: string
+          title: Corpus Version Id
         text:
           type: string
           title: Text
@@ -925,6 +1296,7 @@ components:
       type: object
       required:
       - chunk_id
+      - corpus_version_id
       - text
       - preview
       - citation
@@ -1300,6 +1672,28 @@ components:
           default: ready
       type: object
       title: HealthResponse
+    HighlightRange:
+      properties:
+        paragraph_index:
+          type: integer
+          minimum: 1.0
+          title: Paragraph Index
+        start:
+          type: integer
+          minimum: 0.0
+          title: Start
+          description: Paragraph-local, inclusive character offset
+        end:
+          type: integer
+          minimum: 0.0
+          title: End
+          description: Paragraph-local, end-exclusive character offset
+      type: object
+      required:
+      - paragraph_index
+      - start
+      - end
+      title: HighlightRange
     HistoricalCorpus:
       properties:
         corpus_version_id:
@@ -1444,6 +1838,10 @@ components:
         chunk_id:
           type: string
           title: Chunk Id
+        corpus_version_id:
+          type: string
+          format: uuid
+          title: Corpus Version Id
         citation_handle:
           type: string
           title: Citation Handle
@@ -1483,6 +1881,7 @@ components:
       required:
       - rank
       - chunk_id
+      - corpus_version_id
       - citation_handle
       - ticker
       - accession

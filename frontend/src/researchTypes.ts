@@ -14,6 +14,7 @@ export type CompanyStatus = {
 export type Evidence = {
   rank: number;
   chunk_id: string;
+  corpus_version_id: string;
   citation_handle: string;
   ticker: string;
   accession: string;

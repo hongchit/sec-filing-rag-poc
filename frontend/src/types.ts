@@ -13,6 +13,7 @@ export type Config = {
 };
 export type Chunk = {
   chunk_id: string;
+  corpus_version_id?: string;
   missing: boolean;
   rank?: number;
   matched: boolean;

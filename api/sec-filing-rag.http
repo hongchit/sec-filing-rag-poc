@@ -41,6 +41,54 @@ Content-Type: {{contentType}}
 Authorization: {{internalToken}}
 
 
+###########################################################
+### Request: GET /api/corpus/versions/{corpus_version_id}
+### Summary: Version
+###########################################################
+
+### Path Parameter: GetCorpusVersion_corpus_version_id
+@GetCorpusVersion_corpus_version_id = str
+
+
+GET {{baseUrl}}/api/corpus/versions/{{GetCorpusVersion_corpus_version_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+########################################################################
+### Request: GET /api/corpus/versions/{corpus_version_id}/items/{item}
+### Summary: Item Document
+########################################################################
+
+### Path Parameter: GetCorpusItem_corpus_version_id
+@GetCorpusItem_corpus_version_id = str
+
+### Path Parameter: GetCorpusItem_item
+@GetCorpusItem_item = str
+
+### Query Parameter: GetCorpusItem_chunk_id
+@GetCorpusItem_chunk_id = str
+
+
+GET {{baseUrl}}/api/corpus/versions/{{GetCorpusItem_corpus_version_id}}/items/{{GetCorpusItem_item}}?chunk_id={{GetCorpusItem_chunk_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+#########################################################
+### Request: GET /api/corpus/chunks/{chunk_id}/location
+### Summary: Chunk Location
+#########################################################
+
+### Path Parameter: GetCorpusChunkLocation_chunk_id
+@GetCorpusChunkLocation_chunk_id = str
+
+
+GET {{baseUrl}}/api/corpus/chunks/{{GetCorpusChunkLocation_chunk_id}}/location
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
 ########################################################################################################################
 ### Request: POST /api/filing-batches
 ### Summary: Create Batch
