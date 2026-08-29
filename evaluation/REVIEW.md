@@ -2,6 +2,10 @@
 
 This guide is the operator workflow for preparing SEC corpora, generating candidate questions, reviewing them, finalizing the retrieval ground truth, and running the retrieval evaluation. Run commands from the repository root.
 
+For the benchmark model, retrieval strategies, metric definitions, and promotion rationale, read
+[Evaluation](../docs/evaluation.md). This runbook intentionally concentrates on commands, review
+decisions, artifact validation, and operational completion criteria.
+
 ## Purpose and completion criteria
 
 The aim is to create a reproducible, human-reviewed retrieval benchmark and use it to select the best measured retrieval configuration. Ground truth in this process is not a generated answer. It is a reviewed investor question linked to one or more filing chunk IDs that retrieval should return. The benchmark measures whether those relevant chunks are found and how highly they rank.
@@ -47,13 +51,18 @@ A command succeeding proves processing integrity, not benchmark quality. A small
 
 Before downloading filings, make sure `.env` contains real values for `DATABASE_URL`, `OPENAI_API_KEY`, `EDGAR_IDENTITY`, the ingestion token, and the Kestra credentials. `EDGAR_IDENTITY` must identify the application and a real contact. Keep the configured SEC caution mode and rate limit.
 
-Start the Dev Container and application API as described in the main README. The application API must be reachable by Kestra at `http://app:8000`. Import or re-import the sole ingestion flow, `workflows/filing_batch.yaml`, in the Kestra UI at <http://127.0.0.1:18082>.
+Start the Dev Container and application API as described in [Local development](../docs/local-development.md). The application API must be reachable by Kestra at `http://app:8000`. Import or re-import the sole ingestion flow, `workflows/filing_batch.yaml`, in the Kestra UI at <http://127.0.0.1:18082>.
 
 Confirm that the database schema and API are ready:
 
 ```bash
+# Apply the current application schema.
 uv run sec-rag-migrate
+
+# Start FastAPI on the address used by local clients.
 uv run uvicorn sec_filing_rag.main:app --host 0.0.0.0 --port 8000
+
+# Confirm process and database readiness.
 curl -fsS http://127.0.0.1:8000/api/health
 ```
 
@@ -64,6 +73,7 @@ The health response should report both the process and application database as r
 Submit the latest original 10-K for every enabled company through the public API. It persists a batch and starts `sec_filings.ingestion.filing_batch`:
 
 ```bash
+# Prepare the latest original 10-K for every enabled company.
 curl --fail-with-body -i -X POST http://127.0.0.1:8000/api/filing-batches \
   -H 'Content-Type: application/json' -d '{}'
 ```
@@ -73,10 +83,17 @@ Save `batch_id` from the HTTP 202 response and poll `GET /api/filing-batches/{ba
 Inspect readiness without exposing filing text or credentials:
 
 ```bash
+# Confirm each company's active and historical corpus status.
 curl -fsS http://127.0.0.1:8000/api/companies/AAPL/status
+
 curl -fsS http://127.0.0.1:8000/api/companies/MSFT/status
+
 curl -fsS http://127.0.0.1:8000/api/companies/NVDA/status
+
+# Confirm the submitted batch reached a terminal state.
 curl -fsS http://127.0.0.1:8000/api/filing-batches/$BATCH_ID
+
+# Compare active Item coverage with silver and gold document counts.
 psql "$DATABASE_URL" -c "select ticker,accession,item,coverage_status,chunk_count,search_document_count,embedding_usage_status from gold.corpus_status order by ticker,item"
 ```
 
@@ -89,6 +106,7 @@ Ground-truth generation uses every ready filing compatible with the active defau
 Submit each desired fiscal year directly. Exact-year selection uses the SEC report date and skips a company if no original 10-K exists; it never substitutes a neighboring year:
 
 ```bash
+# Prepare the exact 2024 report year for the evaluation companies.
 curl --fail-with-body -i -X POST http://127.0.0.1:8000/api/filing-batches \
   -H 'Content-Type: application/json' \
   -d '{"tickers":["AAPL","MSFT","NVDA"],"fiscal_year":2024}'
@@ -97,6 +115,7 @@ curl --fail-with-body -i -X POST http://127.0.0.1:8000/api/filing-batches \
 For one company, the retained convenience route creates the same one-item batch:
 
 ```bash
+# Prepare one company's exact report year through the convenience route.
 curl --fail-with-body -i -X POST http://127.0.0.1:8000/api/companies/AAPL/filing-preparations \
   -H 'Content-Type: application/json' \
   -d '{"fiscal_year":2024}'
@@ -105,8 +124,13 @@ curl --fail-with-body -i -X POST http://127.0.0.1:8000/api/companies/AAPL/filing
 Poll the returned batch until every item is terminal, then inspect the company and ready corpora:
 
 ```bash
+# Confirm the company's active and historical corpora.
 curl -fsS http://127.0.0.1:8000/api/companies/AAPL/status
+
+# Confirm exact-year batch completion and any skips.
 curl -fsS http://127.0.0.1:8000/api/filing-batches/$BATCH_ID
+
+# Inspect every ready corpus and its processing contract.
 psql "$DATABASE_URL" -c "select c.ticker,f.report_date,f.accession,cv.id as corpus_version_id,cv.status,cv.parser_version,cv.chunking_version,cv.embedding_model,cv.embedding_dimensions from silver.corpus_version cv join silver.filing f on f.id=cv.filing_id join public.company c on c.id=f.company_id where cv.status='ready' order by c.ticker,f.report_date,f.accession,cv.created_at"
 ```
 
@@ -123,6 +147,7 @@ Review the tracked inputs before spending model tokens:
 Generate a new bundle:
 
 ```bash
+# Generate a new model-assisted ground-truth review bundle.
 uv run sec-rag-generate-ground-truth generate
 ```
 
@@ -144,15 +169,17 @@ These shortfalls are quality warnings, not failed generation. `evaluation/ground
 The generation run and its model usage are also auditable in PostgreSQL:
 
 ```sql
-select id,status,model,prompt_version,sampling_seed,configuration_sha256,prompt_sha256,
-       corpus_snapshot_sha256,review_bundle_sha256,safe_error,started_at,finished_at
-from public.ground_truth_generation_run
+-- Inspect ground-truth generation identity, lineage, and terminal outcome.
+  select id,status,model,prompt_version,sampling_seed,configuration_sha256,prompt_sha256,
+         corpus_snapshot_sha256,review_bundle_sha256,safe_error,started_at,finished_at
+    from public.ground_truth_generation_run
 order by started_at desc;
 
-select ground_truth_generation_run_id,operation,model,input_tokens,output_tokens,total_tokens,
-       latency_ms,usage_status,normalized_status,retry_count
-from public.llm_usage
-where ground_truth_generation_run_id is not null
+-- Inspect model usage and retry outcomes for those generation runs.
+  select ground_truth_generation_run_id,operation,model,input_tokens,output_tokens,total_tokens,
+         latency_ms,usage_status,normalized_status,retry_count
+    from public.llm_usage
+   where ground_truth_generation_run_id is not null
 order by ground_truth_generation_run_id;
 ```
 
@@ -161,6 +188,7 @@ For a successful generation, expect `ground_truth_generation_run.status = 'succe
 To reuse an existing compatible bundle without repeating model calls:
 
 ```bash
+# Reuse a compatible review bundle without repeating model calls.
 uv run sec-rag-generate-ground-truth generate --resume
 ```
 
@@ -193,12 +221,14 @@ A question becomes an evaluation record only when both its parent chunk and the 
 Check structure while review is still in progress:
 
 ```bash
+# Validate structure while allowing unfinished human decisions.
 uv run sec-rag-generate-ground-truth validate-review --allow-pending
 ```
 
 After every decision is complete, run the strict review gate:
 
 ```bash
+# Require every chunk and question decision to be complete and valid.
 uv run sec-rag-generate-ground-truth validate-review
 ```
 
@@ -209,6 +239,7 @@ Expect `status: valid`, counts, and any generation shortfall warnings. Validatio
 Finalize only after strict review validation succeeds:
 
 ```bash
+# Convert accepted review decisions into checksum-bound evaluation artifacts.
 uv run sec-rag-generate-ground-truth finalize
 ```
 
@@ -229,7 +260,10 @@ At least one accepted question is required. Changed chunks, non-ready corpora, i
 Inspect the finalized records and warnings:
 
 ```bash
+# Count finalized evaluation cases.
 wc -l evaluation/retrieval-v1.jsonl
+
+# Pretty-print the manifest for lineage, coverage, and warning review.
 python -m json.tool evaluation/retrieval-v1-manifest.json
 ```
 
@@ -244,6 +278,7 @@ Do not hand-edit the finalized JSONL or manifest. Any change breaks the manifest
 Validate the dataset, manifest, retrieval embedding contract, and live database lineage without running the benchmark grid:
 
 ```bash
+# Check dataset, manifest, embedding contract, and live lineage without benchmarking.
 uv run sec-rag-evaluate-retrieval --validate-only
 ```
 
@@ -252,6 +287,7 @@ Expect `status: valid`, the case count, coverage counts, and warnings. Any non-e
 Run the full retrieval evaluation:
 
 ```bash
+# Execute the complete configured retrieval benchmark grid.
 uv run sec-rag-evaluate-retrieval
 ```
 
@@ -276,15 +312,17 @@ The JSON result is authoritative. For every tested configuration, `results` cont
 Use the following database query to confirm run status and correlate it with the result artifact's `evaluation_run_id`:
 
 ```sql
-select id,status,dataset_sha256,configuration_sha256,selected_configuration,
-       safe_error,started_at,finished_at
-from public.retrieval_evaluation_run
+-- Confirm evaluation status, checksums, selected configuration, and timing.
+  select id,status,dataset_sha256,configuration_sha256,selected_configuration,
+         safe_error,started_at,finished_at
+    from public.retrieval_evaluation_run
 order by started_at desc;
 
-select evaluation_run_id,operation,model,input_tokens,total_tokens,latency_ms,
-       usage_status,normalized_status
-from public.llm_usage
-where evaluation_run_id is not null
+-- Inspect embedding usage and normalized provider outcomes for evaluation runs.
+  select evaluation_run_id,operation,model,input_tokens,total_tokens,latency_ms,
+         usage_status,normalized_status
+    from public.llm_usage
+   where evaluation_run_id is not null
 order by evaluation_run_id;
 ```
 
@@ -309,9 +347,16 @@ Record the accepted dataset checksum, retrieval configuration checksum, selected
 If review or evaluation reveals a weak question, edit its source entry in `evaluation/ground-truth-review-v1.json`, complete all decisions, and repeat:
 
 ```bash
+# Revalidate corrected human review decisions.
 uv run sec-rag-generate-ground-truth validate-review
+
+# Rebuild finalized dataset and manifest artifacts.
 uv run sec-rag-generate-ground-truth finalize
+
+# Check the rebuilt artifacts before spending on a benchmark.
 uv run sec-rag-evaluate-retrieval --validate-only
+
+# Rerun retrieval configurations against the corrected dataset.
 uv run sec-rag-evaluate-retrieval
 ```
 
