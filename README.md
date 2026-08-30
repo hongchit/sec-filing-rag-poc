@@ -62,15 +62,15 @@ production knowledge system must address.
 
 ##### Investor Research
 Investor research input on a specific goal and target:
-![Research question Input](docs/assets/screenshots/101%20-%20research-question-input.png)
+![Research question Input](<docs/assets/screenshots/101 - research-question-input.png>)
 The Corresponding research result:
-![Research result](docs/assets/screenshots/102%20-%20research-result.png)
+![Research result](<docs/assets/screenshots/102 - research-result.png>)
 
 ##### Retrieval evaluation metrics
-![Evaluation](docs/assets/screenshots/301%20-%20Retrieval%20evaluation%20·%20SEC%20Filing%20RAG.png)
+![Evaluation](<docs/assets/screenshots/301 - Retrieval evaluation · SEC Filing RAG.png>)
 
 ##### Corpus Reader
-![Corpus Reader](docs/assets/screenshots/202%20-%20SEC%20Filing%20RAG%20-%20Corpus%20Reader.png)
+![Corpus Reader](<docs/assets/screenshots/202 - SEC Filing RAG - Corpus Reader.png>)
 
 ## Features
 
@@ -84,6 +84,8 @@ The Corresponding research result:
   ranges, and links passages back to EDGAR.
 - **Operational controls:** isolates company failures, preserves prior defaults, records safe errors,
   and exposes health and batch status through FastAPI.
+- **Authenticated access and budgets:** signs users in through Google, keeps research private to its
+  owner and administrators, and reserves a configurable lifetime allowance before provider work.
 
 ## Architecture
 
@@ -110,6 +112,7 @@ EdgarTools acquires original filings, and OpenAI supplies embeddings and answer 
 - OpenAI API credentials
 - Local PostgreSQL and Kestra services supplied by the Dev Container
 - Values from `.env.example` copied into an untracked `.env`
+- A Google OAuth web client with the exact `/api/auth/google/callback` URI registered
 
 The application fails fast when required settings, tracked configuration, pricing, database
 connectivity, or migration checksums are invalid. It does not probe SEC, OpenAI, or Kestra

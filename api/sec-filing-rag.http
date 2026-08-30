@@ -14,6 +14,56 @@ Content-Type: {{contentType}}
 Authorization: {{internalToken}}
 
 
+#########################################
+### Request: GET /api/auth/google/login
+### Summary: Google Login
+#########################################
+
+### Query Parameter: GetGoogle_login_api_auth_google_login_get_return_to
+@GetGoogle_login_api_auth_google_login_get_return_to = str
+
+### Query Parameter: GetGoogle_login_api_auth_google_login_get_policy_acknowledged
+@GetGoogle_login_api_auth_google_login_get_policy_acknowledged = true
+
+
+GET {{baseUrl}}/api/auth/google/login?return_to={{GetGoogle_login_api_auth_google_login_get_return_to}}&policy_acknowledged={{GetGoogle_login_api_auth_google_login_get_policy_acknowledged}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+############################################
+### Request: GET /api/auth/google/callback
+### Summary: Google Callback
+############################################
+
+
+GET {{baseUrl}}/api/auth/google/callback
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+###############################
+### Request: GET /api/auth/me
+### Summary: Me
+###############################
+
+
+GET {{baseUrl}}/api/auth/me
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+####################################
+### Request: POST /api/auth/logout
+### Summary: Logout
+####################################
+
+
+POST {{baseUrl}}/api/auth/logout
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
 ##################################################################
 ### Request: GET /api/companies
 ### Summary: Companies
@@ -258,6 +308,76 @@ GET {{baseUrl}}/api/research/{{Get_research_api_research__research_id__get_resea
 Content-Type: {{contentType}}
 Authorization: {{internalToken}}
 
+
+##############################################
+### Request: GET /api/admin/model-executions
+### Summary: Model Executions
+##############################################
+
+### Query Parameter: GetModel_executions_api_admin_model_executions_get_limit
+@GetModel_executions_api_admin_model_executions_get_limit = 0
+
+### Query Parameter: GetModel_executions_api_admin_model_executions_get_offset
+@GetModel_executions_api_admin_model_executions_get_offset = 0
+
+
+GET {{baseUrl}}/api/admin/model-executions?limit={{GetModel_executions_api_admin_model_executions_get_limit}}&offset={{GetModel_executions_api_admin_model_executions_get_offset}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+###################################
+### Request: GET /api/admin/users
+### Summary: Users
+###################################
+
+### Query Parameter: GetUsers_api_admin_users_get_limit
+@GetUsers_api_admin_users_get_limit = 0
+
+### Query Parameter: GetUsers_api_admin_users_get_search
+@GetUsers_api_admin_users_get_search = str
+
+
+GET {{baseUrl}}/api/admin/users?limit={{GetUsers_api_admin_users_get_limit}}&search={{GetUsers_api_admin_users_get_search}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+######################################################
+### Request: GET /api/admin/users/{user_id}/activity
+### Summary: Activity
+######################################################
+
+### Path Parameter: GetActivity_api_admin_users__user_id__activity_get_user_id
+@GetActivity_api_admin_users__user_id__activity_get_user_id = str
+
+### Query Parameter: GetActivity_api_admin_users__user_id__activity_get_limit
+@GetActivity_api_admin_users__user_id__activity_get_limit = 0
+
+
+GET {{baseUrl}}/api/admin/users/{{GetActivity_api_admin_users__user_id__activity_get_user_id}}/activity?limit={{GetActivity_api_admin_users__user_id__activity_get_limit}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+###############################################
+### Request: PATCH /api/admin/users/{user_id}
+### Summary: Update User
+###############################################
+
+### Path Parameter: PatchUpdate_user_api_admin_users__user_id__patch_user_id
+@PatchUpdate_user_api_admin_users__user_id__patch_user_id = str
+
+
+PATCH {{baseUrl}}/api/admin/users/{{PatchUpdate_user_api_admin_users__user_id__patch_user_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "status": "example",
+  "lifetime_budget_override_usd": 0.0,
+  "clear_budget_override": true
+}
 
 ######################################################
 ### Request: GET /internal/filing-batches/{batch_id}

@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { App } from './App';
 import { theme } from './theme';
 import { Help } from './components/Help';
+import { normalizedRoute } from './analytics';
 
 class ResizeObserverMock {
   observe() {}
@@ -28,6 +29,48 @@ test('redirects the root route to the research workspace', () => {
   expect(screen.getByRole('heading', { name: 'Investor research' })).toBeInTheDocument();
 });
 
+test('keeps policies public and sends protected routes to the landing page', async () => {
+  history.replaceState(null, '', '/privacy');
+  const fetchMock = vi.fn();
+  vi.stubGlobal('fetch', fetchMock);
+  const view = render(
+    <ThemeProvider theme={theme}>
+      <App authenticate />
+    </ThemeProvider>,
+  );
+  expect(screen.getByRole('heading', { name: 'Privacy Policy' })).toBeInTheDocument();
+  expect(fetchMock).not.toHaveBeenCalled();
+  view.unmount();
+
+  history.replaceState(null, '', '/research');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => Promise.resolve({ ok: false })),
+  );
+  render(
+    <ThemeProvider theme={theme}>
+      <App authenticate />
+    </ThemeProvider>,
+  );
+  expect(
+    await screen.findByRole('heading', {
+      name: 'Understand annual filings without reading every page.',
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute(
+    'href',
+    expect.stringContaining('policy_acknowledged=true'),
+  );
+});
+
+test('normalizes sensitive route values before analytics', () => {
+  expect(normalizedRoute('/research/1ea094c5-79b5-4c75-a0a1-5715db1a4e48')).toBe(
+    '/research/:researchId',
+  );
+  expect(normalizedRoute('/corpus/AAPL/1')).toBe('/corpus/:ticker/:item');
+  expect(normalizedRoute('/unknown/private-value')).toBe('/other');
+});
+
 test('help popovers dismiss with Escape and outside click', async () => {
   render(
     <ThemeProvider theme={theme}>
@@ -46,6 +89,256 @@ test('help popovers dismiss with Escape and outside click', async () => {
   await waitFor(() =>
     expect(screen.queryByText('Highest-ranked chunks checked.')).not.toBeInTheDocument(),
   );
+});
+
+test('retrying failed research restores its query and advanced settings', async () => {
+  const researchId = '1ea094c5-79b5-4c75-a0a1-5715db1a4e48';
+  const failedResearch = {
+    research_id: researchId,
+    ticker: 'AAPL',
+    corpus_version_id: 'corpus-2024',
+    goal: 'key_risks',
+    question: 'Which supplier dependencies create risk?',
+    allowed_items: ['1A', '7'],
+    status: 'failed',
+    safe_error: 'Provider operation failed.',
+  };
+  history.replaceState(null, '', `/research/${researchId}`);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const body =
+        url === `/api/research/${researchId}`
+          ? failedResearch
+          : url === '/api/companies'
+            ? [{ ticker: 'AAPL', enabled: true, name: 'Apple' }]
+            : url === '/api/companies/AAPL/status'
+              ? {
+                  ticker: 'AAPL',
+                  active_corpus: {
+                    corpus_version_id: 'corpus-2024',
+                    accession: '0000320193-24-000123',
+                    report_date: '2024-09-28',
+                    filing_date: '2024-11-01',
+                  },
+                  historical_corpora: [],
+                }
+              : { items: [] };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+    }),
+  );
+
+  renderApp();
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry as new research' }));
+
+  expect(await screen.findByDisplayValue(failedResearch.question)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Advanced settings' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  await waitFor(() => expect(screen.getByText('Key Risks')).toBeInTheDocument());
+  await waitFor(() => {
+    const selects = screen.getAllByRole('combobox');
+    expect(selects[0]).toHaveTextContent('AAPL');
+    expect(selects[1]).toHaveTextContent('2024');
+    expect(selects[3]).toHaveTextContent('Item 1A, Item 7');
+  });
+});
+
+test('shows interpretation paragraphs before filing facts while preserving group order', async () => {
+  const researchId = '2ea094c5-79b5-4c75-a0a1-5715db1a4e48';
+  history.replaceState(null, '', `/research/${researchId}`);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            research_id: researchId,
+            ticker: 'AAPL',
+            corpus_version_id: 'corpus-2024',
+            goal: 'key_risks',
+            question: 'What risks matter?',
+            allowed_items: null,
+            status: 'succeeded',
+            answer: [
+              { text: 'Fact one', kind: 'filing_fact', citations: [] },
+              { text: 'Interpretation one', kind: 'interpretation', citations: [] },
+              { text: 'Fact two', kind: 'filing_fact', citations: [] },
+              { text: 'Interpretation two', kind: 'interpretation', citations: [] },
+            ],
+            limitations: [],
+            insufficient_evidence: false,
+            disposition: 'answered',
+            estimate_status: 'available',
+            evidence: [],
+            usage: {
+              query_embedding_input: 1,
+              answer_generation_input: 1,
+              answer_generation_output: 1,
+              complete_request_total: 3,
+              provider_calls: 1,
+            },
+            run_details: { accession: '0000320193-24-000123' },
+            created_at: '2026-01-01T00:00:00Z',
+          }),
+      }),
+    ),
+  );
+
+  renderApp();
+  const paragraphs = await screen.findAllByText(/^(Interpretation|Fact) (one|two)$/);
+  expect(paragraphs.map((paragraph) => paragraph.textContent)).toEqual([
+    'Interpretation one',
+    'Interpretation two',
+    'Fact one',
+    'Fact two',
+  ]);
+});
+
+test('links administrators to research results in a user activity record', async () => {
+  const userId = '3ea094c5-79b5-4c75-a0a1-5715db1a4e48';
+  const researchId = '4ea094c5-79b5-4c75-a0a1-5715db1a4e48';
+  history.replaceState(null, '', `/admin?user=${userId}`);
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const body =
+      url === '/api/admin/users'
+        ? {
+            items: [
+              {
+                id: userId,
+                email: 'user@example.com',
+                status: 'active',
+                budget: {
+                  limit_usd: '10.00',
+                  used_usd: '0.10',
+                  reserved_usd: '0.00',
+                  remaining_usd: '9.90',
+                },
+              },
+            ],
+          }
+        : {
+            research: [
+              {
+                id: researchId,
+                ticker: 'AAPL',
+                question: 'What risks matter?',
+                status: 'succeeded',
+                charged_usd: '0.01',
+              },
+            ],
+            filing_batches: [
+              {
+                id: '5ea094c5-79b5-4c75-a0a1-5715db1a4e48',
+                mode: 'exact_year',
+                fiscal_year: 2024,
+                status: 'succeeded',
+                charged_usd: '0.02',
+                kestra_execution_id: 'execution-123',
+                items: [
+                  {
+                    id: '6ea094c5-79b5-4c75-a0a1-5715db1a4e48',
+                    ticker: 'AAPL',
+                    status: 'succeeded',
+                    selected_accession: '0000320193-24-000123',
+                    corpus_version_id: '7ea094c5-79b5-4c75-a0a1-5715db1a4e48',
+                  },
+                ],
+              },
+              {
+                id: '8ea094c5-79b5-4c75-a0a1-5715db1a4e48',
+                mode: 'exact_year',
+                fiscal_year: 1999,
+                status: 'failed',
+                items: [
+                  {
+                    id: '9ea094c5-79b5-4c75-a0a1-5715db1a4e48',
+                    ticker: 'AAPL',
+                    status: 'skipped',
+                    safe_error: 'no original 10-K for fiscal year 1999',
+                  },
+                ],
+              },
+            ],
+          };
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  renderApp();
+  fireEvent.click(await screen.findByRole('button', { name: /user@example.com/ }));
+
+  expect(location.pathname).toBe('/admin/users');
+  expect(location.search).toBe(`?user=${userId}`);
+  expect(
+    screen.queryByRole('heading', { name: 'Operational model executions' }),
+  ).not.toBeInTheDocument();
+  expect(
+    fetchMock.mock.calls.some(([input]) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      return url.includes('/model-executions');
+    }),
+  ).toBe(false);
+  expect(await screen.findByRole('link', { name: 'What risks matter?' })).toHaveAttribute(
+    'href',
+    `/research/${researchId}`,
+  );
+  expect(screen.getByText(/^1\. AAPL/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'AAPL' })).toHaveAttribute(
+    'href',
+    '/corpus/AAPL/1?corpus=7ea094c5-79b5-4c75-a0a1-5715db1a4e48',
+  );
+  expect(screen.getByText(/2\. exact_year 1999 · skipped/)).toBeInTheDocument();
+  expect(screen.getByText('no original 10-K for fiscal year 1999')).toBeInTheDocument();
+  expect(screen.getByText('Kestra execution: execution-123')).toBeInTheDocument();
+});
+
+test('shows operational executions separately without loading users', async () => {
+  history.replaceState(null, '', '/admin/model-executions');
+  const fetchMock = vi.fn(() =>
+    Promise.resolve({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          items: [
+            {
+              run_type: 'ground_truth_generation',
+              id: '10a094c5-79b5-4c75-a0a1-5715db1a4e48',
+              status: 'succeeded',
+              started_at: '2026-01-01T00:00:00Z',
+              finished_at: '2026-01-01T00:01:00Z',
+              models: ['gpt-5.4-mini'],
+              operations: [],
+              provider_calls: 1,
+              retries: 0,
+              failures: 0,
+              input_tokens: 100,
+              output_tokens: 50,
+              total_tokens: 150,
+              usage_available: true,
+              estimated_usd: '0.001',
+              pricing_basis: 'stored_snapshot',
+            },
+          ],
+          next_offset: null,
+        }),
+    }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+
+  renderApp();
+
+  expect(
+    await screen.findByRole('heading', { name: 'Operational model executions' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Users' })).not.toBeInTheDocument();
+  expect(screen.getByText(/ground truth generation · succeeded/)).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledWith('/api/admin/model-executions?limit=25&offset=0');
 });
 
 afterEach(() => {

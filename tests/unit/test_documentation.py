@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 DOCUMENTS = [
     Path("README.md"),
@@ -39,7 +40,8 @@ def test_documentation_local_links_resolve() -> None:
         for target in re.findall(r"\[[^]]+\]\(([^)]+)\)", document.read_text(encoding="utf-8")):
             if target.startswith(("http://", "https://", "#")):
                 continue
-            path = (document.parent / target.split("#", 1)[0]).resolve()
+            local_target = unquote(target.split("#", 1)[0].strip("<>"))
+            path = (document.parent / local_target).resolve()
             assert path.exists(), f"broken link in {document}: {target}"
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -90,6 +91,23 @@ class Settings(BaseSettings):
     retrieval_evaluation_manifest_path: Path = Path("evaluation/retrieval-v1-manifest.json")
     generation_config_path: Path = Path("config/generation.json")
     model_pricing_config_path: Path = Path("config/model-pricing-v1.json")
+    public_base_url: str = "http://localhost:8000"
+    google_client_id: str = "__required__"
+    google_client_secret: str = "__required__"
+    session_secret: str = Field(
+        default="__required_session_secret_at_least_32_chars__", min_length=32
+    )
+    google_admin_emails: str = "admin@example.com"
+    session_lifetime_days: int = Field(default=7, ge=1, le=30)
+    default_user_lifetime_budget_usd: Decimal = Field(default=Decimal("1.00"), ge=0)
+    research_cost_reservation_usd: Decimal = Field(default=Decimal("0.10"), gt=0)
+    corpus_preparation_cost_reservation_usd: Decimal = Field(default=Decimal("0.50"), gt=0)
+
+    @property
+    def admin_emails(self) -> frozenset[str]:
+        return frozenset(
+            value.strip().lower() for value in self.google_admin_emails.split(",") if value.strip()
+        )
 
     @property
     def resolved_judge_model(self) -> str:
@@ -102,3 +120,11 @@ class Settings(BaseSettings):
         if value < minimum:
             raise ValueError("database_pool_max_size must be at least database_pool_min_size")
         return value
+
+
+class SessionSettings(BaseSettings):
+    """Load middleware settings without requiring the complete application configuration."""
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    public_base_url: str = "http://localhost:8000"
+    session_secret: str = "development-only-session-secret"

@@ -4,18 +4,21 @@ from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from ....auth import Principal
 from ....generation.service import ResearchService
 from ....schemas.research import FeedbackCreate, FeedbackResponse
-from ...dependencies import research_service
+from ...dependencies import current_user, research_service
 
 router = APIRouter(tags=["feedback"])
 
 
 @router.post("/feedback", response_model=FeedbackResponse)
 def save_feedback(
-    body: FeedbackCreate, service: Annotated[ResearchService, Depends(research_service)]
+    body: FeedbackCreate,
+    service: Annotated[ResearchService, Depends(research_service)],
+    user: Annotated[Principal, Depends(current_user)],
 ) -> dict[str, Any]:
-    if service.repository.get(body.result_id) is None:
+    if service.repository.get(body.result_id, user.id, is_admin=False) is None:
         raise HTTPException(404, detail="research not found")
     return cast(
         dict[str, Any],

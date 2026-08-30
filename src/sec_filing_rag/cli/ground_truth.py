@@ -10,6 +10,7 @@ from typing import NoReturn
 from pydantic import ValidationError
 
 from ..core.config import Settings
+from ..core.pricing import load_pricing_configuration
 from ..domain.filings import safe_error, sha256_bytes
 from ..ground_truth.service import (
     GenerationConfiguration,
@@ -77,7 +78,11 @@ def main() -> None:
     try:
         settings = Settings()  # type: ignore[call-arg]
         database = Database(settings.database_url)
-        repository = GroundTruthRepository(database)
+        pricing = load_pricing_configuration(settings.model_pricing_config_path)
+        ground_truth_model = GenerationConfiguration.model_validate_json(
+            args.config.read_text(encoding="utf-8")
+        ).model
+        repository = GroundTruthRepository(database, pricing.snapshot_models(ground_truth_model))
         if args.command == "generate":
             config = GenerationConfiguration.model_validate_json(
                 args.config.read_text(encoding="utf-8")

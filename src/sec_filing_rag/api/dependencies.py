@@ -5,8 +5,9 @@ from functools import lru_cache
 from typing import Annotated, cast
 
 from fastapi import Depends, HTTPException, Request, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyCookie, HTTPAuthorizationCredentials, HTTPBearer
 
+from ..auth import AuthRepository, Principal
 from ..core.config import Settings
 from ..core.pricing import load_pricing_configuration
 from ..core.resources import AppResources
@@ -22,6 +23,7 @@ from ..repositories.companies import CompanyRepository
 from ..repositories.corpus import IngestionRepository
 from ..repositories.corpus_reader import CorpusReaderRepository
 from ..repositories.database import Database
+from ..repositories.model_executions import ModelExecutionRepository
 from ..repositories.research import ResearchRepository
 from ..repositories.system import SystemRepository
 from ..repositories.workflows import WorkflowRepository
@@ -48,6 +50,45 @@ def database(app_resources: Annotated[AppResources, Depends(resources)]) -> Data
     return app_resources.database
 
 
+def auth_repository(db: Annotated[Database, Depends(database)]) -> AuthRepository:
+    return AuthRepository(db)
+
+
+_session_cookie = APIKeyCookie(
+    name="__Host-sec-rag-session", auto_error=False, scheme_name="SessionCookie"
+)
+
+
+def current_user(
+    request: Request,
+    repository: Annotated[AuthRepository, Depends(auth_repository)],
+    config: Annotated[Settings, Depends(settings)],
+    documented_cookie: Annotated[str | None, Security(_session_cookie)] = None,
+) -> Principal:
+    token = documented_cookie or request.cookies.get("sec-rag-session")
+    csrf = (
+        request.headers.get("X-CSRF-Token")
+        if request.method not in {"GET", "HEAD", "OPTIONS"}
+        else None
+    )
+    if not token:
+        raise HTTPException(status_code=401, detail={"code": "authentication_required"})
+    principal = repository.authenticate(token, csrf, config.admin_emails)
+    if principal is None:
+        detail = (
+            {"code": "invalid_csrf"} if csrf is not None else {"code": "authentication_required"}
+        )
+        raise HTTPException(status_code=403 if csrf is not None else 401, detail=detail)
+    request.state.user = principal
+    return principal
+
+
+def require_admin(user: Annotated[Principal, Depends(current_user)]) -> Principal:
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail={"code": "administrator_required"})
+    return user
+
+
 def system_repository(db: Annotated[Database, Depends(database)]) -> SystemRepository:
     return SystemRepository(db)
 
@@ -70,6 +111,14 @@ def workflow_repository(db: Annotated[Database, Depends(database)]) -> WorkflowR
     return WorkflowRepository(db)
 
 
+def model_execution_repository(
+    db: Annotated[Database, Depends(database)], config: Annotated[Settings, Depends(settings)]
+) -> ModelExecutionRepository:
+    return ModelExecutionRepository(
+        db, load_pricing_configuration(config.model_pricing_config_path)
+    )
+
+
 def evaluation_dashboard(
     db: Annotated[Database, Depends(database)], config: Annotated[Settings, Depends(settings)]
 ) -> EvaluationDashboardService:
@@ -89,6 +138,7 @@ def batch_service(
     repository: Annotated[WorkflowRepository, Depends(workflow_repository)],
     ingestion: Annotated[IngestionRepository, Depends(ingestion_repository)],
     app_resources: Annotated[AppResources, Depends(resources)],
+    user: Annotated[Principal, Depends(current_user)],
 ) -> FilingBatchService:
     config = settings()
     kestra = KestraGateway(
@@ -101,7 +151,16 @@ def batch_service(
         retries=config.kestra_max_retries,
         client=app_resources.http,
     )
-    return FilingBatchService(config, repository, kestra, ingestion)
+    return FilingBatchService(
+        config,
+        repository,
+        kestra,
+        ingestion,
+        user.id,
+        config.default_user_lifetime_budget_usd,
+        config.corpus_preparation_cost_reservation_usd,
+        load_pricing_configuration(config.model_pricing_config_path),
+    )
 
 
 def execution_service(
@@ -119,6 +178,7 @@ def research_service(
     db: Annotated[Database, Depends(database)],
     app_resources: Annotated[AppResources, Depends(resources)],
     config: Annotated[Settings, Depends(settings)],
+    user: Annotated[Principal, Depends(current_user)],
 ) -> ResearchService:
     retrieval_config = load_retrieval_configuration(config.retrieval_config_path)
     generation_config = load_generation_configuration(config.generation_config_path)
@@ -140,6 +200,9 @@ def research_service(
         config.openai_chat_model,
         pricing_config,
         config.openai_embedding_model,
+        user.id,
+        config.default_user_lifetime_budget_usd,
+        config.research_cost_reservation_usd,
     )
 
 

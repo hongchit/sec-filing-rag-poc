@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 from ..core.config import Settings, load_companies
 from ..core.errors import UpstreamServiceError
+from ..core.pricing import PricingConfiguration
 from ..domain.filings import safe_error
 from ..integrations.kestra import KestraGateway
 from ..integrations.sec import EdgarGateway
@@ -19,11 +21,19 @@ class FilingBatchService:
         repository: WorkflowRepository,
         kestra: KestraGateway,
         store: IngestionRepository,
+        user_id: uuid.UUID,
+        default_budget_usd: Decimal,
+        reservation_usd: Decimal,
+        pricing: PricingConfiguration,
     ) -> None:
         self.settings = settings
         self.repository = repository
         self.kestra = kestra
         self.store = store
+        self.user_id = user_id
+        self.default_budget_usd = default_budget_usd
+        self.reservation_usd = reservation_usd
+        self.pricing = pricing
 
     def submit(
         self, *, tickers: list[str] | None, fiscal_year: int | None, request_id: str | None
@@ -39,7 +49,16 @@ class FilingBatchService:
         if unavailable:
             raise ValueError("unknown or disabled tickers: " + ", ".join(unavailable))
         batch_id, _ = self.repository.create_batch(
-            tickers=selected, fiscal_year=fiscal_year, request_id=request_id
+            tickers=selected,
+            fiscal_year=fiscal_year,
+            request_id=request_id,
+            user_id=self.user_id,
+            default_budget_usd=self.default_budget_usd,
+            reservation_usd=self.reservation_usd,
+            pricing_snapshot=self.pricing.snapshot(
+                embedding_model=self.settings.openai_embedding_model,
+                chat_model=self.settings.openai_chat_model,
+            ),
         )
         try:
             execution = self.kestra.submit_batch(batch_id=str(batch_id))
@@ -142,6 +161,7 @@ class FilingExecutionService:
         self.repository.transition(item_id, "processing", execution_id=execution_id)
         acquired = self.repository.load_acquisition(context["acquisition_id"])
         result = self.pipeline.process_acquisition(
+            item_id=item_id,
             ticker=context["ticker"],
             acquired=acquired,
             mode=context["mode"],

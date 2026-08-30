@@ -77,13 +77,20 @@ export function ResearchResult() {
           <Typography>ID: {value.research_id}</Typography>
           <Button
             variant="contained"
-            onClick={() => void navigate('/research', { state: { retry: value } })}
+            onClick={() =>
+              void navigate('/research', {
+                state: { retry: value, advanced: value.allowed_items !== null },
+              })
+            }
           >
             Retry as new research
           </Button>
         </Stack>
       </AppShell>
     );
+  const paragraphs = [...(value.answer ?? [])].sort(
+    (left, right) => Number(left.kind === 'filing_fact') - Number(right.kind === 'filing_fact'),
+  );
   const usage = value.usage;
   const rejected =
     value.disposition === 'investment_advice' || value.disposition === 'out_of_scope';
@@ -118,7 +125,7 @@ export function ResearchResult() {
           ))}
         {!rejected && (
           <Stack spacing={2}>
-            {value.answer?.map((paragraph, index) => (
+            {paragraphs.map((paragraph, index) => (
               <Paper key={index} sx={{ p: 3 }}>
                 <Chip
                   size="small"

@@ -15,24 +15,36 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
+import { useAccount } from '../account';
 import { goalEntries, goals, type ResearchGoal } from '../goals';
 import { streamResearch, recoverResearch } from '../researchApi';
 import type { Company, CompanyStatus, Evidence, Research as ResearchValue } from '../researchTypes';
 
 const items = ['1', '1A', '3', '7', '7A', '8'];
 export function Research() {
+  const location = useLocation();
+  const retry = useRef(
+    (location.state as { retry?: ResearchValue; advanced?: boolean } | null) ?? null,
+  ).current;
+  const account = useAccount();
+  const remaining = Number(account?.budget.remaining_usd ?? 0);
+  const canResearch = remaining >= Number(account?.action_reservations.research_usd ?? Infinity);
+  const canPrepare =
+    remaining >= Number(account?.action_reservations.corpus_preparation_usd ?? Infinity);
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [statuses, setStatuses] = useState<Record<string, CompanyStatus>>({});
   const [ticker, setTicker] = useState('');
   const [corpus, setCorpus] = useState('');
-  const [goal, setGoal] = useState<ResearchGoal>('business');
-  const [question, setQuestion] = useState('');
-  const [allowed, setAllowed] = useState<string[]>([]);
-  const [advanced, setAdvanced] = useState(false);
+  const [goal, setGoal] = useState<ResearchGoal>(retry?.retry?.goal ?? 'business');
+  const [question, setQuestion] = useState(retry?.retry?.question ?? '');
+  const [allowed, setAllowed] = useState<string[]>(retry?.retry?.allowed_items ?? []);
+  const [advanced, setAdvanced] = useState(
+    retry?.advanced ?? Array.isArray(retry?.retry?.allowed_items),
+  );
   const [stage, setStage] = useState('');
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [error, setError] = useState('');
@@ -117,7 +129,10 @@ export function Research() {
         }
         setStatuses(ready);
         const first = values.find((value) => value.enabled && ready[value.ticker]?.active_corpus);
-        if (first) {
+        if (retry?.retry) {
+          setTicker(retry.retry.ticker);
+          setCorpus(retry.retry.corpus_version_id);
+        } else if (first) {
           setTicker(first.ticker);
           setCorpus(ready[first.ticker].active_corpus!.corpus_version_id);
         }
@@ -135,7 +150,7 @@ export function Research() {
       .then(async (r) => (r.ok ? ((await r.json()) as { items: ResearchValue[] }) : { items: [] }))
       .then((value) => setRecent(value.items))
       .catch(() => setRecent([]));
-  }, [pollBatch]);
+  }, [pollBatch, retry]);
   const corpora = useMemo(() => {
     const status = statuses[ticker];
     return status
@@ -259,7 +274,7 @@ export function Research() {
                     value={prepareYear}
                     onChange={(event) => setPrepareYear(event.target.value)}
                   />
-                  <Button variant="outlined" onClick={() => void prepare()}>
+                  <Button variant="outlined" disabled={!canPrepare} onClick={() => void prepare()}>
                     Prepare filing
                   </Button>
                   {preparation.includes('still running') && (
@@ -275,6 +290,12 @@ export function Research() {
                     </Button>
                   )}
                 </Stack>
+                {!canPrepare && (
+                  <Alert severity="warning">
+                    Your remaining lifetime allowance is below the amount required to prepare a
+                    filing. Existing corpora remain available.
+                  </Alert>
+                )}
                 {preparation && (
                   <Alert
                     severity={preparation.includes('could not') ? 'error' : 'info'}
@@ -304,6 +325,10 @@ export function Research() {
               onChange={(event) => setQuestion(event.target.value)}
               inputProps={{ maxLength: 2000 }}
             />
+            <Alert severity="info">
+              Your question and result are stored privately and can be reviewed by administrators
+              for operations and abuse prevention. Other users cannot see them.
+            </Alert>
             <Button onClick={() => setAdvanced((value) => !value)} aria-expanded={advanced}>
               Advanced settings
             </Button>
@@ -335,11 +360,17 @@ export function Research() {
             <Button
               variant="contained"
               size="large"
-              disabled={!question.trim() || !corpus || Boolean(stage)}
+              disabled={!question.trim() || !corpus || Boolean(stage) || !canResearch}
               onClick={() => void submit()}
             >
               Research filing
             </Button>
+            {!canResearch && (
+              <Alert severity="warning">
+                Your remaining lifetime allowance is below the amount required for a research query.
+                Existing research and corpora remain available.
+              </Alert>
+            )}
             {stage && (
               <Alert severity="info" aria-live="polite">
                 {stage.replace('_', ' ')}… Server-side work continues if this tab closes.

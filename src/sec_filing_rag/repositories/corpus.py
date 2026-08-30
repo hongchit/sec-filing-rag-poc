@@ -52,6 +52,7 @@ class IngestionRepository:
         trigger: str,
         key: str,
         kestra_execution_id: str | None = None,
+        item_id: uuid.UUID | None = None,
     ) -> tuple[uuid.UUID, uuid.UUID]:
         with self.connect() as connection:
             company = connection.execute(
@@ -66,7 +67,47 @@ class IngestionRepository:
                 "VALUES (%s,%s,%s,%s,%s,'running','source-validation',now())",
                 (run_id, company["id"], trigger, key, kestra_execution_id),
             )
+            if item_id is not None:
+                updated = connection.execute(
+                    "UPDATE public.filing_batch_item SET ingestion_run_id=%s,updated_at=now() "
+                    "WHERE id=%s AND ingestion_run_id IS NULL RETURNING id",
+                    (run_id, item_id),
+                ).fetchone()
+                if updated is None:
+                    raise ValueError("filing batch item already has an ingestion run")
             return run_id, company["id"]
+
+    def record_embedding_usage(
+        self,
+        run_id: uuid.UUID,
+        model: str,
+        *,
+        input_tokens: int | None,
+        total_tokens: int | None,
+        latency_ms: int,
+        provider_started_at: Any,
+        provider_finished_at: Any,
+        error: str | None = None,
+    ) -> None:
+        status = "reported" if total_tokens is not None else ("failed" if error else "unavailable")
+        with self.connect() as connection:
+            connection.execute(
+                "INSERT INTO public.llm_usage"
+                "(ingestion_run_id,operation,model,input_tokens,output_tokens,total_tokens,usage_status,"
+                "normalized_status,latency_ms,provider_started_at,provider_finished_at) "
+                "VALUES (%s,'embedding',%s,%s,NULL,%s,%s,%s,%s,%s,%s)",
+                (
+                    run_id,
+                    model,
+                    input_tokens,
+                    total_tokens,
+                    status,
+                    error or "succeeded",
+                    latency_ms,
+                    provider_started_at,
+                    provider_finished_at,
+                ),
+            )
 
     def update_run_key(self, run_id: uuid.UUID, key: str) -> None:
         with self.connect() as connection:
@@ -215,7 +256,6 @@ class IngestionRepository:
         model: str,
         dimensions: int,
         index: str,
-        usage: tuple[int | None, int | None, int | None, str, int],
         identity_hash: str,
         promote_default: bool = True,
     ) -> uuid.UUID:
@@ -374,12 +414,6 @@ class IngestionRepository:
                             chunk.text,
                         ),
                     )
-            connection.execute(
-                "INSERT INTO public.llm_usage"
-                "(ingestion_run_id,operation,model,input_tokens,output_tokens,total_tokens,usage_status,"
-                "normalized_status,latency_ms) VALUES (%s,'embedding',%s,%s,%s,%s,%s,'succeeded',%s)",
-                (run_id, model, *usage),
-            )
             self._validate_candidate(connection, corpus_id, model, dimensions)
             connection.execute(
                 "SELECT id FROM public.company WHERE id=%s FOR UPDATE", (company_id,)

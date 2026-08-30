@@ -17,6 +17,80 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+  /api/auth/google/login:
+    get:
+      tags:
+      - authentication
+      summary: Google Login
+      operationId: google_login_api_auth_google_login_get
+      parameters:
+      - name: return_to
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^/(?:[^/].*)?$
+          default: /research
+          title: Return To
+      - name: policy_acknowledged
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Policy Acknowledged
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/auth/google/callback:
+    get:
+      tags:
+      - authentication
+      summary: Google Callback
+      operationId: google_callback_api_auth_google_callback_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/auth/me:
+    get:
+      tags:
+      - authentication
+      summary: Me
+      operationId: me_api_auth_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Me Api Auth Me Get
+      security:
+      - SessionCookie: []
+  /api/auth/logout:
+    post:
+      tags:
+      - authentication
+      summary: Logout
+      operationId: logout_api_auth_logout_post
+      responses:
+        '204':
+          description: Successful Response
+      security:
+      - SessionCookie: []
   /api/companies:
     get:
       tags:
@@ -34,6 +108,8 @@ paths:
                   $ref: '#/components/schemas/CompanySummary'
                 type: array
                 title: Response Listcompanies
+      security:
+      - SessionCookie: []
   /api/companies/{ticker}/status:
     get:
       tags:
@@ -41,6 +117,8 @@ paths:
       summary: Company Status
       description: Inspect application-owned corpus status without querying Kestra.
       operationId: getCompanyStatus
+      security:
+      - SessionCookie: []
       parameters:
       - name: ticker
         in: path
@@ -67,6 +145,8 @@ paths:
       - corpus
       summary: Version
       operationId: getCorpusVersion
+      security:
+      - SessionCookie: []
       parameters:
       - name: corpus_version_id
         in: path
@@ -94,6 +174,8 @@ paths:
       - corpus
       summary: Item Document
       operationId: getCorpusItem
+      security:
+      - SessionCookie: []
       parameters:
       - name: corpus_version_id
         in: path
@@ -143,6 +225,8 @@ paths:
       - corpus
       summary: Chunk Location
       operationId: getCorpusChunkLocation
+      security:
+      - SessionCookie: []
       parameters:
       - name: chunk_id
         in: path
@@ -190,6 +274,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - SessionCookie: []
   /api/companies/{ticker}/filing-preparations:
     post:
       tags:
@@ -197,6 +283,8 @@ paths:
       summary: Create Preparation
       description: Submit one configured company for latest or exact fiscal-year ingestion.
       operationId: createCompanyFilingPreparation
+      security:
+      - SessionCookie: []
       parameters:
       - name: ticker
         in: path
@@ -230,6 +318,8 @@ paths:
       summary: Get Batch
       description: Read authoritative overall and per-company workflow status.
       operationId: getFilingBatch
+      security:
+      - SessionCookie: []
       parameters:
       - name: batch_id
         in: path
@@ -276,6 +366,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - SessionCookie: []
   /api/retrieval-evaluations/current:
     get:
       tags:
@@ -290,6 +382,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EvaluationSummary'
+      security:
+      - SessionCookie: []
   /api/retrieval-evaluations/current/configurations/{configuration_id}/cases:
     get:
       tags:
@@ -297,6 +391,8 @@ paths:
       summary: Cases
       description: Inspect every reviewed question and ranked chunk for one stable configuration.
       operationId: getCurrentRetrievalEvaluationCases
+      security:
+      - SessionCookie: []
       parameters:
       - name: configuration_id
         in: path
@@ -324,6 +420,8 @@ paths:
       summary: Chunk
       description: Lazy-load full text and provenance for a chunk referenced by the current evaluation.
       operationId: getCurrentRetrievalEvaluationChunk
+      security:
+      - SessionCookie: []
       parameters:
       - name: chunk_id
         in: path
@@ -350,6 +448,8 @@ paths:
       - research
       summary: Create Research
       operationId: create_research_api_research_post
+      security:
+      - SessionCookie: []
       parameters:
       - name: Idempotency-Key
         in: header
@@ -385,6 +485,8 @@ paths:
       - research
       summary: Stream Research
       operationId: stream_research_api_research_stream_post
+      security:
+      - SessionCookie: []
       parameters:
       - name: Idempotency-Key
         in: header
@@ -416,6 +518,8 @@ paths:
       - research
       summary: Research History
       operationId: research_history_api_research_history_get
+      security:
+      - SessionCookie: []
       parameters:
       - name: limit
         in: query
@@ -453,6 +557,8 @@ paths:
       - research
       summary: Get Research
       operationId: get_research_api_research__research_id__get
+      security:
+      - SessionCookie: []
       parameters:
       - name: research_id
         in: path
@@ -468,6 +574,164 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResearchResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/model-executions:
+    get:
+      tags:
+      - administration
+      summary: Model Executions
+      operationId: model_executions_api_admin_model_executions_get
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 25
+          title: Limit
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelExecutionPage'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/users:
+    get:
+      tags:
+      - administration
+      summary: Users
+      operationId: users_api_admin_users_get
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+          title: Limit
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Users Api Admin Users Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/users/{user_id}/activity:
+    get:
+      tags:
+      - administration
+      summary: Activity
+      operationId: activity_api_admin_users__user_id__activity_get
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Activity Api Admin Users  User Id  Activity Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/users/{user_id}:
+    patch:
+      tags:
+      - administration
+      summary: Update User
+      operationId: update_user_api_admin_users__user_id__patch
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                title: Response Update User Api Admin Users  User Id  Patch
         '422':
           description: Validation Error
           content:
@@ -1793,6 +2057,215 @@ components:
       - status
       - stage
       title: LatestRun
+    ModelExecution:
+      properties:
+        run_type:
+          type: string
+          enum:
+          - retrieval_evaluation
+          - generation_evaluation
+          - ground_truth_generation
+          title: Run Type
+        id:
+          type: string
+          format: uuid
+          title: Id
+        status:
+          type: string
+          title: Status
+        safe_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Safe Error
+        started_at:
+          type: string
+          format: date-time
+          title: Started At
+        finished_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Finished At
+        models:
+          items:
+            type: string
+          type: array
+          title: Models
+        operations:
+          items:
+            $ref: '#/components/schemas/ModelOperation'
+          type: array
+          title: Operations
+        provider_calls:
+          type: integer
+          title: Provider Calls
+        retries:
+          type: integer
+          title: Retries
+        failures:
+          type: integer
+          title: Failures
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        total_tokens:
+          type: integer
+          title: Total Tokens
+        usage_available:
+          type: boolean
+          title: Usage Available
+        estimate_status:
+          type: string
+          enum:
+          - available
+          - unavailable
+          title: Estimate Status
+        estimated_usd:
+          anyOf:
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          - type: 'null'
+          title: Estimated Usd
+        pricing_basis:
+          type: string
+          enum:
+          - stored_snapshot
+          - current_price_estimate
+          title: Pricing Basis
+        pricing_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pricing Version
+        pricing_sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pricing Sha256
+      type: object
+      required:
+      - run_type
+      - id
+      - status
+      - safe_error
+      - started_at
+      - finished_at
+      - models
+      - operations
+      - provider_calls
+      - retries
+      - failures
+      - input_tokens
+      - output_tokens
+      - total_tokens
+      - usage_available
+      - estimate_status
+      - estimated_usd
+      - pricing_basis
+      - pricing_version
+      - pricing_sha256
+      title: ModelExecution
+    ModelExecutionPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ModelExecution'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        limit:
+          type: integer
+          title: Limit
+        offset:
+          type: integer
+          title: Offset
+        next_offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Next Offset
+      type: object
+      required:
+      - items
+      - total
+      - limit
+      - offset
+      - next_offset
+      title: ModelExecutionPage
+    ModelOperation:
+      properties:
+        operation:
+          type: string
+          title: Operation
+        model:
+          type: string
+          title: Model
+        input_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Input Tokens
+        output_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Output Tokens
+        total_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Total Tokens
+        latency_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Latency Ms
+        usage_status:
+          type: string
+          title: Usage Status
+        normalized_status:
+          type: string
+          title: Normalized Status
+        attempt:
+          type: integer
+          title: Attempt
+        retry_count:
+          type: integer
+          title: Retry Count
+        provider_started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Provider Started At
+        provider_finished_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Provider Finished At
+      type: object
+      required:
+      - operation
+      - model
+      - input_tokens
+      - output_tokens
+      - total_tokens
+      - latency_ms
+      - usage_status
+      - normalized_status
+      - attempt
+      - retry_count
+      - provider_started_at
+      - provider_finished_at
+      title: ModelOperation
     ResearchCreate:
       properties:
         ticker:
@@ -2154,6 +2627,31 @@ components:
       required:
       - status
       title: StatusResponse
+    UserUpdate:
+      properties:
+        status:
+          anyOf:
+          - type: string
+            enum:
+            - active
+            - disabled
+          - type: 'null'
+          title: Status
+        lifetime_budget_override_usd:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          - type: 'null'
+          title: Lifetime Budget Override Usd
+        clear_budget_override:
+          type: boolean
+          title: Clear Budget Override
+          default: false
+      additionalProperties: false
+      type: object
+      title: UserUpdate
     ValidationError:
       properties:
         loc:
@@ -2176,6 +2674,10 @@ components:
       - type
       title: ValidationError
   securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-sec-rag-session
     InternalBearer:
       type: http
       scheme: bearer

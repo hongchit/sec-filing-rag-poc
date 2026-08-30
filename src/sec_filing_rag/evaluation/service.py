@@ -212,9 +212,14 @@ def select_winner(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 class RetrievalEvaluator:
     def __init__(
-        self, database: Database, service: RetrievalService, config: RetrievalConfiguration
+        self,
+        database: Database,
+        service: RetrievalService,
+        config: RetrievalConfiguration,
+        pricing_snapshot: dict[str, Any] | None = None,
     ) -> None:
         self.database, self.service, self.config = database, service, config
+        self.pricing_snapshot = pricing_snapshot
 
     def run(
         self,
@@ -226,9 +231,16 @@ class RetrievalEvaluator:
         run_id = uuid.uuid4()
         with self.database.transaction() as connection:
             connection.execute(
-                "INSERT INTO public.retrieval_evaluation_run(id,dataset_sha256,configuration_sha256) "
-                "VALUES (%s,%s,%s)",
-                (run_id, dataset_hash, self.config.sha256()),
+                "INSERT INTO public.retrieval_evaluation_run"
+                "(id,dataset_sha256,configuration_sha256,pricing_snapshot) VALUES (%s,%s,%s,%s)",
+                (
+                    run_id,
+                    dataset_hash,
+                    self.config.sha256(),
+                    json.dumps(self.pricing_snapshot)
+                    if self.pricing_snapshot is not None
+                    else None,
+                ),
             )
         embeddings: dict[str, list[float]] = {}
         rows: list[dict[str, Any]] = []

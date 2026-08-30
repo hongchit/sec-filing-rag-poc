@@ -75,3 +75,12 @@ def test_clean_schema_has_historical_state_default_pointer_and_no_cross_database
     assert "CREATE EXTENSION IF NOT EXISTS vector" in initialization
     assert "CREATE EXTENSION IF NOT EXISTS pg_textsearch" in initialization
     assert "shared_preload_libraries=pg_textsearch" in compose
+
+
+def test_execution_accounting_migration_adds_direct_lineage_and_pricing_snapshots() -> None:
+    migration = Path("migrations/versions/0005_execution_cost_accounting.sql").read_text(
+        encoding="utf-8"
+    )
+    assert "filing_batch_item" in migration
+    assert "ingestion_run_id uuid UNIQUE REFERENCES public.ingestion_run(id)" in migration
+    assert migration.count("ADD COLUMN pricing_snapshot jsonb") == 3

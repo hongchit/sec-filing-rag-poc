@@ -12,6 +12,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
+from ....auth import Principal, QuotaExceeded
 from ....generation.service import (
     IdempotencyConflict,
     ResearchFailure,
@@ -20,7 +21,7 @@ from ....generation.service import (
     ResearchService,
 )
 from ....schemas.research import ResearchCreate, ResearchHistory, ResearchResponse
-from ...dependencies import research_service
+from ...dependencies import current_user, research_service
 
 router = APIRouter(prefix="/research", tags=["research"])
 
@@ -36,6 +37,8 @@ def _run(
 
 
 def _http_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, QuotaExceeded):
+        return HTTPException(403, detail={"code": "quota_exceeded", "budget": exc.summary})
     if isinstance(exc, IdempotencyConflict):
         return HTTPException(409, detail={"code": "idempotency_conflict"})
     if isinstance(exc, ResearchInProgress):
@@ -57,7 +60,13 @@ def create_research(
 ) -> dict[str, Any]:
     try:
         return _run(body, service, idempotency_key)
-    except (ResearchFailure, ResearchInProgress, IdempotencyConflict, ValueError) as exc:
+    except (
+        ResearchFailure,
+        ResearchInProgress,
+        IdempotencyConflict,
+        QuotaExceeded,
+        ValueError,
+    ) as exc:
         raise _http_error(exc) from None
 
 
@@ -79,7 +88,13 @@ def stream_research(
         try:
             result = _run(body, service, idempotency_key, publish)
             publish("succeeded", ResearchResponse.model_validate(result).model_dump(mode="json"))
-        except (ResearchFailure, ResearchInProgress, IdempotencyConflict, ValueError) as exc:
+        except (
+            ResearchFailure,
+            ResearchInProgress,
+            IdempotencyConflict,
+            QuotaExceeded,
+            ValueError,
+        ) as exc:
             error = _http_error(exc)
             detail = error.detail if isinstance(error.detail, dict) else {"code": "invalid_request"}
             publish("failed", detail)
@@ -109,6 +124,7 @@ def stream_research(
 @router.get("/history", response_model=ResearchHistory)
 def research_history(
     service: Annotated[ResearchService, Depends(research_service)],
+    user: Annotated[Principal, Depends(current_user)],
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     cursor: str | None = None,
 ) -> dict[str, Any]:
@@ -119,7 +135,7 @@ def research_history(
             decoded = datetime.fromisoformat(created), uuid.UUID(identifier)
         except Exception:
             raise HTTPException(422, detail="invalid cursor") from None
-    items = service.repository.history(limit=limit + 1, cursor=decoded)  # type: ignore[attr-defined]
+    items = service.repository.history(limit=limit + 1, cursor=decoded, user_id=user.id)  # type: ignore[attr-defined]
     next_cursor = None
     if len(items) > limit:
         last = items[limit - 1]
@@ -131,9 +147,11 @@ def research_history(
 
 @router.get("/{research_id}", response_model=ResearchResponse)
 def get_research(
-    research_id: uuid.UUID, service: Annotated[ResearchService, Depends(research_service)]
+    research_id: uuid.UUID,
+    service: Annotated[ResearchService, Depends(research_service)],
+    user: Annotated[Principal, Depends(current_user)],
 ) -> dict[str, Any]:
-    value = service.repository.get(research_id)
+    value = service.repository.get(research_id, user.id, is_admin=user.is_admin)
     if value is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="research not found")
     return value

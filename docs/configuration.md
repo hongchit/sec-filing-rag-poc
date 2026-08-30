@@ -61,6 +61,40 @@ snapshot. Prices are estimates, not billing reconciliation.
 | `CHUNKING_VERSION` | `character-v1` | Compatibility-sensitive chunk identity |
 | `INDEX_VERSION` | `vector-v1` | Compatibility-sensitive search projection identity |
 
+## Authentication and lifetime budgets
+
+Google OpenID Connect uses the authorization-code flow and requests only `openid profile email`.
+The registered callback must exactly equal `PUBLIC_BASE_URL` plus `/api/auth/google/callback`.
+
+| Variable | Rule and effect |
+| --- | --- |
+| `PUBLIC_BASE_URL` | Browser-visible HTTPS origin in production; localhost HTTP is for development only. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth web-client credentials; the secret never reaches the browser. |
+| `SESSION_SECRET` | Random secret of at least 32 characters used only for the short-lived OAuth handshake. |
+| `GOOGLE_ADMIN_EMAILS` | Comma-separated verified emails granted administrator access on each request. |
+| `SESSION_LIFETIME_DAYS` | Absolute server-side session lifetime, 1–30 days; default 7. |
+| `DEFAULT_USER_LIFETIME_BUDGET_USD` | Lifetime allowance used when an account has no database override. |
+| `RESEARCH_COST_RESERVATION_USD` | Amount reserved atomically before starting one research request. |
+| `CORPUS_PREPARATION_COST_RESERVATION_USD` | Amount reserved before submitting one filing workflow. |
+
+Reservations must conservatively cover configured provider limits. Reported usage reconciles to the
+pricing snapshot; missing usage retains the reservation for administrator review. Google profile
+data is stored for account administration and is never substituted for `EDGAR_IDENTITY`.
+
+## Optional analytics and cookie consent
+
+The browser uses CookieConsent v3 to keep necessary cookies enabled and analytics disabled until a
+visitor opts in. Configure exactly one public identifier in the root `.env`: prefer
+`VITE_GTM_CONTAINER_ID` for Google Tag Manager, or use `VITE_GA4_MEASUREMENT_ID` for direct Google
+Analytics 4. If neither or both are supplied, the build reports the condition and analytics fails
+closed without loading Google scripts. These identifiers are public configuration, not secrets.
+
+Every analytics tag deployed in a GTM container must require the analytics consent category. Do
+not deploy advertising, remarketing, personalization, or marketing tags under that grant. The
+application emits normalized route names only; GTM tags must not enrich events with full URLs,
+query strings, identity, research content, tickers, or filing identifiers. Changing the consent
+revision in `frontend/src/consent.ts` re-prompts visitors when the categories or purposes change.
+
 Parser, chunker, embedding model/dimensions, index version, and source checksum contribute to the
 corpus compatibility key. Change them deliberately: compatible reuse will stop, and new filings
 require processing and embeddings.

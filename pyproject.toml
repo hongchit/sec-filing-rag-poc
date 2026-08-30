@@ -5,7 +5,7 @@ description = "SEC filing ingestion and retrieval proof of concept"
 readme = "README.md"
 license = "PolyForm-Noncommercial-1.0.0"
 requires-python = ">=3.14"
-dependencies = ["beautifulsoup4==4.13.4", "edgartools==5.41.0", "fastapi==0.116.1", "httpx==0.28.1", "openai==1.99.9", "psycopg[binary,pool]==3.2.10", "pydantic-settings==2.10.1", "pyyaml==6.0.2", "uvicorn[standard]==0.35.0"]
+dependencies = ["authlib==1.7.0", "beautifulsoup4==4.13.4", "edgartools==5.41.0", "fastapi==0.116.1", "httpx==0.28.1", "itsdangerous==2.2.0", "openai==1.99.9", "psycopg[binary,pool]==3.2.10", "pydantic-settings==2.10.1", "pyyaml==6.0.2", "uvicorn[standard]==0.35.0"]
 [dependency-groups]
 dev = ["mypy==1.17.1", "pytest==8.4.1", "pytest-cov==6.2.1", "respx==0.22.0", "ruff==0.12.8", "types-pyyaml==6.0.12.20250822"]
 [project.scripts]

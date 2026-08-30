@@ -22,24 +22,36 @@ def validate_database_schema(database: Database) -> list[str]:
     expected = {path.name: sha256_bytes(path.read_bytes()) for path in migration_files()}
     try:
         with database.transaction() as connection:
-            relation = connection.execute("SELECT to_regclass('public.schema_migration') AS value").fetchone()
+            relation = connection.execute(
+                "SELECT to_regclass('public.schema_migration') AS value"
+            ).fetchone()
             if relation is None or relation["value"] is None:
-                raise StartupSchemaError("application schema is missing; run `uv run sec-rag-migrate`")
-            rows = connection.execute("SELECT name,sha256 FROM public.schema_migration ORDER BY name").fetchall()
+                raise StartupSchemaError(
+                    "application schema is missing; run `uv run sec-rag-migrate`"
+                )
+            rows = connection.execute(
+                "SELECT name,sha256 FROM public.schema_migration ORDER BY name"
+            ).fetchall()
             applied = {row["name"]: str(row["sha256"]) for row in rows}
             if any(applied.get(name) != digest for name, digest in expected.items()):
-                raise StartupSchemaError("migrations are pending or checksums differ; run `uv run sec-rag-migrate`")
+                raise StartupSchemaError(
+                    "migrations are pending or checksums differ; run `uv run sec-rag-migrate`"
+                )
             required = connection.execute(
                 "SELECT to_regclass('public.research_request') AS request,"
                 "to_regclass('public.research_result') AS result,to_regclass('public.llm_usage') AS usage"
             ).fetchone()
             if required is None or any(value is None for value in required.values()):
-                raise StartupSchemaError("required application relations are missing; run `uv run sec-rag-migrate`")
+                raise StartupSchemaError(
+                    "required application relations are missing; run `uv run sec-rag-migrate`"
+                )
         return sorted(expected)
     except StartupSchemaError:
         raise
     except Exception:
-        raise StartupSchemaError("database schema validation failed; verify connectivity and migrations") from None
+        raise StartupSchemaError(
+            "database schema validation failed; verify connectivity and migrations"
+        ) from None
 
 
 @dataclass

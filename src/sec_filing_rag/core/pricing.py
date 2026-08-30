@@ -52,12 +52,25 @@ class PricingConfiguration(BaseModel):
             "chat_model": chat_model,
         }
 
+    def snapshot_models(self, *models: str) -> dict[str, Any]:
+        """Capture the configured rates needed by an operational execution."""
+        selected = {model: self.models[model].model_dump(mode="json") for model in models}
+        return {
+            "version": self.version,
+            "sha256": self.sha256(),
+            "currency": self.currency,
+            "token_unit": self.token_unit,
+            "models": selected,
+        }
+
 
 def load_pricing_configuration(path: Path) -> PricingConfiguration:
     return PricingConfiguration.model_validate_json(path.read_text(encoding="utf-8"))
 
 
-def estimate_charge(snapshot: dict[str, Any] | None, operations: list[dict[str, Any]]) -> tuple[str, str | None]:
+def estimate_charge(
+    snapshot: dict[str, Any] | None, operations: list[dict[str, Any]]
+) -> tuple[str, str | None]:
     """Return (availability, decimal USD). A missing usage component invalidates the whole estimate."""
     if snapshot is None:
         return "unavailable", None
@@ -70,11 +83,15 @@ def estimate_charge(snapshot: dict[str, Any] | None, operations: list[dict[str, 
             input_tokens = operation.get("input_tokens")
             if input_tokens is None:
                 return "unavailable", None
-            total += Decimal(input_tokens) * Decimal(str(model_price["input_usd_per_million_tokens"])) / unit
-            if operation["operation"] == "answer_generation":
+            total += (
+                Decimal(input_tokens)
+                * Decimal(str(model_price["input_usd_per_million_tokens"]))
+                / unit
+            )
+            if model_price.get("output_usd_per_million_tokens") is not None:
                 output_tokens = operation.get("output_tokens")
                 output_rate = model_price.get("output_usd_per_million_tokens")
-                if output_tokens is None or output_rate is None:
+                if output_tokens is None:
                     return "unavailable", None
                 total += Decimal(output_tokens) * Decimal(str(output_rate)) / unit
         if not total.is_finite() or math.isinf(float(total)):

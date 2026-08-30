@@ -9,7 +9,7 @@ EdgarTools and OpenAI are external trust boundaries.
 
 ```mermaid
 flowchart LR
-  U[Browser or API client] -->|public HTTP| A[FastAPI]
+  U[Authenticated browser] -->|session + CSRF| A[FastAPI]
   A <--> D[(Application PostgreSQL)]
   A -->|multipart batch reference| K[Kestra]
   K -->|bearer-authenticated UUID callbacks| A
@@ -52,6 +52,8 @@ flowchart TB
 ```
 
 - **Public API:** accepts business intent and exposes application-owned state. See [API](api.md).
+- **Identity and quota policy:** validates Google-backed sessions, enforces resource ownership, and
+  reserves lifetime allowance before research or ingestion submission.
 - **Internal API:** accepts persisted identifiers from Kestra and requires the ingestion bearer
   token. It never accepts filing bytes, provider objects, or credentials.
 - **Services:** apply selection, lifecycle, research, and failure policies.

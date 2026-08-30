@@ -9,6 +9,7 @@ from typing import Any, NoReturn
 from pydantic import ValidationError
 
 from ..core.config import Settings
+from ..core.pricing import load_pricing_configuration
 from ..domain.filings import safe_error
 from ..evaluation.service import (
     RetrievalEvaluator,
@@ -152,9 +153,13 @@ def evaluate_main() -> None:
                 )
             )
             return
-        artifact = RetrievalEvaluator(database, service, service.config).run(
-            cases, dataset_sha256(args.dataset), manifest.coverage, manifest.warnings
-        )
+        pricing = load_pricing_configuration(settings.model_pricing_config_path)
+        artifact = RetrievalEvaluator(
+            database,
+            service,
+            service.config,
+            pricing.snapshot_models(service.config.embedding_model),
+        ).run(cases, dataset_sha256(args.dataset), manifest.coverage, manifest.warnings)
         args.output_dir.mkdir(parents=True, exist_ok=True)
         json_path, markdown_path = (
             args.output_dir / "retrieval-v1.json",

@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 
+from ..auth import reserve_cost
 from ..core.pricing import estimate_charge
 from ..generation.service import (
     INVESTMENT_ADVICE_MESSAGE,
@@ -23,12 +25,14 @@ class ResearchRepository:
     def __init__(self, database: Database) -> None:
         self.database = database
 
-    def idempotent_result(self, key: uuid.UUID, request: ResearchRequest) -> dict[str, Any] | None:
+    def idempotent_result(
+        self, key: uuid.UUID, request: ResearchRequest, user_id: uuid.UUID
+    ) -> dict[str, Any] | None:
         with self.database.transaction() as connection:
             row = connection.execute(
                 "SELECT id,ticker,corpus_version_id,goal,question,allowed_items,status "
-                "FROM public.research_request WHERE idempotency_key=%s",
-                (key,),
+                "FROM public.research_request WHERE idempotency_key=%s AND user_id=%s",
+                (key, user_id),
             ).fetchone()
         if row is None:
             return None
@@ -50,7 +54,7 @@ class ResearchRepository:
             raise IdempotencyConflict("idempotency key was used with different inputs")
         if row["status"] == "running":
             raise ResearchInProgress(row["id"])
-        value = self.get(row["id"])
+        value = self.get(row["id"], user_id)
         if value is None:
             raise RuntimeError("persisted idempotent research disappeared")
         return value
@@ -66,6 +70,9 @@ class ResearchRepository:
         generation_configuration_sha256: str | None = None,
         prompt_sha256: str | None = None,
         pricing_snapshot: dict[str, Any] | None = None,
+        user_id: uuid.UUID,
+        default_budget_usd: Decimal,
+        reservation_usd: Decimal,
     ) -> uuid.UUID:
         research_id = uuid.uuid4()
         with self.database.transaction() as connection:
@@ -77,9 +84,10 @@ class ResearchRepository:
             ).fetchone()
             if row is None:
                 raise ValueError("unknown company, non-ready corpus, or corpus/company mismatch")
+            reserve_cost(connection, user_id, default_budget_usd, reservation_usd)
             connection.execute(
-                "INSERT INTO public.research_request(id,company_id,corpus_version_id,ticker,goal,question,allowed_items,status,prompt_id,chat_model,idempotency_key,retrieval_configuration_sha256,generation_configuration_sha256,prompt_sha256,accession,pricing_snapshot) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,'running',%s,%s,%s,%s,%s,%s,%s,%s)",
+                "INSERT INTO public.research_request(id,company_id,corpus_version_id,ticker,goal,question,allowed_items,status,prompt_id,chat_model,idempotency_key,retrieval_configuration_sha256,generation_configuration_sha256,prompt_sha256,accession,pricing_snapshot,user_id) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,'running',%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                 (
                     research_id,
                     row["company_id"],
@@ -96,7 +104,13 @@ class ResearchRepository:
                     prompt_sha256,
                     row["accession"],
                     json.dumps(pricing_snapshot) if pricing_snapshot is not None else None,
+                    user_id,
                 ),
+            )
+            connection.execute(
+                "INSERT INTO public.cost_action(id,user_id,kind,reserved_usd,pricing_snapshot,research_id) "
+                "VALUES (%s,%s,'research',%s,%s,%s)",
+                (uuid.uuid4(), user_id, reservation_usd, json.dumps(pricing_snapshot), research_id),
             )
         return research_id
 
@@ -170,7 +184,8 @@ class ResearchRepository:
                 (research_id,),
             )
             connection.execute(
-                "INSERT INTO public.research_result(research_id,answer,insufficient_evidence,limitations,policy_refusal,disposition,rejection_message) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                "INSERT INTO public.research_result(research_id,answer,insufficient_evidence,limitations,policy_refusal,disposition,rejection_message) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (research_id) DO NOTHING",
                 (
                     research_id,
                     json.dumps([item.model_dump(mode="json") for item in answer.paragraphs]),
@@ -181,7 +196,8 @@ class ResearchRepository:
                     rejection_message,
                 ),
             )
-        value = self.get(research_id)
+            self._reconcile(connection, research_id)
+        value = self.get(research_id, is_admin=True)
         if value is None:
             raise RuntimeError("persisted research result was not found")
         return value
@@ -189,16 +205,47 @@ class ResearchRepository:
     def fail(self, research_id: uuid.UUID, error: str) -> None:
         with self.database.transaction() as connection:
             connection.execute(
-                "UPDATE public.research_request SET status='failed',safe_error=%s,finished_at=now() WHERE id=%s",
+                "UPDATE public.research_request SET status='failed',safe_error=%s,finished_at=now() "
+                "WHERE id=%s AND status='running'",
                 (error, research_id),
             )
+            self._reconcile(connection, research_id)
 
-    def get(self, research_id: uuid.UUID) -> dict[str, Any] | None:
+    def _reconcile(self, connection: Any, research_id: uuid.UUID) -> None:
+        action = connection.execute(
+            "SELECT ca.id,ca.status::text AS status,ca.reserved_usd,rr.pricing_snapshot FROM public.cost_action ca "
+            "JOIN public.research_request rr ON rr.id=ca.research_id WHERE ca.research_id=%s FOR UPDATE",
+            (research_id,),
+        ).fetchone()
+        if action is None or action.get("status") == "reconciled":
+            return
+        operations = connection.execute(
+            "SELECT operation,model,input_tokens,output_tokens FROM public.llm_usage WHERE research_id=%s ORDER BY id",
+            (research_id,),
+        ).fetchall()
+        availability, charge = estimate_charge(
+            action["pricing_snapshot"], [dict(row) for row in operations]
+        )
+        if availability == "available" and charge is not None:
+            connection.execute(
+                "UPDATE public.cost_action SET status='reconciled',charged_usd=%s,reconciled_at=now() WHERE id=%s",
+                (Decimal(charge), action["id"]),
+            )
+        else:
+            connection.execute(
+                "UPDATE public.cost_action SET status='indeterminate',charged_usd=reserved_usd,reconciled_at=now() WHERE id=%s",
+                (action["id"],),
+            )
+
+    def get(
+        self, research_id: uuid.UUID, user_id: uuid.UUID | None = None, *, is_admin: bool = False
+    ) -> dict[str, Any] | None:
         with self.database.transaction() as connection:
             row = connection.execute(
                 "SELECT rr.id AS research_id,rr.ticker,rr.corpus_version_id,rr.goal,rr.question,rr.allowed_items,rr.status,rr.prompt_id,rr.chat_model,rr.safe_error,rr.created_at,rr.finished_at,rr.accession,rr.retrieval_configuration_sha256,rr.generation_configuration_sha256,rr.prompt_sha256,rr.pricing_snapshot,res.answer,res.limitations,res.insufficient_evidence,res.policy_refusal,res.disposition,res.rejection_message "
-                "FROM public.research_request rr LEFT JOIN public.research_result res ON res.research_id=rr.id WHERE rr.id=%s",
-                (research_id,),
+                "FROM public.research_request rr LEFT JOIN public.research_result res ON res.research_id=rr.id "
+                "WHERE rr.id=%s AND (%s OR rr.user_id=%s)",
+                (research_id, is_admin, user_id),
             ).fetchone()
             if row is None:
                 return None
@@ -278,20 +325,20 @@ class ResearchRepository:
         return value
 
     def history(
-        self, *, limit: int, cursor: tuple[datetime, uuid.UUID] | None
+        self, *, limit: int, cursor: tuple[datetime, uuid.UUID] | None, user_id: uuid.UUID
     ) -> list[dict[str, Any]]:
         with self.database.transaction() as connection:
             if cursor is None:
                 rows = connection.execute(
-                    "SELECT id FROM public.research_request ORDER BY created_at DESC,id DESC LIMIT %s",
-                    (limit,),
+                    "SELECT id FROM public.research_request WHERE user_id=%s ORDER BY created_at DESC,id DESC LIMIT %s",
+                    (user_id, limit),
                 ).fetchall()
             else:
                 rows = connection.execute(
-                    "SELECT id FROM public.research_request WHERE (created_at,id)<(%s,%s) ORDER BY created_at DESC,id DESC LIMIT %s",
-                    (cursor[0], cursor[1], limit),
+                    "SELECT id FROM public.research_request WHERE user_id=%s AND (created_at,id)<(%s,%s) ORDER BY created_at DESC,id DESC LIMIT %s",
+                    (user_id, cursor[0], cursor[1], limit),
                 ).fetchall()
-        return [value for row in rows if (value := self.get(row["id"])) is not None]
+        return [value for row in rows if (value := self.get(row["id"], user_id)) is not None]
 
     def save_feedback(
         self, research_id: uuid.UUID, rating: str, comment: str | None

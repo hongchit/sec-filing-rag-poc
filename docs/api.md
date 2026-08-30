@@ -9,14 +9,16 @@ is easier to understand across operations.
 
 ```mermaid
 flowchart LR
-  UI[Browser / public client] -->|no internal token| P["Public API (/api)"]
+  UI[Browser] -->|Google-backed session + CSRF| P["Application API (/api)"]
   K[Kestra] -->|Bearer ingestion token| I["Internal API (/internal)"]
   P --> A[Application policy and state]
   I --> A
 ```
 
-Public routes do not require the internal bearer token. Protected routes use constant-time token
-comparison and return `401` when credentials are missing or invalid. Kestra submission is different:
+Only authentication callbacks and minimal health are anonymous. Application routes require a
+revocable server-side session; unsafe requests also require the session CSRF value. Cross-user
+resource identifiers return `404`. Internal routes use constant-time bearer-token comparison and
+return `401` when credentials are missing or invalid. Kestra submission is different:
 FastAPI authenticates to Kestra with Basic authentication and sends only a batch identifier.
 
 Never place source HTML, `.env` values, provider credentials, authorization headers, or private data
@@ -26,13 +28,18 @@ in route parameters, workflow payloads, logs, or error messages.
 
 | Group | Principal routes | Responsibility |
 | --- | --- | --- |
-| Health | `GET /api/health` | Application/database readiness |
+| Authentication | Google login/callback, current account, logout | OIDC and local session lifecycle |
+| Health | `GET /api/health` | Anonymous application/database readiness |
 | Companies | `GET /api/companies`, `GET /api/companies/{ticker}/status` | Configured discovery, active/historical corpus status |
 | Filing batches | `POST /api/filing-batches`, one-company preparation, batch GET | Persist ingestion intent and expose durable progress |
 | Research | synchronous/streaming POST, history GET, result GET | Grounded answer lifecycle and replay |
 | Feedback | `POST /api/feedback` | One upsertable rating per research result |
 | Evaluation | current summary, cases, and chunk GETs | Validated retrieval benchmark presentation |
 | Corpus | version, Item, and chunk-location GETs | Read-only source context and canonical citation locations |
+| Administration | users, account activity, account mutation | Admin-only consumption review, disabling, and budget overrides |
+
+Research history/results, feedback, and filing-batch status are owner-scoped. Administrators use
+the administration endpoints to inspect all users rather than broadening ordinary history queries.
 
 The [Pipeline](pipeline.md), [Research](research.md), [Evaluation](evaluation.md), and
 [Corpus reader](corpus-reader.md) guides explain feature semantics. This document does not duplicate

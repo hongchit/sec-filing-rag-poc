@@ -4,8 +4,11 @@ import json
 import uuid
 from dataclasses import asdict
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
+from ..auth import reserve_cost
+from ..core.pricing import estimate_charge
 from ..domain.filings import safe_error
 from ..integrations.sec import (
     AcquiredFiling,
@@ -23,7 +26,15 @@ class WorkflowRepository:
         self.database = database
 
     def create_batch(
-        self, *, tickers: list[str], fiscal_year: int | None, request_id: str | None
+        self,
+        *,
+        tickers: list[str],
+        fiscal_year: int | None,
+        request_id: str | None,
+        user_id: uuid.UUID,
+        default_budget_usd: Decimal,
+        reservation_usd: Decimal,
+        pricing_snapshot: dict[str, Any],
     ) -> tuple[uuid.UUID, list[uuid.UUID]]:
         batch_id = uuid.uuid4()
         item_ids: list[uuid.UUID] = []
@@ -37,9 +48,15 @@ class WorkflowRepository:
             missing = [ticker for ticker in tickers if ticker not in companies]
             if missing:
                 raise ValueError("unknown or disabled tickers: " + ", ".join(missing))
+            reserve_cost(connection, user_id, default_budget_usd, reservation_usd)
             connection.execute(
-                "INSERT INTO public.filing_batch(id,mode,fiscal_year,request_id) VALUES (%s,%s,%s,%s)",
-                (batch_id, mode, fiscal_year, request_id),
+                "INSERT INTO public.filing_batch(id,mode,fiscal_year,request_id,user_id) VALUES (%s,%s,%s,%s,%s)",
+                (batch_id, mode, fiscal_year, request_id, user_id),
+            )
+            connection.execute(
+                "INSERT INTO public.cost_action(id,user_id,kind,reserved_usd,pricing_snapshot,filing_batch_id) "
+                "VALUES (%s,%s,'corpus_preparation',%s,%s,%s)",
+                (uuid.uuid4(), user_id, reservation_usd, json.dumps(pricing_snapshot), batch_id),
             )
             for position, ticker in enumerate(tickers):
                 item_id = uuid.uuid4()
@@ -182,12 +199,15 @@ class WorkflowRepository:
             EdgarFilingDocument(**payload["document"], content=bytes(row["content"])),
         )
 
-    def batch(self, batch_id: uuid.UUID) -> dict[str, Any] | None:
+    def batch(
+        self, batch_id: uuid.UUID, user_id: uuid.UUID | None = None, *, is_admin: bool = False
+    ) -> dict[str, Any] | None:
         with self.database.transaction() as connection:
             batch = connection.execute(
                 "SELECT id AS batch_id,mode::text AS mode,fiscal_year,status::text AS status,request_id,"
-                "kestra_execution_id,created_at,updated_at FROM public.filing_batch WHERE id=%s",
-                (batch_id,),
+                "kestra_execution_id,created_at,updated_at FROM public.filing_batch WHERE id=%s "
+                "AND (%s::uuid IS NULL OR %s OR user_id=%s)",
+                (batch_id, user_id, is_admin, user_id),
             ).fetchone()
             if batch is None:
                 return None
@@ -228,4 +248,39 @@ class WorkflowRepository:
                 "finished_at=now(),updated_at=now() WHERE id=%s",
                 (status, execution_id, batch_id),
             )
+            self._reconcile_batch(connection, batch_id)
         return status
+
+    def _reconcile_batch(self, connection: Any, batch_id: uuid.UUID) -> None:
+        action = connection.execute(
+            "SELECT id,status::text AS status,reserved_usd,pricing_snapshot FROM public.cost_action "
+            "WHERE filing_batch_id=%s FOR UPDATE",
+            (batch_id,),
+        ).fetchone()
+        if action is None or action["status"] != "reserved":
+            return
+        operations = connection.execute(
+            "SELECT lu.operation,lu.model,lu.input_tokens,lu.output_tokens FROM public.filing_batch_item bi "
+            "JOIN public.llm_usage lu ON lu.ingestion_run_id=bi.ingestion_run_id WHERE bi.batch_id=%s",
+            (batch_id,),
+        ).fetchall()
+        if operations:
+            availability, charge = estimate_charge(
+                action["pricing_snapshot"], [dict(row) for row in operations]
+            )
+            if availability == "available" and charge is not None:
+                connection.execute(
+                    "UPDATE public.cost_action SET status='reconciled',charged_usd=%s,reconciled_at=now() WHERE id=%s",
+                    (Decimal(charge), action["id"]),
+                )
+                return
+        else:
+            connection.execute(
+                "UPDATE public.cost_action SET status='reconciled',charged_usd=0,reconciled_at=now() WHERE id=%s",
+                (action["id"],),
+            )
+            return
+        connection.execute(
+            "UPDATE public.cost_action SET status='indeterminate',charged_usd=reserved_usd,reconciled_at=now() WHERE id=%s",
+            (action["id"],),
+        )

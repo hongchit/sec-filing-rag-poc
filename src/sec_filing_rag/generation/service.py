@@ -5,8 +5,9 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -15,6 +16,7 @@ from ..domain.filings import SUPPORTED_ITEMS, safe_error, sha256_bytes
 from ..retrieval.service import RetrievalQuery, RetrievalResult, RetrievalService
 
 ROOT = Path(__file__).resolve().parents[3]
+LEGACY_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 ResearchGoal = Literal[
     "business", "key_risks", "management_analysis", "market_risk", "legal_regulatory_risk"
 ]
@@ -25,9 +27,7 @@ INVESTMENT_ADVICE_MESSAGE = (
     "This tool cannot answer requests for investment recommendations, trades, price targets, "
     "or price and return predictions. Ask a question about disclosures in the selected company's Form 10-K."
 )
-OUT_OF_SCOPE_MESSAGE = (
-    "This tool answers questions grounded in the selected company's supported original Form 10-K items."
-)
+OUT_OF_SCOPE_MESSAGE = "This tool answers questions grounded in the selected company's supported original Form 10-K items."
 
 GOAL_INSTRUCTIONS: dict[ResearchGoal, str] = {
     "business": "Explain the company's business, products, customers, and operating model.",
@@ -278,16 +278,21 @@ class ResearchRepository(Protocol):
         generation_configuration_sha256: str | None = None,
         prompt_sha256: str | None = None,
         pricing_snapshot: dict[str, Any] | None = None,
+        user_id: uuid.UUID,
+        default_budget_usd: Decimal,
+        reservation_usd: Decimal,
     ) -> uuid.UUID: ...
     def idempotent_result(
-        self, key: uuid.UUID, request: ResearchRequest
+        self, key: uuid.UUID, request: ResearchRequest, user_id: uuid.UUID
     ) -> dict[str, Any] | None: ...
     def identity(self, research_id: uuid.UUID) -> tuple[str, str]: ...
     def save_evidence(self, research_id: uuid.UUID, evidence: list[RetrievalResult]) -> None: ...
     def usage(self, research_id: uuid.UUID, **values: Any) -> None: ...
     def succeed(self, research_id: uuid.UUID, answer: GeneratedAnswer) -> dict[str, Any]: ...
     def fail(self, research_id: uuid.UUID, error: str) -> None: ...
-    def get(self, research_id: uuid.UUID) -> dict[str, Any] | None: ...
+    def get(
+        self, research_id: uuid.UUID, user_id: uuid.UUID | None = None, *, is_admin: bool = False
+    ) -> dict[str, Any] | None: ...
 
 
 class ResearchFailure(RuntimeError):
@@ -315,6 +320,9 @@ class ResearchService:
         model: str,
         pricing: PricingConfiguration | None = None,
         embedding_model: str | None = None,
+        user_id: uuid.UUID = LEGACY_USER_ID,
+        default_budget_usd: Decimal = Decimal("1000000"),
+        reservation_usd: Decimal = Decimal("0"),
     ) -> None:
         self.repository = repository
         self.retrieval = retrieval
@@ -323,6 +331,9 @@ class ResearchService:
         self.model = model
         self.pricing = pricing
         self.embedding_model = embedding_model
+        self.user_id = user_id
+        self.default_budget_usd = default_budget_usd
+        self.reservation_usd = reservation_usd
 
     def create(
         self,
@@ -335,7 +346,10 @@ class ResearchService:
         if prompt_id is None or self.retrieval.config.default is None:
             raise ValueError("runtime retrieval and prompt defaults must be configured")
         if idempotency_key is not None and hasattr(self.repository, "idempotent_result"):
-            existing = self.repository.idempotent_result(idempotency_key, request)
+            try:
+                existing = self.repository.idempotent_result(idempotency_key, request, self.user_id)
+            except TypeError:
+                existing = cast(Any, self.repository).idempotent_result(idempotency_key, request)
             if existing is not None:
                 return existing
         template, prompt_sha256 = self.config.prompt(prompt_id)
@@ -357,9 +371,14 @@ class ResearchService:
                 generation_configuration_sha256=self.config.sha256(),
                 prompt_sha256=prompt_sha256,
                 pricing_snapshot=snapshot,
+                user_id=self.user_id,
+                default_budget_usd=self.default_budget_usd,
+                reservation_usd=self.reservation_usd,
             )
         except TypeError:  # Compatibility for lightweight test repositories.
-            research_id = self.repository.create(request, prompt_id=prompt_id, model=self.model)
+            research_id = cast(Any, self.repository).create(
+                request, prompt_id=prompt_id, model=self.model
+            )
 
         def stage(name: str, **payload: Any) -> None:
             if on_stage is None:

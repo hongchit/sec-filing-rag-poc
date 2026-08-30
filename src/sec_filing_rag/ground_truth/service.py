@@ -189,8 +189,9 @@ class ReviewBundle(BaseModel):
 
 
 class GroundTruthRepository:
-    def __init__(self, database: Database) -> None:
+    def __init__(self, database: Database, pricing_snapshot: dict[str, Any] | None = None) -> None:
         self.database = database
+        self.pricing_snapshot = pricing_snapshot
 
     def snapshot(self) -> tuple[list[CorpusSnapshot], list[dict[str, Any]]]:
         with self.database.transaction() as connection:
@@ -274,7 +275,9 @@ class GroundTruthRepository:
     ) -> None:
         with self.database.transaction() as connection:
             connection.execute(
-                "INSERT INTO public.ground_truth_generation_run(id,model,prompt_version,sampling_seed,configuration,configuration_sha256,prompt_sha256) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                "INSERT INTO public.ground_truth_generation_run"
+                "(id,model,prompt_version,sampling_seed,configuration,configuration_sha256,prompt_sha256,pricing_snapshot) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
                 (
                     run_id,
                     config.model,
@@ -283,6 +286,9 @@ class GroundTruthRepository:
                     json.dumps(config.model_dump(mode="json")),
                     config.sha256(),
                     prompt_sha,
+                    json.dumps(self.pricing_snapshot)
+                    if self.pricing_snapshot is not None
+                    else None,
                 ),
             )
 

@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from ....auth import Principal, QuotaExceeded
 from ....core.config import TICKER_RE
 from ....repositories.workflows import WorkflowRepository
 from ....schemas.workflows import (
@@ -15,7 +16,7 @@ from ....schemas.workflows import (
     FilingPreparationRequest,
 )
 from ....services.workflows import FilingBatchService
-from ...dependencies import batch_service, workflow_repository
+from ...dependencies import batch_service, current_user, workflow_repository
 
 router = APIRouter()
 
@@ -29,6 +30,8 @@ def _submit(
             fiscal_year=payload.fiscal_year,
             request_id=request.state.request_id,
         )
+    except QuotaExceeded as exc:
+        raise HTTPException(403, detail={"code": "quota_exceeded", "budget": exc.summary}) from None
     except ValueError as exc:
         raise HTTPException(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail=str(exc)) from None
     return FilingBatchAccepted(
@@ -91,9 +94,11 @@ def create_preparation(
     description="Read authoritative overall and per-company workflow status.",
 )
 def get_batch(
-    batch_id: uuid.UUID, repository: Annotated[WorkflowRepository, Depends(workflow_repository)]
+    batch_id: uuid.UUID,
+    repository: Annotated[WorkflowRepository, Depends(workflow_repository)],
+    user: Annotated[Principal, Depends(current_user)],
 ) -> FilingBatchStatus:
-    result = repository.batch(batch_id)
+    result = repository.batch(batch_id, user.id, is_admin=user.is_admin)
     if result is None:
         raise HTTPException(status_code=404, detail="filing batch not found")
     return FilingBatchStatus.model_validate(result)

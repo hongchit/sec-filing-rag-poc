@@ -4,6 +4,7 @@ import hashlib
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from openai import OpenAI
 
@@ -42,7 +43,13 @@ class IngestionPipeline:
         self.settings, self.store, self.openai = settings, store, openai
 
     def process_acquisition(
-        self, *, ticker: str, acquired: AcquiredFiling, mode: str, kestra_execution_id: str | None
+        self,
+        *,
+        item_id: uuid.UUID,
+        ticker: str,
+        acquired: AcquiredFiling,
+        mode: str,
+        kestra_execution_id: str | None,
     ) -> CorpusResult:
         provisional_key = compatibility_key(
             parser=self.settings.parser_version,
@@ -52,7 +59,7 @@ class IngestionPipeline:
             index=self.settings.index_version,
         )
         run_id, company_id = self.store.start_run(
-            ticker, mode, provisional_key, kestra_execution_id
+            ticker, mode, provisional_key, kestra_execution_id, item_id
         )
         stage = "source-validation"
         try:
@@ -131,10 +138,41 @@ class IngestionPipeline:
                 raise ValueError("corpus has no present sections to embed")
             self.store.stage(run_id, stage, "running", input_count=len(flat_chunks))
             started = time.monotonic()
-            response = self.openai.embeddings.create(
-                model=self.settings.openai_embedding_model,
-                input=[chunk.text for chunk in flat_chunks],
-                dimensions=self.settings.openai_embedding_dimensions,
+            provider_started_at = datetime.now(UTC)
+            try:
+                response = self.openai.embeddings.create(
+                    model=self.settings.openai_embedding_model,
+                    input=[chunk.text for chunk in flat_chunks],
+                    dimensions=self.settings.openai_embedding_dimensions,
+                )
+            except Exception as provider_error:
+                finished_at = datetime.now(UTC)
+                self.store.record_embedding_usage(
+                    run_id,
+                    self.settings.openai_embedding_model,
+                    input_tokens=None,
+                    total_tokens=None,
+                    latency_ms=int((time.monotonic() - started) * 1000),
+                    provider_started_at=provider_started_at,
+                    provider_finished_at=finished_at,
+                    error=safe_error(provider_error, (self.settings.openai_api_key,)),
+                )
+                raise
+            finished_at = datetime.now(UTC)
+            usage_object = getattr(response, "usage", None)
+            prompt_tokens, total_tokens = (
+                getattr(usage_object, "prompt_tokens", None),
+                getattr(usage_object, "total_tokens", None),
+            )
+            usage_status = "reported" if total_tokens is not None else "unavailable"
+            self.store.record_embedding_usage(
+                run_id,
+                self.settings.openai_embedding_model,
+                input_tokens=prompt_tokens,
+                total_tokens=total_tokens,
+                latency_ms=int((time.monotonic() - started) * 1000),
+                provider_started_at=provider_started_at,
+                provider_finished_at=finished_at,
             )
             vectors = [entry.embedding for entry in response.data]
             if len(vectors) != len(flat_chunks) or any(
@@ -146,18 +184,6 @@ class IngestionPipeline:
             for item in REQUIRED_ITEMS:
                 embeddings[item] = vectors[cursor : cursor + len(chunks[item])]
                 cursor += len(chunks[item])
-            usage_object = getattr(response, "usage", None)
-            prompt_tokens, total_tokens = (
-                getattr(usage_object, "prompt_tokens", None),
-                getattr(usage_object, "total_tokens", None),
-            )
-            usage = (
-                prompt_tokens,
-                None,
-                total_tokens,
-                "reported" if total_tokens is not None else "unavailable",
-                int((time.monotonic() - started) * 1000),
-            )
             self.store.stage(run_id, stage, "succeeded", output_count=len(vectors))
 
             stage = "persistence"
@@ -178,7 +204,6 @@ class IngestionPipeline:
                 model=self.settings.openai_embedding_model,
                 dimensions=self.settings.openai_embedding_dimensions,
                 index=self.settings.index_version,
-                usage=usage,
                 identity_hash=hashlib.sha256(self.settings.edgar_identity.encode()).hexdigest(),
                 promote_default=mode == "latest",
             )
@@ -191,7 +216,7 @@ class IngestionPipeline:
                 len(sections),
                 len(flat_chunks),
                 len(flat_chunks),
-                usage[3],
+                usage_status,
                 "activated" if mode == "latest" else "historical_ready",
             )
         except Exception as exc:

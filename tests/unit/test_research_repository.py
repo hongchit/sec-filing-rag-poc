@@ -76,7 +76,13 @@ def test_succeed_serializes_answer_and_limitations_as_json_text(monkeypatch: Any
         limitations=["The filing does not quantify the dependency."],
         insufficient_evidence=False,
     )
-    monkeypatch.setattr(repository, "get", lambda value: {"research_id": value})
+    get_calls: list[tuple[uuid.UUID, bool]] = []
+
+    def get_result(value: uuid.UUID, *, is_admin: bool = False) -> dict[str, Any]:
+        get_calls.append((value, is_admin))
+        return {"research_id": value}
+
+    monkeypatch.setattr(repository, "get", get_result)
 
     repository.succeed(research_id, answer)
 
@@ -87,3 +93,17 @@ def test_succeed_serializes_answer_and_limitations_as_json_text(monkeypatch: Any
     assert isinstance(bound_limitations, str)
     assert json.loads(bound_answer) == [item.model_dump(mode="json") for item in answer.paragraphs]
     assert json.loads(bound_limitations) == answer.limitations
+    assert "ON CONFLICT (research_id) DO NOTHING" in database.connection.calls[1][0]
+    assert get_calls == [(research_id, True)]
+
+
+def test_fail_does_not_overwrite_a_succeeded_request() -> None:
+    database = RecordingDatabase()
+    repository = ResearchRepository(database)  # type: ignore[arg-type]
+    research_id = uuid.uuid4()
+
+    repository.fail(research_id, "late failure")
+
+    statement, params = database.connection.calls[0]
+    assert "WHERE id=%s AND status='running'" in statement
+    assert params == ("late failure", research_id)

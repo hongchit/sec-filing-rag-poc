@@ -11,10 +11,12 @@ import httpx
 from sec_filing_rag.api.dependencies import (
     batch_service,
     company_repository,
+    current_user,
     execution_service,
     system_repository,
     workflow_repository,
 )
+from sec_filing_rag.auth import Principal
 from sec_filing_rag.core.config import Settings
 from sec_filing_rag.main import create_app
 
@@ -40,7 +42,8 @@ class FakeBatchService:
 
 
 class FakeRepository:
-    def batch(self, batch_id: uuid.UUID):  # type: ignore[no-untyped-def]
+    def batch(self, batch_id: uuid.UUID, *args, **kwargs):  # type: ignore[no-untyped-def]
+        del args, kwargs
         if batch_id.int != 1:
             return None
         now = datetime.now(UTC)
@@ -111,6 +114,9 @@ def client(tmp_path: Path) -> ApiClient:
     app.dependency_overrides[batch_service] = FakeBatchService
     app.dependency_overrides[workflow_repository] = FakeRepository
     app.dependency_overrides[execution_service] = FakeExecutionService
+    app.dependency_overrides[current_user] = lambda: Principal(
+        uuid.UUID(int=2), "user@example.com", "Test User", False, "csrf"
+    )
     return ApiClient(app)
 
 
