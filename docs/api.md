@@ -8,6 +8,9 @@ is easier to understand across operations.
 ## Boundary and authentication
 
 ```mermaid
+---
+title: API authentication boundaries
+---
 flowchart LR
   UI[Browser] -->|Google-backed session + CSRF| P["Application API (/api)"]
   K[Kestra] -->|Bearer ingestion token| I["Internal API (/internal)"]
@@ -87,6 +90,9 @@ service runs in a producer thread. Disconnecting does not cancel durable work; c
 idempotency key or research identifier.
 
 ```mermaid
+---
+title: Streaming research request
+---
 sequenceDiagram
   Client->>API: POST /api/research/stream + Idempotency-Key
   API->>Service: create or replay persisted request

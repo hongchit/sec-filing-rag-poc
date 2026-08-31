@@ -52,6 +52,68 @@ export function Research() {
   const [prepareOpen, setPrepareOpen] = useState(false);
   const [prepareYear, setPrepareYear] = useState(String(new Date().getUTCFullYear() - 1));
   const [preparation, setPreparation] = useState('');
+  const [latestPreparation, setLatestPreparation] = useState('');
+  const refreshCompanies = useCallback(async () => {
+    const response = await fetch('/api/companies');
+    if (!response.ok) throw new Error('Company status is unavailable.');
+    const values = (await response.json()) as Company[];
+    setCompanies(values);
+    const ready: Record<string, CompanyStatus> = {};
+    for (const company of values.filter((value) => value.enabled)) {
+      const statusResponse = await fetch(`/api/companies/${company.ticker}/status`);
+      if (statusResponse.ok) ready[company.ticker] = (await statusResponse.json()) as CompanyStatus;
+    }
+    setStatuses(ready);
+    const firstReady = values.find((value) => value.enabled && ready[value.ticker]?.active_corpus);
+    const firstEnabled = values.find((value) => value.enabled);
+    if (retry?.retry) {
+      setTicker(retry.retry.ticker);
+      setCorpus(retry.retry.corpus_version_id);
+    } else {
+      setTicker((current) => {
+        const selected =
+          (current && ready[current]?.active_corpus ? current : undefined) ??
+          firstReady?.ticker ??
+          (current || firstEnabled?.ticker || '');
+        setCorpus(ready[selected]?.active_corpus?.corpus_version_id ?? '');
+        return selected;
+      });
+    }
+  }, [retry]);
+  const pollLatestBatch = useCallback(
+    async function poll(batchId: string, started = Date.now()) {
+      if (Date.now() - started >= 10 * 60_000) {
+        setLatestPreparation(
+          'Preparation is still running. Select Check latest batch to resume polling.',
+        );
+        return;
+      }
+      const response = await fetch(`/api/filing-batches/${batchId}`);
+      if (response.ok) {
+        const batch = (await response.json()) as {
+          status: string;
+          items: { status: string; safe_error?: string }[];
+        };
+        if (['succeeded', 'partial_failure', 'failed'].includes(batch.status)) {
+          localStorage.removeItem('research-preparation:latest');
+          await refreshCompanies();
+          if (batch.status === 'succeeded') setLatestPreparation('Latest filings ready.');
+          else
+            setLatestPreparation(
+              batch.items.find((item) => item.safe_error)?.safe_error ??
+                'Some latest filings could not be prepared. Ready corpora remain available.',
+            );
+          return;
+        }
+      }
+      setLatestPreparation(
+        'Preparing latest filings… Server-side work continues if this tab closes.',
+      );
+      const delay = Date.now() - started < 30_000 ? 2_000 : 5_000;
+      window.setTimeout(() => void poll(batchId, started), delay);
+    },
+    [refreshCompanies],
+  );
   const pollBatch = useCallback(async function poll(
     batchId: string,
     selectedTicker: string,
@@ -117,27 +179,31 @@ export function Research() {
     localStorage.setItem(`research-preparation:${ticker}:${prepareYear}`, body.batch_id);
     void pollBatch(body.batch_id, ticker, prepareYear);
   }
+  async function prepareLatest() {
+    setLatestPreparation('Submitting latest filing preparation…');
+    const response = await fetch('/api/filing-batches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (!response.ok) {
+      setLatestPreparation('Latest filing preparation could not be submitted.');
+      return;
+    }
+    const body = (await response.json()) as { batch_id: string };
+    localStorage.setItem('research-preparation:latest', body.batch_id);
+    void pollLatestBatch(body.batch_id);
+  }
   useEffect(() => {
-    void fetch('/api/companies')
-      .then((r) => r.json())
-      .then(async (values: Company[]) => {
-        setCompanies(values);
-        const ready: Record<string, CompanyStatus> = {};
-        for (const company of values.filter((value) => value.enabled)) {
-          const response = await fetch(`/api/companies/${company.ticker}/status`);
-          if (response.ok) ready[company.ticker] = (await response.json()) as CompanyStatus;
-        }
-        setStatuses(ready);
-        const first = values.find((value) => value.enabled && ready[value.ticker]?.active_corpus);
-        if (retry?.retry) {
-          setTicker(retry.retry.ticker);
-          setCorpus(retry.retry.corpus_version_id);
-        } else if (first) {
-          setTicker(first.ticker);
-          setCorpus(ready[first.ticker].active_corpus!.corpus_version_id);
-        }
+    void refreshCompanies()
+      .then(() => {
         for (let index = 0; index < localStorage.length; index += 1) {
           const storageKey = localStorage.key(index);
+          if (storageKey === 'research-preparation:latest') {
+            const batchId = localStorage.getItem(storageKey);
+            if (batchId) void pollLatestBatch(batchId);
+            continue;
+          }
           if (!storageKey?.startsWith('research-preparation:')) continue;
           const [, storedTicker, storedYear] = storageKey.split(':');
           const batchId = localStorage.getItem(storageKey);
@@ -150,7 +216,7 @@ export function Research() {
       .then(async (r) => (r.ok ? ((await r.json()) as { items: ResearchValue[] }) : { items: [] }))
       .then((value) => setRecent(value.items))
       .catch(() => setRecent([]));
-  }, [pollBatch, retry]);
+  }, [pollBatch, pollLatestBatch, refreshCompanies]);
   const corpora = useMemo(() => {
     const status = statuses[ticker];
     return status
@@ -159,6 +225,7 @@ export function Research() {
         >[])
       : [];
   }, [statuses, ticker]);
+  const hasActiveCorpus = Object.values(statuses).some((status) => status.active_corpus);
   async function submit() {
     if (!question.trim() || !ticker || !corpus) return;
     setError('');
@@ -201,6 +268,45 @@ export function Research() {
           </Typography>
         </Box>
         {error && <Alert severity="error">{error}</Alert>}
+        {companies.length > 0 && !hasActiveCorpus && (
+          <Alert severity="info">
+            <Stack spacing={1} alignItems="flex-start">
+              <Typography>No searchable filing corpus is ready yet.</Typography>
+              <Button
+                variant="contained"
+                disabled={
+                  !canPrepare ||
+                  latestPreparation.startsWith('Submitting') ||
+                  latestPreparation.startsWith('Preparing')
+                }
+                onClick={() => void prepareLatest()}
+              >
+                Prepare latest filings
+              </Button>
+              {latestPreparation.includes('still running') && (
+                <Button
+                  onClick={() => {
+                    const batchId = localStorage.getItem('research-preparation:latest');
+                    if (batchId) void pollLatestBatch(batchId);
+                  }}
+                >
+                  Check latest batch
+                </Button>
+              )}
+              {latestPreparation && <Typography>{latestPreparation}</Typography>}
+              {!canPrepare && (
+                <Typography>
+                  Your remaining lifetime allowance is below the preparation reservation.
+                </Typography>
+              )}
+            </Stack>
+          </Alert>
+        )}
+        {hasActiveCorpus && latestPreparation && (
+          <Alert severity={latestPreparation === 'Latest filings ready.' ? 'success' : 'warning'}>
+            {latestPreparation}
+          </Alert>
+        )}
         <Paper sx={{ p: { xs: 2, md: 4 } }}>
           <Stack spacing={3}>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -218,11 +324,7 @@ export function Research() {
                   {companies
                     .filter((c) => c.enabled)
                     .map((c) => (
-                      <MenuItem
-                        key={c.ticker}
-                        value={c.ticker}
-                        disabled={!statuses[c.ticker]?.active_corpus}
-                      >
+                      <MenuItem key={c.ticker} value={c.ticker}>
                         {c.ticker}
                         {c.name ? ` — ${c.name}` : ''}
                       </MenuItem>

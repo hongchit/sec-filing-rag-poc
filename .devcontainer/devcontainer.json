@@ -29,6 +29,11 @@
       ], "settings": {
         "python.terminal.useEnvFile": true,
         "python.envFile": "${workspaceFolder}/.env",
+        "typescript.tsdk": "frontend/node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+        "eslint.workingDirectories": [
+          {"directory": "frontend", "changeProcessCWD": true}
+        ],
         "[python]": {
           "editor.defaultFormatter": "charliermarsh.ruff",
           "editor.formatOnSave": true,

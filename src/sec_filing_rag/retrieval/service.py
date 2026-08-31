@@ -221,6 +221,7 @@ class QueryEmbedder(Protocol):
         text: str,
         evaluation_run_id: uuid.UUID | None = None,
         research_id: uuid.UUID | None = None,
+        generation_evaluation_run_id: uuid.UUID | None = None,
     ) -> list[float]: ...
 
 
@@ -248,6 +249,7 @@ class OpenAIQueryEmbedder:
         text: str,
         evaluation_run_id: uuid.UUID | None = None,
         research_id: uuid.UUID | None = None,
+        generation_evaluation_run_id: uuid.UUID | None = None,
     ) -> list[float]:
         provider_started_at = datetime.now(UTC)
         started = time.monotonic()
@@ -271,12 +273,13 @@ class OpenAIQueryEmbedder:
         finally:
             with self.database.transaction() as connection:
                 connection.execute(
-                    "INSERT INTO public.llm_usage(evaluation_run_id,research_id,operation,model,input_tokens,"
+                    "INSERT INTO public.llm_usage(evaluation_run_id,research_id,generation_evaluation_run_id,operation,model,input_tokens,"
                     "output_tokens,total_tokens,latency_ms,attempt,retry_count,provider_started_at,provider_finished_at,usage_status,normalized_status) "
-                    "VALUES (%s,%s,'query_embedding',%s,%s,NULL,%s,%s,1,0,%s,%s,%s,%s)",
+                    "VALUES (%s,%s,%s,'query_embedding',%s,%s,NULL,%s,%s,1,0,%s,%s,%s,%s)",
                     (
                         evaluation_run_id,
                         research_id,
+                        generation_evaluation_run_id,
                         self.model,
                         input_tokens,
                         total_tokens,
@@ -401,6 +404,7 @@ class RetrievalService:
         embedding: list[float] | None = None,
         evaluation_run_id: uuid.UUID | None = None,
         research_id: uuid.UUID | None = None,
+        generation_evaluation_run_id: uuid.UUID | None = None,
     ) -> list[RetrievalResult]:
         identity = self.repository.identity(query, self.config)
         keyword: list[Candidate] = []
@@ -408,11 +412,20 @@ class RetrievalService:
         if query.strategy in {"keyword", "weighted_hybrid", "rrf"}:
             keyword = self.repository.keyword(query, identity)
         if query.strategy in {"vector", "weighted_hybrid", "rrf"}:
-            vector_embedding = (
-                embedding
-                if embedding is not None
-                else self.embedder.embed(query.question, evaluation_run_id, research_id)
-            )
+            if embedding is not None:
+                vector_embedding = embedding
+            elif generation_evaluation_run_id is not None:
+                vector_embedding = self.embedder.embed(
+                    query.question,
+                    evaluation_run_id,
+                    research_id,
+                    generation_evaluation_run_id,
+                )
+            else:
+                # Preserve the lightweight collaborator contract used outside this benchmark.
+                vector_embedding = self.embedder.embed(
+                    query.question, evaluation_run_id, research_id
+                )
             vector = self.repository.vector(query, identity, vector_embedding)
         if query.strategy == "keyword":
             results = [candidate.result for candidate in keyword]

@@ -8,6 +8,9 @@ long-running ingestion; PostgreSQL stores source, corpus, search, research, and 
 EdgarTools and OpenAI are external trust boundaries.
 
 ```mermaid
+---
+title: System context and external boundaries
+---
 flowchart LR
   U[Authenticated browser] -->|session + CSRF| A[FastAPI]
   A <--> D[(Application PostgreSQL)]
@@ -25,6 +28,9 @@ reference-only workflow payloads.
 ## Runtime components
 
 ```mermaid
+---
+title: Runtime components
+---
 flowchart TB
   subgraph Frontend[React frontend]
     RS[Research]
@@ -64,6 +70,9 @@ flowchart TB
 ## Information layers
 
 ```mermaid
+---
+title: Information layers
+---
 flowchart TD
   SEC[Original filing HTML] --> B[Bronze<br/>immutable source snapshots]
   B --> S[Silver<br/>filings, corpus versions, sections, chunks]
@@ -98,6 +107,9 @@ The feature-level mechanics belong to [Pipeline](pipeline.md), [Evaluation](eval
 ## Trust and data boundaries
 
 ```mermaid
+---
+title: Trust and data boundaries
+---
 flowchart TD
   C[Configuration and secrets] --> A[FastAPI process]
   A -->|safe application state| DB[(Application DB)]

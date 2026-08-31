@@ -2,6 +2,12 @@
 
 This guide is the operator workflow for preparing SEC corpora, generating candidate questions, reviewing them, finalizing the retrieval ground truth, and running the retrieval evaluation. Run commands from the repository root.
 
+It is the retrieval-evaluation portion of the complete
+[setup, evaluation, and usage journey](../docs/getting-started.md). Corpus-version UUIDs are created
+inside each database. A fresh installation must generate, review, and finalize its own local
+dataset; the checked-in dataset cannot pass database-lineage validation against independently
+ingested corpus UUIDs.
+
 For the benchmark model, retrieval strategies, metric definitions, and promotion rationale, read
 [Evaluation](../docs/evaluation.md). This runbook intentionally concentrates on commands, review
 decisions, artifact validation, and operational completion criteria.
@@ -143,6 +149,14 @@ Review the tracked inputs before spending model tokens:
 - `config/ground-truth.json` controls model, seed, workers, target chunks, generated questions, and the five-candidate screening budget.
 - `evaluation/prompts/investor-questions-v1.txt` defines meaningfulness and question-generation behavior.
 - The active defaults must share one processing contract.
+
+The prompt receives one sampled filing passage at a time. It rejects low-value passage candidates
+or proposes one exact-keyword and two semantic-paraphrase questions for human review. This provides
+consistent candidate coverage without treating model output as truth: reviewers still decide
+whether the passage is meaningful and every question is natural, correctly labeled, and fully
+answerable from it. See the retrieval guide's
+[ground-truth question-generation prompt](../docs/retrieval-evaluation-workflow.md#ground-truth-question-generation-prompt)
+section for its strengths, weaknesses, and versioning implications.
 
 Generate a new bundle:
 
@@ -361,3 +375,17 @@ uv run sec-rag-evaluate-retrieval
 ```
 
 If more coverage is needed, prepare additional compatible historical years, run a fresh `generate`, review the new bundle, and finalize again. Adding corpus data changes the snapshot, so an older bundle cannot be resumed against the expanded pool.
+
+## 9. Promote an accepted retrieval result
+
+Evaluation records a recommendation and never changes runtime behavior. After accepting the
+coverage, warnings, misses, latency, and deterministic winner in
+`evaluation/results/retrieval-v1.json`, copy the `selected_default` values for `strategy`,
+`candidate_count`, `top_k`, `alpha`, and `rrf_k` into the `default` object in
+`config/retrieval.json`. Keep the strict object complete and update `reason` with the artifact
+identity, metrics, and human decision.
+
+Run the provider-free verification set in [Testing](../docs/testing.md), restart FastAPI, and
+confirm startup accepts the tracked configuration. Continue with
+[full-RAG evaluation](../docs/rag-evaluation-workflow.md), which fixes this promoted retrieval path
+while comparing generation prompts.

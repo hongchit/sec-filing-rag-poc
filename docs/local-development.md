@@ -1,8 +1,10 @@
 # Local development
 
-The repository is designed to run inside its Dev Container. The container pins Python and Node
-dependencies, provides PostgreSQL and Kestra, shares package caches, and runs migration checks after
-startup.
+The repository is designed to run inside its Dev Container. [Getting started](getting-started.md)
+owns cloning, initial configuration, workflow import, ingestion, evaluation, and first use. This
+guide covers ports and recurring development work after that setup. The container pins Python and
+Node dependencies, provides PostgreSQL and Kestra, shares package caches, and runs migration checks
+after startup.
 
 ## Prerequisites
 
@@ -11,9 +13,8 @@ startup.
 - SEC identity and OpenAI credentials
 - Sufficient local storage for filing HTML, PostgreSQL, frontend dependencies, and model caches
 
-Clone the repository, open it in the Dev Container, copy `.env.example` to `.env`, and replace all
-placeholders. Environment meanings and compatibility effects are documented in
-[Configuration](configuration.md).
+Complete the prerequisites and `.env` procedure in [Getting started](getting-started.md).
+Environment meanings and compatibility effects are documented in [Configuration](configuration.md).
 
 ## Local services and ports
 

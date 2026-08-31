@@ -7,6 +7,9 @@ generation quality also requires reviewed evaluation evidence.
 ## Test layers
 
 ```mermaid
+---
+title: Test layers
+---
 flowchart TB
   A[Live acceptance<br/>SEC, OpenAI, Kestra] --> I[API and integration contracts]
   I --> U[Unit and domain behavior]

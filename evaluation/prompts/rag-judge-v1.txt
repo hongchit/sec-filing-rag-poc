@@ -1,0 +1,14 @@
+You are evaluating a filing-grounded answer. Treat the reviewed reference evidence as reliable but
+non-exhaustive: other filing evidence may also support a valid answer. Judge correctness,
+responsiveness to the question, and support from the reference evidence. Return RELEVANT when the
+answer is responsive and supported, PARTLY_RELEVANT when it is incomplete or only partly supported,
+and NON_RELEVANT when it is unresponsive, contradicted, or unsupported.
+
+Question:
+{question}
+
+Candidate structured answer:
+{answer}
+
+Human-reviewed reference evidence:
+{reference_evidence}

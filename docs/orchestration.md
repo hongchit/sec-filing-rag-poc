@@ -7,6 +7,9 @@ persists a batch and its ordered items, then submits only `batch_id` to the sing
 ## Component boundary
 
 ```mermaid
+---
+title: API and Kestra component boundary
+---
 flowchart LR
   C[Client] -->|business intent| A[FastAPI]
   A -->|persist batch/items| DB[(Application PostgreSQL)]
@@ -23,6 +26,9 @@ validation, idempotency, persistence, activation, and failure policy.
 ## Flow graph
 
 ```mermaid
+---
+title: Filing batch workflow
+---
 flowchart TD
   S[Receive batch_id] --> L[Load persisted item IDs]
   L --> F{For each item<br/>concurrency 1}
@@ -48,6 +54,9 @@ of earlier task outcomes.
 ## State machines
 
 ```mermaid
+---
+title: Filing batch item states
+---
 stateDiagram-v2
   [*] --> pending
   pending --> selecting
@@ -65,6 +74,9 @@ Items normally move `pending → selecting → acquiring → processing → succ
 bounded safe error where applicable.
 
 ```mermaid
+---
+title: Filing batch states
+---
 stateDiagram-v2
   [*] --> submitted
   submitted --> running

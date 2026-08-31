@@ -1,13 +1,16 @@
 # Operations
 
-Operations covers runtime readiness, observability, migrations, recovery, destructive reset, and
-evaluation promotion. Local setup belongs to [Local development](local-development.md), setting
+Operations covers runtime readiness, observability, migrations, recovery, and destructive reset.
+Initial setup and evaluation promotion belong to [Getting started](getting-started.md), setting
 definitions to [Configuration](configuration.md), and symptom diagnosis to
 [Troubleshooting](troubleshooting.md).
 
 ## Startup and readiness
 
 ```mermaid
+---
+title: Startup and readiness checks
+---
 flowchart TD
   F[Load settings and tracked files] --> C{Valid and fully priced?}
   C -- no --> X[startup_configuration_invalid]
@@ -135,23 +138,6 @@ uv run sec-rag-generate-http --check
 
 Retrieval artifacts have a checksum-bound set and must be validated together. The complete benchmark
 workflow lives in [evaluation/REVIEW.md](../evaluation/REVIEW.md).
-
-## Generation evaluation and promotion
-
-Generation evaluation uses the reviewed baseline and can incur meaningful OpenAI cost. Confirm the
-active model, pricing, account limits, complete workload, and expected output location before a live
-run. Validate a completed artifact and render its summary with:
-
-```bash
-# Validate the generation-evaluation artifact and render its review summary.
-sec-rag-evaluate-generation evaluation/results/generation-v1.json \
-  --markdown evaluation/results/generation-v1.md
-```
-
-The validator requires the expected case set and rejects a selected prompt that fails the 100%
-valid-handle or zero-cross-corpus guardrails. Refusal-aware prompt/configuration changes must be
-benchmarked as new artifacts. Promote only the measured eligible winner, updating configuration,
-hashes, documentation, and runtime default together.
 
 ## Operational acceptance
 

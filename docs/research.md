@@ -19,6 +19,9 @@ EDGAR links, and corpus-reader navigation keep verification one action away.
 ## Request lifecycle
 
 ```mermaid
+---
+title: Research request lifecycle
+---
 sequenceDiagram
   participant UI as Research UI
   participant API as FastAPI
@@ -71,6 +74,13 @@ Generation receives the question, goal instructions, and selected evidence. The 
 the configured structured schema. Answer paragraphs are classified as filing facts or
 interpretations and must carry one or more known citation handles.
 
+`config/generation.json` selects the promoted template from `config/prompts/`. The service formats
+that template with the goal instruction, exact user question, and bounded evidence context, then
+records both the generation-configuration and prompt checksums with the request. Prompt comparison
+and manual promotion are explained in
+[Five candidate answer prompts](rag-evaluation-workflow.md#five-candidate-answer-prompts) and
+[Promote an accepted prompt](rag-evaluation-workflow.md#promote-an-accepted-prompt).
+
 Application validation rejects blank text, duplicate/unknown handles, malformed structure, and
 substantive paragraphs without evidence. Grounding reduces unsupported claims and makes them easier
 to detect; it does not prove every interpretation correct. Users should inspect the cited source for
@@ -96,6 +106,9 @@ observed stages through server-sent events (SSE). Both run the same service and 
 UUID `Idempotency-Key`.
 
 ```mermaid
+---
+title: Research request idempotency
+---
 flowchart TD
   K[Idempotency key + normalized input] --> E{Existing request?}
   E -- no --> N[Create and execute]

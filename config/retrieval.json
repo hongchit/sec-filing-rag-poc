@@ -8,10 +8,10 @@
   "rrf_k_values": [1, 10, 60],
   "default": {
     "strategy": "weighted_hybrid",
-    "candidate_count": 10,
+    "candidate_count": 50,
     "top_k": 10,
     "alpha": 0.25,
     "rrf_k": 60,
-    "reason": "Accepted retrieval-v1 winner: MRR 0.9395424836601307, Hit Rate 1.0, zero misses, complete coverage, and no warnings."
+    "reason": "Accepted retrieval-v1 winner: MRR 0.9600694444444445, Hit Rate 0.9895833333333334, complete coverage, and no warnings."
   }
 }

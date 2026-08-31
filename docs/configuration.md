@@ -7,6 +7,9 @@ before serving requests. Copy `.env.example` to untracked `.env`; never commit r
 ## Configuration model
 
 ```mermaid
+---
+title: Configuration validation and startup
+---
 flowchart LR
   E[Environment variables] --> S[Validated Settings]
   T[Tracked config and prompts] --> V[Startup validation]
@@ -137,12 +140,17 @@ Encode the raw token without a newline as shown in `.env.example`. Never log eit
 | `config/generation.json` | Prompt, model behavior, evidence and policy contract |
 | `config/ground-truth.json` | Sampling, model, workers, and question-generation budget |
 | `config/model-pricing-v1.json` | Versioned model rates used for estimates |
-| `prompts/*.txt` | Versioned answer-generation templates |
-| `evaluation/prompts/*.txt` | Versioned ground-truth question instructions |
+| `config/prompts/*.txt` | Versioned runtime answer-generation candidates |
+| `evaluation/prompts/*.txt` | Versioned ground-truth generation and answer-judging instruments |
 
 Retrieval and generation paths can also be overridden through `RETRIEVAL_CONFIG_PATH` and
 `GENERATION_CONFIG_PATH`; evaluation artifact paths have corresponding Settings fields. Production
 deployments should keep selected files immutable for the lifetime of a process.
+
+The retrieval dataset prompt is explained under
+[Ground-truth question-generation prompt](retrieval-evaluation-workflow.md#ground-truth-question-generation-prompt).
+The runtime candidates and evaluation judge are explained under
+[Prompt roles in full-RAG evaluation](rag-evaluation-workflow.md#prompt-roles-in-full-rag-evaluation).
 
 ## Startup validation
 

@@ -12,6 +12,9 @@ choose a retrieval strategy. [Research](research.md) consumes a ready corpus, wh
 [Evaluation](evaluation.md) measures retrieval behavior.
 
 ```mermaid
+---
+title: Filing ingestion pipeline
+---
 flowchart TD
   I[Batch intent] --> S[Select original 10-K]
   S --> A[Acquire and checksum HTML]
@@ -90,6 +93,9 @@ changing relevant text or processing settings produces a new identity rather tha
 evidence.
 
 ```mermaid
+---
+title: Deterministic chunk construction
+---
 flowchart TD
   T[Normalized Item text] --> C1[Chunk 0]
   T --> C2[Chunk 1]
@@ -120,6 +126,9 @@ dimensions, and index version. It prevents a corpus built under one processing c
 silently treated as equivalent to another.
 
 ```mermaid
+---
+title: Corpus reuse and promotion
+---
 flowchart TD
   K[Company + accession + compatibility key] --> R{Ready corpus exists?}
   R -- no --> B[Build and validate candidate]

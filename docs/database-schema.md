@@ -7,6 +7,9 @@ references, research, and evaluation. Numbered migrations under `migrations/vers
 ## Principal relationships
 
 ```mermaid
+---
+title: Principal database relationships
+---
 erDiagram
   COMPANY ||--o{ FILING_BATCH_ITEM : processes
   FILING_BATCH ||--|{ FILING_BATCH_ITEM : contains
@@ -102,6 +105,9 @@ not a second editable copy.
 The reader adds no migration. It derives paragraphs and highlight ranges at read time:
 
 ```mermaid
+---
+title: Corpus reader paragraph derivation
+---
 flowchart TD
   CV[corpus_version] --> F[filing + company metadata]
   CV --> S[section text and section source_start]

@@ -29,6 +29,133 @@ test('redirects the root route to the research workspace', () => {
   expect(screen.getByRole('heading', { name: 'Investor research' })).toBeInTheDocument();
 });
 
+test('bootstraps latest filings when a fresh installation has no active corpus', async () => {
+  history.replaceState(null, '', '/research');
+  let statusReads = 0;
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    let body: unknown;
+    if (url === '/api/auth/me')
+      body = {
+        user_id: 'user-id',
+        email: 'user@example.com',
+        is_admin: false,
+        budget: { limit_usd: '10', used_usd: '0', reserved_usd: '0', remaining_usd: '10' },
+        action_reservations: { research_usd: '0.05', corpus_preparation_usd: '0.05' },
+      };
+    else if (url === '/api/companies') body = [{ ticker: 'AAPL', enabled: true, name: 'Apple' }];
+    else if (url === '/api/companies/AAPL/status') {
+      statusReads += 1;
+      body = {
+        ticker: 'AAPL',
+        active_corpus:
+          statusReads > 1
+            ? {
+                corpus_version_id: 'corpus-latest',
+                accession: '0000320193-25-000079',
+                report_date: '2025-09-27',
+                filing_date: '2025-10-31',
+              }
+            : null,
+        historical_corpora: [],
+      };
+    } else if (url === '/api/research/history?limit=10') body = { items: [] };
+    else if (url === '/api/filing-batches' && init?.method === 'POST')
+      body = { batch_id: 'batch-id' };
+    else if (url === '/api/filing-batches/batch-id')
+      body = { status: 'succeeded', items: [{ status: 'succeeded' }] };
+    else body = {};
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  render(
+    <ThemeProvider theme={theme}>
+      <App authenticate />
+    </ThemeProvider>,
+  );
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Prepare latest filings' }));
+  await waitFor(() => expect(screen.getByText('Latest filings ready.')).toBeInTheDocument());
+  expect(
+    fetchMock.mock.calls.some(
+      ([input, init]) =>
+        input === '/api/filing-batches' &&
+        init?.method === 'POST' &&
+        init.body === JSON.stringify({}),
+    ),
+  ).toBe(true);
+  await waitFor(() =>
+    expect(screen.queryByText('No searchable filing corpus is ready yet.')).not.toBeInTheDocument(),
+  );
+  expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('AAPL');
+  expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('2025');
+});
+
+test('keeps successful corpora available when latest bootstrap partially fails', async () => {
+  history.replaceState(null, '', '/research');
+  let refreshed = false;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      let body: unknown;
+      if (url === '/api/auth/me')
+        body = {
+          user_id: 'user-id',
+          email: 'user@example.com',
+          is_admin: false,
+          budget: { limit_usd: '10', used_usd: '0', reserved_usd: '0', remaining_usd: '10' },
+          action_reservations: { research_usd: '0.05', corpus_preparation_usd: '0.05' },
+        };
+      else if (url === '/api/companies')
+        body = [
+          { ticker: 'AAPL', enabled: true },
+          { ticker: 'MSFT', enabled: true },
+        ];
+      else if (url.endsWith('/status'))
+        body = {
+          ticker: url.includes('AAPL') ? 'AAPL' : 'MSFT',
+          active_corpus:
+            refreshed && url.includes('AAPL')
+              ? {
+                  corpus_version_id: 'corpus-aapl',
+                  accession: 'accession',
+                  report_date: '2025-09-27',
+                  filing_date: '2025-10-31',
+                }
+              : null,
+          historical_corpora: [],
+        };
+      else if (url === '/api/research/history?limit=10') body = { items: [] };
+      else if (url === '/api/filing-batches' && init?.method === 'POST')
+        body = { batch_id: 'partial-batch' };
+      else if (url === '/api/filing-batches/partial-batch') {
+        refreshed = true;
+        body = {
+          status: 'partial_failure',
+          items: [
+            { status: 'succeeded' },
+            { status: 'failed', safe_error: 'MSFT filing preparation failed safely.' },
+          ],
+        };
+      } else body = {};
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+    }),
+  );
+
+  render(
+    <ThemeProvider theme={theme}>
+      <App authenticate />
+    </ThemeProvider>,
+  );
+  fireEvent.click(await screen.findByRole('button', { name: 'Prepare latest filings' }));
+
+  expect(await screen.findByText('MSFT filing preparation failed safely.')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('2025'));
+  expect(screen.queryByText('No searchable filing corpus is ready yet.')).not.toBeInTheDocument();
+});
+
 test('keeps policies public and sends protected routes to the landing page', async () => {
   history.replaceState(null, '', '/privacy');
   const fetchMock = vi.fn();

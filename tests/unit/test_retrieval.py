@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -19,6 +20,7 @@ from sec_filing_rag.evaluation.service import (
 )
 from sec_filing_rag.retrieval.service import (
     Candidate,
+    RetrievalConfiguration,
     RetrievalQuery,
     RetrievalResult,
     load_retrieval_configuration,
@@ -121,22 +123,45 @@ def test_metrics_and_winner_tie_breaks() -> None:
     assert select_winner(rows)["configuration"]["strategy"] == "keyword"
 
 
-def test_tracked_configuration_grid_and_finalized_schema() -> None:
-    config = load_retrieval_configuration(Path("config/retrieval.json"))
+def test_retrieval_configuration_grid_and_default_schema() -> None:
+    config = RetrievalConfiguration.model_validate(
+        {
+            "version": "test-v1",
+            "embedding_model": "embedding-model",
+            "embedding_dimensions": 3,
+            "candidate_counts": [10, 20, 50],
+            "top_k_values": [5, 10],
+            "hybrid_alphas": [0.25, 0.5],
+            "rrf_k_values": [10, 60],
+            "default": {
+                "strategy": "weighted_hybrid",
+                "candidate_count": 20,
+                "top_k": 10,
+                "alpha": 0.25,
+                "rrf_k": 60,
+                "reason": "Accepted synthetic test winner.",
+            },
+        }
+    )
     assert config.candidate_counts == [10, 20, 50]
     assert config.top_k_values == [5, 10]
     assert config.default is not None
-    assert config.default.model_dump() == {
-        "strategy": "weighted_hybrid",
-        "candidate_count": 10,
-        "top_k": 10,
-        "alpha": 0.25,
-        "rrf_k": 60,
-        "reason": (
-            "Accepted retrieval-v1 winner: MRR 0.9395424836601307, Hit Rate 1.0, "
-            "zero misses, complete coverage, and no warnings."
-        ),
-    }
+    assert config.default.candidate_count in config.candidate_counts
+    assert config.default.top_k in config.top_k_values
+    assert config.default.alpha in config.hybrid_alphas
+
+
+def test_tracked_retrieval_default_matches_evaluation_artifact() -> None:
+    config = load_retrieval_configuration(Path("config/retrieval.json"))
+    artifact = json.loads(Path("evaluation/results/retrieval-v1.json").read_text(encoding="utf-8"))
+    assert config.default is not None
+    promoted = config.default.model_dump(exclude={"reason"})
+    assert promoted == artifact["selected_default"]
+    assert config.default.reason is not None
+    assert config.default.reason.strip()
+
+
+def test_finalized_retrieval_case_and_manifest_schema() -> None:
     case = {
         "id": "gtq-0123456789abcdef",
         "review_status": "reviewed",

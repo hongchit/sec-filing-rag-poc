@@ -5,9 +5,18 @@ can produce fluent text even when retrieval is weak, so generation quality alone
 This project uses human-reviewed questions, exact relevant chunk identifiers, repeatable
 configuration grids, and explicit selection rules to make retrieval quality measurable.
 
+For dataset construction, including how the model-assisted prompt affects retrieval ground truth,
+use [Ground-truth question-generation prompt](retrieval-evaluation-workflow.md#ground-truth-question-generation-prompt).
+For prompt and answer evaluation across the complete path, start with
+[Prompt roles in full-RAG evaluation](rag-evaluation-workflow.md#prompt-roles-in-full-rag-evaluation).
+This page remains the high-level overview of the project's current model and accepted results.
+
 ## Evaluation lifecycle
 
 ```mermaid
+---
+title: Retrieval evaluation lifecycle
+---
 flowchart TD
   C[Ready compatible corpora] --> S[Deterministic candidate sampling]
   S --> G[Model-assisted question generation]
@@ -64,6 +73,9 @@ one pinned corpus per case, so changes in active defaults cannot change the benc
   letting a few extreme calls dominate.
 
 ```mermaid
+---
+title: Retrieval configuration selection
+---
 flowchart TD
   R[Configuration results] --> H{Highest MRR}
   H --> HR{Highest Hit Rate}
@@ -120,5 +132,7 @@ proves integrity, not quality. Promotion requires valid checksums, complete expe
 warnings and misses, and the deterministic selection rule.
 
 Generation evaluation is separate: it judges answer behavior after retrieval and applies citation
-and policy gates. Its operational validation and promotion commands live in
-[Operations](operations.md); retrieval benchmark preparation remains in the review runbook.
+and policy gates. Its candidate designs are compared in
+[Five candidate answer prompts](rag-evaluation-workflow.md#five-candidate-answer-prompts), while
+operational validation and promotion commands live in [Operations](operations.md); retrieval
+benchmark preparation remains in the review runbook.

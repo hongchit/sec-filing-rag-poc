@@ -8,7 +8,7 @@ is a practical reference architecture for adopting RAG where answers must remain
 the underlying knowledge changes over time.
 
 [Benefits](#why-this-system) · [Features](#features) · [Architecture](#architecture) ·
-[Quick start](#quick-start) · [Usage](#usage) · [Documentation](#documentation) ·
+[Quick start](#quick-start) · [Complete journey](#complete-setup-evaluation-and-use) · [Usage](#usage) · [Documentation](#documentation) ·
 [Development](#development-and-testing) · [Status](#license-and-project-status)
 
 ## Why this system
@@ -90,7 +90,10 @@ The Corresponding research result:
 ## Architecture
 
 ```mermaid
-flowchart LR
+---
+title: SEC filing research flow
+---
+flowchart TD
   SEC[SEC EDGAR filings] --> P[Governed corpus preparation]
   P --> C[(Versioned searchable corpus)]
   Q[Research question] --> R[Measured hybrid retrieval]
@@ -107,7 +110,7 @@ EdgarTools acquires original filings, and OpenAI supplies embeddings and answer 
 
 ## Prerequisites
 
-- A Dev Container-compatible Docker environment
+- Git, Visual Studio Code with Dev Containers, and Docker Desktop or a compatible Docker runtime
 - A truthful SEC identity
 - OpenAI API credentials
 - Local PostgreSQL and Kestra services supplied by the Dev Container
@@ -117,6 +120,9 @@ EdgarTools acquires original filings, and OpenAI supplies embeddings and answer 
 The application fails fast when required settings, tracked configuration, pricing, database
 connectivity, or migration checksums are invalid. It does not probe SEC, OpenAI, or Kestra
 availability during startup.
+
+See [Getting started](docs/getting-started.md) for account setup, exact configuration, evaluation,
+promotion, and acceptance guidance.
 
 ## Quick start
 
@@ -135,28 +141,36 @@ npm --prefix frontend run dev
 ```
 
 Import `workflows/filing_batch.yaml` through the Kestra UI at <http://127.0.0.1:18082>. FastAPI is
-available on port 8000 and the frontend on port 5173. Detailed setup and port information lives in
+available on port 8000 and the frontend on port 5173. Complete initial setup and ingestion are in
+[Getting started](docs/getting-started.md); recurring developer commands are in
 [local development](docs/local-development.md).
+
+## Complete setup, evaluation, and use
+
+The complete project journey is:
+
+1. Install the prerequisites, clone the repository, and reopen it in the Dev Container.
+2. Create `.env`, configure SEC/OpenAI/Google/Kestra/PostgreSQL values, and start the backend and
+   frontend.
+3. Import the Kestra filing workflow, sign in, and use **Prepare latest filings** to create the
+   initial searchable corpora.
+4. Use the checked-in promoted retrieval and generation defaults for a fast functional review, or
+   continue with the full quality workflow.
+5. Generate and human-review local ground truth, finalize it, and run retrieval evaluation.
+6. Review and manually promote the accepted retrieval result.
+7. Run full-RAG prompt evaluation against that fixed retrieval configuration, calibrate judge
+   verdicts, and manually promote the accepted prompt.
+8. Restart after configuration changes and verify research, evaluation evidence, corpus reading,
+   history, citations, and operational usage.
+
+The end-to-end commands, completion checks, fast/full path split, and fresh-database lineage caveat
+are in [Getting started: set up, evaluate, and use the system](docs/getting-started.md).
 
 ## Usage
 
-Prepare the latest original 10-K for all enabled companies:
-
-```bash
-# Create a latest-filing preparation batch for every enabled company.
-curl --fail-with-body -i -X POST http://127.0.0.1:8000/api/filing-batches \
-  -H 'Content-Type: application/json' -d '{}'
-```
-
-Poll the returned batch and inspect company readiness:
-
-```bash
-# Read durable progress for the submitted batch.
-curl --fail-with-body -i http://127.0.0.1:8000/api/filing-batches/$BATCH_ID
-
-# Confirm the company's active and historical corpus readiness.
-curl --fail-with-body -i http://127.0.0.1:8000/api/companies/AAPL/status
-```
+After Google sign-in, a fresh installation shows **Prepare latest filings** on the Research page.
+Submit it once and wait for the UI to report ready corpora. The browser supplies the authenticated
+session and CSRF protection required by the ingestion API.
 
 Open <http://127.0.0.1:5173/research> for grounded research,
 <http://127.0.0.1:5173/evaluation> for retrieval evaluation, or
@@ -168,11 +182,14 @@ are described in [API reference](docs/api.md).
 Start with the [documentation index](docs/README.md), or go directly to:
 
 - [Architecture](docs/architecture.md) — system structure, boundaries, and invariants
+- [Getting started](docs/getting-started.md) — clone, configure, ingest, evaluate, promote, and use
+- [Command reference](docs/commands.md) — project CLIs, frontend scripts, checks, and workflow links
 - [Pipeline](docs/pipeline.md) — acquisition through validated corpus activation
 - [Evaluation](docs/evaluation.md) — benchmark design and retrieval selection
+- [Evaluation prompt roles](docs/rag-evaluation-workflow.md#prompt-roles-in-full-rag-evaluation) — candidate answer generation and judging
 - [Research](docs/research.md) — grounded answer lifecycle and guardrails
 - [Corpus reader](docs/corpus-reader.md) — contextual reading and source navigation
-- [Operations](docs/operations.md) — runtime, migrations, recovery, and promotion
+- [Operations](docs/operations.md) — runtime readiness, observability, migrations, and recovery
 - [Glossary](docs/glossary.md) — RAG and project terminology
 
 ## Development and testing

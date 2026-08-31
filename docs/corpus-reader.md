@@ -15,6 +15,9 @@ makes chunk boundaries and provenance observable instead of hiding them behind a
 ## Component and data flow
 
 ```mermaid
+---
+title: Corpus reader component and data flow
+---
 flowchart TD
   R[Research result] -->|corpus + chunk| UI[CorpusReader route]
   E[Evaluation evidence] -->|corpus + chunk| UI
@@ -99,6 +102,9 @@ coalesced, or deleted; this includes one-character lines and table cells. A reco
 emphasis.
 
 ```mermaid
+---
+title: Paragraph offset derivation
+---
 flowchart TD
   T[section.text_content] --> SL[split lines, retaining newline lengths]
   SL -->|empty| O[advance offset only]
@@ -133,6 +139,9 @@ ticker, and Item. Canonicalization uses history replacement so an incorrect inte
 not become an extra Back-button stop.
 
 ```mermaid
+---
+title: Corpus reader navigation history
+---
 sequenceDiagram
   participant Source as Research/evaluation
   participant UI as CorpusReader
@@ -184,6 +193,9 @@ unsuitable, candidates are checked by increasing distance, with the following pa
 ties; the UI labels this as an approximate jump.
 
 ```mermaid
+---
+title: EDGAR text-fragment fallback
+---
 flowchart TD
   C[Current visible paragraph] --> S{safe 6-12 word phrase?}
   S -- yes --> F[encode text fragment]

@@ -3,5 +3,15 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"typescript.tsdk": "frontend/node_modules/typescript/lib",
+		"typescript.enablePromptUseWorkspaceTsdk": true,
+		"eslint.workingDirectories": [
+			{
+				"directory": "frontend",
+				"changeProcessCWD": true
+			}
+		]
+	}
 }
