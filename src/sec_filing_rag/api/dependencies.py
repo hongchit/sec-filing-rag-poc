@@ -12,6 +12,7 @@ from ..core.config import Settings
 from ..core.pricing import load_pricing_configuration
 from ..core.resources import AppResources
 from ..evaluation.dashboard import EvaluationDashboardService
+from ..evaluation.generation_dashboard import GenerationEvaluationDashboardService
 from ..generation.service import (
     OpenAIAnswerProvider,
     ResearchService,
@@ -123,6 +124,12 @@ def evaluation_dashboard(
     db: Annotated[Database, Depends(database)], config: Annotated[Settings, Depends(settings)]
 ) -> EvaluationDashboardService:
     return EvaluationDashboardService(db, config)
+
+
+def generation_evaluation_dashboard(
+    db: Annotated[Database, Depends(database)], config: Annotated[Settings, Depends(settings)]
+) -> GenerationEvaluationDashboardService:
+    return GenerationEvaluationDashboardService(db, config)
 
 
 def provider_gateway() -> EdgarGateway:

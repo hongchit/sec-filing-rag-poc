@@ -120,6 +120,25 @@ warnings, and question outcomes. Question detail shows expected and retrieved ch
 full text, technical provenance, EDGAR source, and a corpus-pinned reader link. URL-backed filters
 make a diagnostic view repeatable without changing benchmark artifacts.
 
+The `/evaluation/generation` sub-page presents the current prompt winner, business-facing quality,
+citation, latency, and cost measures, a prompt leaderboard, and a question-by-prompt verdict matrix.
+Question detail compares two structured answers and their judge explanations against the shared
+retrieved evidence. Metric definitions and exact checksum-verified prompt source remain available
+through contextual help and dialogs without crowding the decision view.
+
+### Artifact-only deployments
+
+Generation summary, verdict, and answer data comes from the configured JSON artifact and remains
+available when a deployment does not contain the original evaluation run or filing chunks in
+PostgreSQL. The dashboard warns reviewers that operational reconciliation or evidence inspection is
+unavailable; it does not misreport the evaluation as failed.
+
+An administrator restoring a deployment must first follow [Getting started](getting-started.md) to
+prepare the required corpus and database records, then follow the
+[full-RAG evaluation guide](rag-evaluation-workflow.md) to regenerate and validate an artifact bound
+to that corpus. Until both steps are complete, use the artifact-level aggregates and answers for
+orientation only and do not treat citation handles as independently reverified evidence.
+
 ![Weighted-hybrid configuration, Hit Rate/MRR/latency](assets/screenshots/303%20-%20Weighted-hybrid%20configuration%20Hit%20Rate%20MRR%20latency.png)
 ![Outcome filters](assets/screenshots/304%20-%20Outcome%20filters.png)
 ![Question evidence drill-down](assets/screenshots/302%20-%20Evaluation%20evidence%20drill-down.png)

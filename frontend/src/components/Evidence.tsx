@@ -193,7 +193,13 @@ function RankedRow({
     </Accordion>
   );
 }
-export function EvidenceReview({ item }: { item: EvaluationCase }) {
+export function EvidenceReview({
+  item,
+  chunkBaseUrl = '/api/retrieval-evaluations/current/chunks',
+}: {
+  item: EvaluationCase;
+  chunkBaseUrl?: string;
+}) {
   const location = useLocation();
   const [selectedId, setSelectedId] = useState('');
   const [full, setFull] = useState<FullChunk | null>(null);
@@ -216,7 +222,7 @@ export function EvidenceReview({ item }: { item: EvaluationCase }) {
     setFull(null);
     setLoading(true);
     try {
-      const chunk = await getJson<FullChunk>(`/api/retrieval-evaluations/current/chunks/${id}`);
+      const chunk = await getJson<FullChunk>(`${chunkBaseUrl}/${id}`);
       if (token === request.current) setFull(chunk);
     } catch {
       if (token === request.current) setFull(null);

@@ -585,6 +585,128 @@ test('renders the selected evaluation winner and question evidence', async () =>
   await waitFor(() => expect(location.search).toContain('outcome=miss'));
 });
 
+test('renders portable generation results and missing-database recovery guidance', async () => {
+  history.replaceState(null, '', '/evaluation/generation?attention=needs_attention');
+  const summary = {
+    run: {
+      status: 'succeeded',
+      question_count: 1,
+      prompt_count: 2,
+      finished_at: '2026-08-31T03:04:45Z',
+      generation_model: 'gpt-test',
+      judge_model: 'gpt-test',
+    },
+    selected_prompt_id: 'basic-grounded-v2',
+    promoted_prompt_id: 'basic-grounded-v2',
+    availability: {
+      artifact_loaded: true,
+      audit_record_available: false,
+      evidence_available: false,
+    },
+    warnings: [
+      {
+        code: 'evidence_unavailable',
+        message: 'Generated answers remain reviewable, but filing evidence is unavailable.',
+        recovery_docs: ['docs/getting-started.md', 'docs/rag-evaluation-workflow.md'],
+      },
+    ],
+    lineage: {},
+    prompts: [
+      {
+        id: 'basic-grounded-v2',
+        official_rank: 1,
+        selected: true,
+        promoted: true,
+        eligible: true,
+        mean_score: 2,
+        relevant_count: 1,
+        partly_relevant_count: 0,
+        non_relevant_count: 0,
+        failures: 0,
+        valid_citation_handles: 2,
+        citation_handles: 2,
+        cross_corpus_citations: 0,
+        median_latency_ms: 2100,
+        generation_cost_per_answer_usd: '0.002',
+        judge_cost_per_answer_usd: '0.001',
+      },
+      {
+        id: 'guardrailed-10k-v3',
+        official_rank: 2,
+        selected: false,
+        promoted: false,
+        eligible: true,
+        mean_score: 1,
+        relevant_count: 0,
+        partly_relevant_count: 1,
+        non_relevant_count: 0,
+        failures: 0,
+        valid_citation_handles: 1,
+        citation_handles: 1,
+        cross_corpus_citations: 0,
+        median_latency_ms: 1800,
+        generation_cost_per_answer_usd: '0.001',
+        judge_cost_per_answer_usd: '0.001',
+      },
+    ],
+  };
+  const cases = {
+    warnings: [],
+    facets: {
+      tickers: ['AAPL'],
+      items: ['1'],
+      goals: ['business'],
+      query_types: ['exact_keyword'],
+    },
+    cases: [
+      {
+        id: 'q1',
+        question: 'What is the business?',
+        ticker: 'AAPL',
+        items: ['1'],
+        goal: 'business',
+        query_type: 'exact_keyword',
+        results: [
+          {
+            prompt_id: 'basic-grounded-v2',
+            label: 'RELEVANT',
+            failure: null,
+            citations_valid: true,
+            latency_ms: 2100,
+          },
+          {
+            prompt_id: 'guardrailed-10k-v3',
+            label: 'PARTLY_RELEVANT',
+            failure: null,
+            citations_valid: true,
+            latency_ms: 1800,
+          },
+        ],
+      },
+    ],
+  };
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(url.endsWith('/cases') ? cases : summary),
+      }),
+    ),
+  );
+
+  renderApp();
+
+  expect(
+    await screen.findByRole('heading', { name: 'Basic grounded v2 leads this run' }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/prepare the corpus using/)).toHaveTextContent('docs/getting-started.md');
+  expect(
+    screen.getByRole('grid', { name: 'Question by prompt result matrix' }),
+  ).toBeInTheDocument();
+  expect(screen.getAllByText('Partly relevant').length).toBeGreaterThan(0);
+});
+
 test('uses a single-open ranked evidence panel and replaces the selected chunk inspector', async () => {
   history.replaceState(
     null,

@@ -90,6 +90,7 @@ class Settings(BaseSettings):
     retrieval_evaluation_dataset_path: Path = Path("evaluation/retrieval-v1.jsonl")
     retrieval_evaluation_manifest_path: Path = Path("evaluation/retrieval-v1-manifest.json")
     generation_config_path: Path = Path("config/generation.json")
+    generation_evaluation_result_path: Path = Path("evaluation/results/generation-v1.json")
     model_pricing_config_path: Path = Path("config/model-pricing-v1.json")
     public_base_url: str = "http://localhost:8000"
     google_client_id: str = "__required__"

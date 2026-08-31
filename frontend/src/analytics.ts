@@ -29,12 +29,15 @@ export function normalizedRoute(pathname = window.location.pathname): string {
   if (/^\/corpus\/[^/]+\/[^/]+$/.test(pathname)) return '/corpus/:ticker/:item';
   if (/^\/evaluation\/configurations\/[^/]+\/questions\/[^/]+$/.test(pathname))
     return '/evaluation/configurations/:configurationId/questions/:questionId';
+  if (/^\/evaluation\/generation\/questions\/[^/]+$/.test(pathname))
+    return '/evaluation/generation/questions/:questionId';
   return [
     '/',
     '/research',
     '/research/history',
     '/corpus',
     '/evaluation',
+    '/evaluation/generation',
     '/diagnostics/health',
     '/admin',
     '/admin/users',

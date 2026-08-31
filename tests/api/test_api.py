@@ -157,6 +157,11 @@ def test_routers_are_mounted_only_in_their_namespaces() -> None:
     assert "/api/retrieval-evaluations/current" in routes
     assert "/api/retrieval-evaluations/current/configurations/{configuration_id}/cases" in routes
     assert "/api/retrieval-evaluations/current/chunks/{chunk_id}" in routes
+    assert "/api/generation-evaluations/current" in routes
+    assert "/api/generation-evaluations/current/cases" in routes
+    assert "/api/generation-evaluations/current/questions/{case_id}" in routes
+    assert "/api/generation-evaluations/current/prompts/{prompt_id}" in routes
+    assert "/api/generation-evaluations/current/chunks/{chunk_id}" in routes
     assert all(
         path.startswith(("/api", "/internal", "/openapi", "/docs", "/redoc")) for path in routes
     )

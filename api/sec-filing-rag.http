@@ -246,6 +246,75 @@ Content-Type: {{contentType}}
 Authorization: {{internalToken}}
 
 
+###########################################################################
+### Request: GET /api/generation-evaluations/current
+### Summary: Current
+### Description: Read the current portable generation evaluation summary.
+###########################################################################
+
+
+GET {{baseUrl}}/api/generation-evaluations/current
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+##########################################################################################
+### Request: GET /api/generation-evaluations/current/cases
+### Summary: Cases
+### Description: Read question-by-prompt verdicts for the current generation evaluation.
+##########################################################################################
+
+
+GET {{baseUrl}}/api/generation-evaluations/current/cases
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+############################################################################
+### Request: GET /api/generation-evaluations/current/questions/{case_id}
+### Summary: Question
+### Description: Compare every generated answer for one reviewed question.
+############################################################################
+
+### Path Parameter: GetCurrentGenerationEvaluationQuestion_case_id
+@GetCurrentGenerationEvaluationQuestion_case_id = str
+
+
+GET {{baseUrl}}/api/generation-evaluations/current/questions/{{GetCurrentGenerationEvaluationQuestion_case_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+##########################################################################
+### Request: GET /api/generation-evaluations/current/prompts/{prompt_id}
+### Summary: Prompt
+### Description: Read checksum-verified source for one evaluated prompt.
+##########################################################################
+
+### Path Parameter: GetCurrentGenerationEvaluationPrompt_prompt_id
+@GetCurrentGenerationEvaluationPrompt_prompt_id = str
+
+
+GET {{baseUrl}}/api/generation-evaluations/current/prompts/{{GetCurrentGenerationEvaluationPrompt_prompt_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+###########################################################################################
+### Request: GET /api/generation-evaluations/current/chunks/{chunk_id}
+### Summary: Chunk
+### Description: Read optional database-backed evidence referenced by the generation run.
+###########################################################################################
+
+### Path Parameter: GetCurrentGenerationEvaluationChunk_chunk_id
+@GetCurrentGenerationEvaluationChunk_chunk_id = str
+
+
+GET {{baseUrl}}/api/generation-evaluations/current/chunks/{{GetCurrentGenerationEvaluationChunk_chunk_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
 #################################
 ### Request: POST /api/research
 ### Summary: Create Research

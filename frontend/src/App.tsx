@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { EvaluationDashboard } from './pages/EvaluationDashboard';
+import { GenerationEvaluationDashboard } from './pages/GenerationEvaluationDashboard';
+import { GenerationQuestionComparison } from './pages/GenerationQuestionComparison';
 import { QuestionEvidence } from './pages/QuestionEvidence';
 import { Health } from './pages/Health';
 import { Research } from './pages/Research';
@@ -41,6 +43,14 @@ export function App({ authenticate = false }: { authenticate?: boolean }) {
         <Route path="/corpus/:ticker/:item" element={protectedPage(<CorpusReader />)} />
         <Route path="/diagnostics/health" element={protectedPage(<Health />)} />
         <Route path="/evaluation" element={protectedPage(<EvaluationDashboard />)} />
+        <Route
+          path="/evaluation/generation"
+          element={protectedPage(<GenerationEvaluationDashboard />)}
+        />
+        <Route
+          path="/evaluation/generation/questions/:questionId"
+          element={protectedPage(<GenerationQuestionComparison />)}
+        />
         <Route path="/admin" element={protectedPage(<Admin />)}>
           <Route index element={<AdminIndex />} />
           <Route path="users" element={<AdminUsers />} />

@@ -45,6 +45,7 @@ SEC availability is a runtime concern and is not probed during startup.
 | `OPENAI_JUDGE_MODEL` | chat model | Optional evaluation judge override |
 | `OPENAI_TIMEOUT_SECONDS` | `30` | Provider-call timeout, greater than 0 and at most 120 seconds |
 | `MODEL_PRICING_CONFIG_PATH` | `config/model-pricing-v1.json` | Exact active-model pricing required at startup |
+| `GENERATION_EVALUATION_RESULT_PATH` | `evaluation/results/generation-v1.json` | Portable current generation-evaluation artifact displayed by the evaluation dashboard |
 
 Pricing is expressed as decimal USD per one million tokens. Embeddings need input pricing;
 generation needs input and output pricing. Historical requests retain the request-time pricing
@@ -144,8 +145,8 @@ Encode the raw token without a newline as shown in `.env.example`. Never log eit
 | `evaluation/prompts/*.txt` | Versioned ground-truth generation and answer-judging instruments |
 
 Retrieval and generation paths can also be overridden through `RETRIEVAL_CONFIG_PATH` and
-`GENERATION_CONFIG_PATH`; evaluation artifact paths have corresponding Settings fields. Production
-deployments should keep selected files immutable for the lifetime of a process.
+`GENERATION_CONFIG_PATH`; retrieval evaluation inputs and results have corresponding Settings
+fields. Production deployments should keep selected files immutable for the lifetime of a process.
 
 The retrieval dataset prompt is explained under
 [Ground-truth question-generation prompt](retrieval-evaluation-workflow.md#ground-truth-question-generation-prompt).

@@ -117,6 +117,7 @@ Use the platform at:
   and verify cited evidence;
 - <http://127.0.0.1:5173/corpus> to browse complete filing Items and historical corpora;
 - <http://127.0.0.1:5173/evaluation> to inspect the checked-in retrieval benchmark summary;
+- <http://127.0.0.1:5173/evaluation/generation> to compare the checked-in RAG generation results;
 - `/research/history` to revisit stored work and `/admin` for authorized operational inspection.
 
 The checked-in benchmark records its original corpus UUIDs. A newly ingested database has different
@@ -176,8 +177,9 @@ browser acceptance pass:
 1. Ask a filing question and confirm the answer, limitations, and citation links.
 2. Open cited evidence in the Corpus Reader and follow its EDGAR source link.
 3. Inspect retrieval metrics and at least one case in the Evaluation dashboard.
-4. Confirm research history is private to the signed-in user.
-5. If authorized as an administrator, inspect model executions, usage, retries, and safe failures.
+4. Compare prompt verdicts and at least one answer pair in the RAG generation evaluation.
+5. Confirm research history is private to the signed-in user.
+6. If authorized as an administrator, inspect model executions, usage, retries, and safe failures.
 
 For ongoing monitoring, recovery, migrations, and reset procedures, continue with
 [Operations](operations.md). For symptoms and remediation, use [Troubleshooting](troubleshooting.md).

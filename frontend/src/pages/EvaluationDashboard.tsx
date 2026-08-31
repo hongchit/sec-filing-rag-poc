@@ -30,6 +30,7 @@ import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { errorMessage, getJson } from '../api';
 import { AppShell } from '../components/AppShell';
 import { Help } from '../components/Help';
+import { EvaluationNav } from '../components/EvaluationNav';
 import { detailPath, PAGE_SIZE, readEvaluationQuery } from '../evaluation';
 import { labels, type Cases, type Config, type Summary } from '../types';
 function Metric({ name, value, help }: { name: string; value: string; help: string }) {
@@ -212,6 +213,7 @@ export function EvaluationDashboard() {
   return (
     <AppShell>
       <Stack spacing={4}>
+        <EvaluationNav />
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           sx={{ justifyContent: 'space-between', gap: 2 }}

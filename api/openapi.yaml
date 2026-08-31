@@ -442,6 +442,125 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/generation-evaluations/current:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Current
+      description: Read the current portable generation evaluation summary.
+      operationId: getCurrentGenerationEvaluation
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationEvaluationSummary'
+      security:
+      - SessionCookie: []
+  /api/generation-evaluations/current/cases:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Cases
+      description: Read question-by-prompt verdicts for the current generation evaluation.
+      operationId: getCurrentGenerationEvaluationCases
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationEvaluationCases'
+      security:
+      - SessionCookie: []
+  /api/generation-evaluations/current/questions/{case_id}:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Question
+      description: Compare every generated answer for one reviewed question.
+      operationId: getCurrentGenerationEvaluationQuestion
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: case_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Case Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationEvaluationQuestion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/generation-evaluations/current/prompts/{prompt_id}:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Prompt
+      description: Read checksum-verified source for one evaluated prompt.
+      operationId: getCurrentGenerationEvaluationPrompt
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: prompt_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Prompt Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationPromptSource'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/generation-evaluations/current/chunks/{chunk_id}:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Chunk
+      description: Read optional database-backed evidence referenced by the generation run.
+      operationId: getCurrentGenerationEvaluationChunk
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: chunk_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Chunk Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationEvaluationChunk'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/research:
     post:
       tags:
@@ -1913,6 +2032,185 @@ components:
       - item_id
       - status
       title: FilingSelectionResponse
+    GenerationEvaluationCases:
+      properties:
+        cases:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Cases
+        facets:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+          title: Facets
+        warnings:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Warnings
+      type: object
+      required:
+      - cases
+      - facets
+      - warnings
+      title: GenerationEvaluationCases
+    GenerationEvaluationChunk:
+      properties:
+        chunk_id:
+          type: string
+          title: Chunk Id
+        corpus_version_id:
+          type: string
+          title: Corpus Version Id
+        text:
+          type: string
+          title: Text
+        preview:
+          type: string
+          title: Preview
+        citation:
+          type: string
+          title: Citation
+        ticker:
+          type: string
+          title: Ticker
+        item:
+          type: string
+          title: Item
+        accession:
+          type: string
+          title: Accession
+        source_url:
+          type: string
+          title: Source Url
+        provenance:
+          additionalProperties: true
+          type: object
+          title: Provenance
+      type: object
+      required:
+      - chunk_id
+      - corpus_version_id
+      - text
+      - preview
+      - citation
+      - ticker
+      - item
+      - accession
+      - source_url
+      - provenance
+      title: GenerationEvaluationChunk
+    GenerationEvaluationQuestion:
+      properties:
+        question:
+          additionalProperties: true
+          type: object
+          title: Question
+        results:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Results
+        expected:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Expected
+        retrieved:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Retrieved
+        evidence_available:
+          type: boolean
+          title: Evidence Available
+        warnings:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Warnings
+      type: object
+      required:
+      - question
+      - results
+      - expected
+      - retrieved
+      - evidence_available
+      - warnings
+      title: GenerationEvaluationQuestion
+    GenerationEvaluationSummary:
+      properties:
+        run:
+          additionalProperties: true
+          type: object
+          title: Run
+        selected_prompt_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Selected Prompt Id
+        promoted_prompt_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Promoted Prompt Id
+        prompts:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Prompts
+        availability:
+          additionalProperties:
+            type: boolean
+          type: object
+          title: Availability
+        warnings:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Warnings
+        lineage:
+          additionalProperties: true
+          type: object
+          title: Lineage
+      type: object
+      required:
+      - run
+      - selected_prompt_id
+      - promoted_prompt_id
+      - prompts
+      - availability
+      - warnings
+      - lineage
+      title: GenerationEvaluationSummary
+    GenerationPromptSource:
+      properties:
+        prompt_id:
+          type: string
+          title: Prompt Id
+        prompt_sha256:
+          type: string
+          title: Prompt Sha256
+        source:
+          type: string
+          title: Source
+      type: object
+      required:
+      - prompt_id
+      - prompt_sha256
+      - source
+      title: GenerationPromptSource
     HTTPValidationError:
       properties:
         detail:
