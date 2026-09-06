@@ -20,7 +20,7 @@ export function ResearchHistory() {
   return (
     <AppShell>
       <Stack spacing={2}>
-        <Typography variant="h1">Research history</Typography>
+        <Typography variant="h1">Query history</Typography>
         {items.map((item) => (
           <Button
             component={Link}

@@ -91,6 +91,223 @@ paths:
           description: Successful Response
       security:
       - SessionCookie: []
+  /api/evaluation-overview/current:
+    get:
+      tags:
+      - evaluation-overview
+      summary: Current
+      description: Read safe aggregate results and model provenance for the public portfolio overview.
+      operationId: getCurrentEvaluationOverview
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationOverview'
+  /api/showcase:
+    get:
+      tags:
+      - showcase
+      summary: Showcase
+      description: Read optional, deployment-managed examples for the public landing page.
+      operationId: getShowcase
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShowcaseResponse'
+  /api/retrieval-evaluations/current:
+    get:
+      tags:
+      - retrieval-evaluations
+      summary: Current
+      description: Read the validated current retrieval evaluation and official leaderboard.
+      operationId: getCurrentRetrievalEvaluation
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationSummary'
+  /api/retrieval-evaluations/current/configurations/{configuration_id}/cases:
+    get:
+      tags:
+      - retrieval-evaluations
+      summary: Cases
+      description: Inspect every reviewed question and ranked chunk for one stable configuration.
+      operationId: getCurrentRetrievalEvaluationCases
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: configuration_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Configuration Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationCases'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/retrieval-evaluations/current/chunks/{chunk_id}:
+    get:
+      tags:
+      - retrieval-evaluations
+      summary: Chunk
+      description: Lazy-load full text and provenance for a chunk referenced by the current evaluation.
+      operationId: getCurrentRetrievalEvaluationChunk
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: chunk_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Chunk Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationChunk'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/generation-evaluations/current:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Current
+      description: Read the current portable generation evaluation summary.
+      operationId: getCurrentGenerationEvaluation
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationEvaluationSummary'
+  /api/generation-evaluations/current/cases:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Cases
+      description: Read question-by-prompt verdicts for the current generation evaluation.
+      operationId: getCurrentGenerationEvaluationCases
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationEvaluationCases'
+      security:
+      - SessionCookie: []
+  /api/generation-evaluations/current/questions/{case_id}:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Question
+      description: Compare every generated answer for one reviewed question.
+      operationId: getCurrentGenerationEvaluationQuestion
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: case_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Case Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationEvaluationQuestion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/generation-evaluations/current/prompts/{prompt_id}:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Prompt
+      description: Read checksum-verified source for one evaluated prompt.
+      operationId: getCurrentGenerationEvaluationPrompt
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: prompt_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Prompt Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationPromptSource'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/generation-evaluations/current/chunks/{chunk_id}:
+    get:
+      tags:
+      - generation-evaluations
+      summary: Chunk
+      description: Read optional database-backed evidence referenced by the generation run.
+      operationId: getCurrentGenerationEvaluationChunk
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: chunk_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Chunk Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationEvaluationChunk'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/companies:
     get:
       tags:
@@ -368,199 +585,6 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
       - SessionCookie: []
-  /api/retrieval-evaluations/current:
-    get:
-      tags:
-      - retrieval-evaluations
-      summary: Current
-      description: Read the validated current retrieval evaluation and official leaderboard.
-      operationId: getCurrentRetrievalEvaluation
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EvaluationSummary'
-      security:
-      - SessionCookie: []
-  /api/retrieval-evaluations/current/configurations/{configuration_id}/cases:
-    get:
-      tags:
-      - retrieval-evaluations
-      summary: Cases
-      description: Inspect every reviewed question and ranked chunk for one stable configuration.
-      operationId: getCurrentRetrievalEvaluationCases
-      security:
-      - SessionCookie: []
-      parameters:
-      - name: configuration_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Configuration Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EvaluationCases'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /api/retrieval-evaluations/current/chunks/{chunk_id}:
-    get:
-      tags:
-      - retrieval-evaluations
-      summary: Chunk
-      description: Lazy-load full text and provenance for a chunk referenced by the current evaluation.
-      operationId: getCurrentRetrievalEvaluationChunk
-      security:
-      - SessionCookie: []
-      parameters:
-      - name: chunk_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Chunk Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EvaluationChunk'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /api/generation-evaluations/current:
-    get:
-      tags:
-      - generation-evaluations
-      summary: Current
-      description: Read the current portable generation evaluation summary.
-      operationId: getCurrentGenerationEvaluation
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GenerationEvaluationSummary'
-      security:
-      - SessionCookie: []
-  /api/generation-evaluations/current/cases:
-    get:
-      tags:
-      - generation-evaluations
-      summary: Cases
-      description: Read question-by-prompt verdicts for the current generation evaluation.
-      operationId: getCurrentGenerationEvaluationCases
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GenerationEvaluationCases'
-      security:
-      - SessionCookie: []
-  /api/generation-evaluations/current/questions/{case_id}:
-    get:
-      tags:
-      - generation-evaluations
-      summary: Question
-      description: Compare every generated answer for one reviewed question.
-      operationId: getCurrentGenerationEvaluationQuestion
-      security:
-      - SessionCookie: []
-      parameters:
-      - name: case_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Case Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GenerationEvaluationQuestion'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /api/generation-evaluations/current/prompts/{prompt_id}:
-    get:
-      tags:
-      - generation-evaluations
-      summary: Prompt
-      description: Read checksum-verified source for one evaluated prompt.
-      operationId: getCurrentGenerationEvaluationPrompt
-      security:
-      - SessionCookie: []
-      parameters:
-      - name: prompt_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Prompt Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GenerationPromptSource'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /api/generation-evaluations/current/chunks/{chunk_id}:
-    get:
-      tags:
-      - generation-evaluations
-      summary: Chunk
-      description: Read optional database-backed evidence referenced by the generation run.
-      operationId: getCurrentGenerationEvaluationChunk
-      security:
-      - SessionCookie: []
-      parameters:
-      - name: chunk_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Chunk Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GenerationEvaluationChunk'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
   /api/research:
     post:
       tags:
@@ -958,6 +982,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /internal/filing-batches/{batch_id}/launch-failures:
+    post:
+      tags:
+      - internal-lifecycle
+      summary: Fail Launch
+      description: Fail and reconcile a persisted batch whose processing subflow did not start.
+      operationId: failFilingBatchLaunch
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Batch Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchLaunchFailureRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /internal/providers/filing-items/{item_id}/selection:
     post:
       tags:
@@ -1060,6 +1120,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CorpusExecutionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/scheduled-filing-batches:
+    post:
+      tags:
+      - internal-scheduled-ingestion
+      summary: Create Scheduled Batch
+      description: Persist an idempotent scheduler-owned batch for the shared Kestra processing flow.
+      operationId: createScheduledFilingBatch
+      security:
+      - InternalBearer: []
+      parameters:
+      - name: X-Kestra-Execution-ID
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9._:-]+$
+          title: X-Kestra-Execution-Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilingBatchRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledFilingBatchCreated'
         '422':
           description: Validation Error
           content:
@@ -1176,6 +1274,21 @@ components:
       additionalProperties: false
       type: object
       title: BatchFinalizationRequest
+    BatchLaunchFailureRequest:
+      properties:
+        error:
+          type: string
+          title: Error
+        kestra_execution_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Kestra Execution Id
+      additionalProperties: false
+      type: object
+      required:
+      - error
+      title: BatchLaunchFailureRequest
     CompanyStatus:
       properties:
         ticker:
@@ -1689,6 +1802,107 @@ components:
       - source_url
       - provenance
       title: EvaluationChunk
+    EvaluationOverview:
+      properties:
+        benchmark:
+          additionalProperties: true
+          type: object
+          title: Benchmark
+        retrieval:
+          additionalProperties: true
+          type: object
+          title: Retrieval
+        generation:
+          additionalProperties: true
+          type: object
+          title: Generation
+        models:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Models
+        example:
+          anyOf:
+          - $ref: '#/components/schemas/EvaluationOverviewExample'
+          - type: 'null'
+        warnings:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Warnings
+      type: object
+      required:
+      - benchmark
+      - retrieval
+      - generation
+      - models
+      - example
+      - warnings
+      title: EvaluationOverview
+    EvaluationOverviewExample:
+      properties:
+        case_id:
+          type: string
+          title: Case Id
+        question:
+          type: string
+          title: Question
+        ticker:
+          type: string
+          title: Ticker
+        accession:
+          type: string
+          title: Accession
+        corpus_version_id:
+          type: string
+          title: Corpus Version Id
+        items:
+          items:
+            type: string
+          type: array
+          title: Items
+        goal:
+          type: string
+          title: Goal
+        query_type:
+          type: string
+          title: Query Type
+        consensus:
+          type: boolean
+          title: Consensus
+        interpretation:
+          type: string
+          title: Interpretation
+        citations:
+          items:
+            type: string
+          type: array
+          title: Citations
+        prompt_id:
+          type: string
+          title: Prompt Id
+        judge_label:
+          type: string
+          const: RELEVANT
+          title: Judge Label
+      type: object
+      required:
+      - case_id
+      - question
+      - ticker
+      - accession
+      - corpus_version_id
+      - items
+      - goal
+      - query_type
+      - consensus
+      - interpretation
+      - citations
+      - prompt_id
+      - judge_label
+      title: EvaluationOverviewExample
     EvaluationSummary:
       properties:
         run:
@@ -2916,6 +3130,111 @@ components:
       - evidence_count
       - attempts
       title: RunDetails
+    ScheduledFilingBatchCreated:
+      properties:
+        batch_id:
+          type: string
+          format: uuid
+          title: Batch Id
+        mode:
+          type: string
+          enum:
+          - latest
+          - exact_year
+          title: Mode
+        fiscal_year:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Fiscal Year
+        tickers:
+          items:
+            type: string
+          type: array
+          title: Tickers
+        status:
+          type: string
+          const: created
+          title: Status
+          default: created
+      type: object
+      required:
+      - batch_id
+      - mode
+      - fiscal_year
+      - tickers
+      title: ScheduledFilingBatchCreated
+    ShowcaseExample:
+      properties:
+        id:
+          type: string
+          minLength: 1
+          title: Id
+        question:
+          type: string
+          minLength: 1
+          title: Question
+        answer:
+          type: string
+          minLength: 1
+          title: Answer
+        ticker:
+          type: string
+          pattern: ^[A-Z][A-Z0-9.-]{0,9}$
+          title: Ticker
+        filing_period:
+          type: string
+          minLength: 1
+          title: Filing Period
+        accession:
+          type: string
+          pattern: ^\d{10}-\d{2}-\d{6}$
+          title: Accession
+        items:
+          items:
+            type: string
+          type: array
+          minItems: 1
+          title: Items
+        citations:
+          items:
+            type: string
+          type: array
+          minItems: 1
+          title: Citations
+        goal:
+          type: string
+          enum:
+          - business
+          - key_risks
+          - management_analysis
+          - market_risk
+          - legal_regulatory_risk
+          title: Goal
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - question
+      - answer
+      - ticker
+      - filing_period
+      - accession
+      - items
+      - citations
+      - goal
+      title: ShowcaseExample
+    ShowcaseResponse:
+      properties:
+        examples:
+          items:
+            $ref: '#/components/schemas/ShowcaseExample'
+          type: array
+          title: Examples
+      type: object
+      required:
+      - examples
+      title: ShowcaseResponse
     StatusResponse:
       properties:
         status:

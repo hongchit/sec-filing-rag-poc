@@ -47,6 +47,14 @@ class FilingBatchAccepted(BaseModel):
     status: Literal["submitted"] = "submitted"
 
 
+class ScheduledFilingBatchCreated(BaseModel):
+    batch_id: uuid.UUID
+    mode: WorkflowMode
+    fiscal_year: int | None
+    tickers: list[str]
+    status: Literal["created"] = "created"
+
+
 class FilingBatchItemStatus(BaseModel):
     id: uuid.UUID
     position: int

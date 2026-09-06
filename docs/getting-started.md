@@ -85,8 +85,9 @@ npm --prefix frontend run dev
 ```
 
 Open the Kestra UI at <http://127.0.0.1:18082>, sign in with the configured Kestra credentials, and
-import `workflows/filing_batch.yaml`. Confirm namespace `sec_filings.ingestion` and flow ID
-`filing_batch`. Then check <http://127.0.0.1:8000/api/health> and open
+import `workflows/filing_batch.yaml` and `workflows/scheduled_filing_launcher.yaml`. Confirm namespace
+`sec_filings.ingestion` and flow IDs `filing_batch` and `scheduled_filing_launcher`. Then check
+<http://127.0.0.1:8000/api/health> and open
 <http://127.0.0.1:5173>.
 
 ## 5. Sign in and prepare the first corpora
@@ -95,6 +96,10 @@ Select **Sign in with Google**. On a fresh database, the Research page explains 
 corpus exists and offers **Prepare latest filings**. This submits one authenticated latest-mode
 batch for all enabled companies. It can take several minutes and incurs embedding cost. The UI
 retains the batch ID so polling can resume after a refresh or closed tab.
+
+The first address in `GOOGLE_ADMIN_EMAILS` must complete this sign-in once before the daily launcher
+runs. Kestra checks all enabled companies at 06:08 UTC and attributes any resulting embedding cost
+to that administrator. A compatible unchanged filing is recorded without an OpenAI request.
 
 Wait for at least one company to have a ready active corpus. Inspect the Kestra execution for task
 progress and use the Research or Corpus Reader company selectors to confirm readiness. Partial
@@ -113,11 +118,18 @@ measured retrieval default in `config/retrieval.json` and a guarded generation p
 
 Use the platform at:
 
+- <http://127.0.0.1:5173/> for the public landing page and curated examples;
+- <http://127.0.0.1:5173/overview> for the plain-language RAG and SEC filing story;
+- <http://127.0.0.1:5173/how-it-works> for pipelines, architecture, course concepts, and the future-improvement roadmap;
 - <http://127.0.0.1:5173/research> to select a company and filing, choose a goal, ask a question,
   and verify cited evidence;
 - <http://127.0.0.1:5173/corpus> to browse complete filing Items and historical corpora;
-- <http://127.0.0.1:5173/evaluation> to inspect the checked-in retrieval benchmark summary;
-- <http://127.0.0.1:5173/evaluation/generation> to compare the checked-in RAG generation results;
+- <http://127.0.0.1:5173/evaluation> to understand the public business value, measured baselines,
+  model roles, and benchmark limitations;
+- <http://127.0.0.1:5173/evaluation/evidence-search> to inspect aggregate retrieval metrics;
+- <http://127.0.0.1:5173/evaluation/answer-quality> to compare aggregate answer-quality results;
+- `/evaluation/evidence-search/questions` and `/evaluation/answer-quality/questions` after sign-in
+  to inspect question-level outcomes;
 - `/research/history` to revisit stored work and `/admin` for authorized operational inspection.
 
 The checked-in benchmark records its original corpus UUIDs. A newly ingested database has different

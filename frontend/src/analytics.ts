@@ -27,23 +27,29 @@ let loaded = false;
 export function normalizedRoute(pathname = window.location.pathname): string {
   if (/^\/research\/[^/]+$/.test(pathname)) return '/research/:researchId';
   if (/^\/corpus\/[^/]+\/[^/]+$/.test(pathname)) return '/corpus/:ticker/:item';
-  if (/^\/evaluation\/configurations\/[^/]+\/questions\/[^/]+$/.test(pathname))
-    return '/evaluation/configurations/:configurationId/questions/:questionId';
-  if (/^\/evaluation\/generation\/questions\/[^/]+$/.test(pathname))
-    return '/evaluation/generation/questions/:questionId';
+  if (/^\/evaluation\/evidence-search\/configurations\/[^/]+\/questions\/[^/]+$/.test(pathname))
+    return '/evaluation/evidence-search/configurations/:configurationId/questions/:questionId';
+  if (/^\/evaluation\/answer-quality\/questions\/[^/]+$/.test(pathname))
+    return '/evaluation/answer-quality/questions/:questionId';
   return [
     '/',
     '/research',
     '/research/history',
     '/corpus',
+    '/overview',
+    '/how-it-works',
     '/evaluation',
-    '/evaluation/generation',
+    '/evaluation/evidence-search',
+    '/evaluation/evidence-search/questions',
+    '/evaluation/answer-quality',
+    '/evaluation/answer-quality/questions',
     '/diagnostics/health',
     '/admin',
     '/admin/users',
     '/admin/model-executions',
     '/privacy',
     '/terms',
+    '/sign-in',
   ].includes(pathname)
     ? pathname
     : '/other';

@@ -55,3 +55,4 @@ def test_admin_email_configuration_is_normalized() -> None:
         google_admin_emails=" Admin@Example.com,second@example.com ",
     )
     assert config.admin_emails == frozenset({"admin@example.com", "second@example.com"})
+    assert config.primary_admin_email == "admin@example.com"

@@ -64,6 +64,141 @@ Content-Type: {{contentType}}
 Authorization: {{internalToken}}
 
 
+######################################################################################################
+### Request: GET /api/evaluation-overview/current
+### Summary: Current
+### Description: Read safe aggregate results and model provenance for the public portfolio overview.
+######################################################################################################
+
+
+GET {{baseUrl}}/api/evaluation-overview/current
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+##########################################################################################
+### Request: GET /api/showcase
+### Summary: Showcase
+### Description: Read optional, deployment-managed examples for the public landing page.
+##########################################################################################
+
+
+GET {{baseUrl}}/api/showcase
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+############################################################################################
+### Request: GET /api/retrieval-evaluations/current
+### Summary: Current
+### Description: Read the validated current retrieval evaluation and official leaderboard.
+############################################################################################
+
+
+GET {{baseUrl}}/api/retrieval-evaluations/current
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+#################################################################################################
+### Request: GET /api/retrieval-evaluations/current/configurations/{configuration_id}/cases
+### Summary: Cases
+### Description: Inspect every reviewed question and ranked chunk for one stable configuration.
+#################################################################################################
+
+### Path Parameter: GetCurrentRetrievalEvaluationCases_configuration_id
+@GetCurrentRetrievalEvaluationCases_configuration_id = str
+
+
+GET {{baseUrl}}/api/retrieval-evaluations/current/configurations/{{GetCurrentRetrievalEvaluationCases_configuration_id}}/cases
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+#######################################################################################################
+### Request: GET /api/retrieval-evaluations/current/chunks/{chunk_id}
+### Summary: Chunk
+### Description: Lazy-load full text and provenance for a chunk referenced by the current evaluation.
+#######################################################################################################
+
+### Path Parameter: GetCurrentRetrievalEvaluationChunk_chunk_id
+@GetCurrentRetrievalEvaluationChunk_chunk_id = str
+
+
+GET {{baseUrl}}/api/retrieval-evaluations/current/chunks/{{GetCurrentRetrievalEvaluationChunk_chunk_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+###########################################################################
+### Request: GET /api/generation-evaluations/current
+### Summary: Current
+### Description: Read the current portable generation evaluation summary.
+###########################################################################
+
+
+GET {{baseUrl}}/api/generation-evaluations/current
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+##########################################################################################
+### Request: GET /api/generation-evaluations/current/cases
+### Summary: Cases
+### Description: Read question-by-prompt verdicts for the current generation evaluation.
+##########################################################################################
+
+
+GET {{baseUrl}}/api/generation-evaluations/current/cases
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+############################################################################
+### Request: GET /api/generation-evaluations/current/questions/{case_id}
+### Summary: Question
+### Description: Compare every generated answer for one reviewed question.
+############################################################################
+
+### Path Parameter: GetCurrentGenerationEvaluationQuestion_case_id
+@GetCurrentGenerationEvaluationQuestion_case_id = str
+
+
+GET {{baseUrl}}/api/generation-evaluations/current/questions/{{GetCurrentGenerationEvaluationQuestion_case_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+##########################################################################
+### Request: GET /api/generation-evaluations/current/prompts/{prompt_id}
+### Summary: Prompt
+### Description: Read checksum-verified source for one evaluated prompt.
+##########################################################################
+
+### Path Parameter: GetCurrentGenerationEvaluationPrompt_prompt_id
+@GetCurrentGenerationEvaluationPrompt_prompt_id = str
+
+
+GET {{baseUrl}}/api/generation-evaluations/current/prompts/{{GetCurrentGenerationEvaluationPrompt_prompt_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
+###########################################################################################
+### Request: GET /api/generation-evaluations/current/chunks/{chunk_id}
+### Summary: Chunk
+### Description: Read optional database-backed evidence referenced by the generation run.
+###########################################################################################
+
+### Path Parameter: GetCurrentGenerationEvaluationChunk_chunk_id
+@GetCurrentGenerationEvaluationChunk_chunk_id = str
+
+
+GET {{baseUrl}}/api/generation-evaluations/current/chunks/{{GetCurrentGenerationEvaluationChunk_chunk_id}}
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+
 ##################################################################
 ### Request: GET /api/companies
 ### Summary: Companies
@@ -203,117 +338,6 @@ Authorization: {{internalToken}}
   "result_id": "example",
   "rating": "example"
 }
-
-############################################################################################
-### Request: GET /api/retrieval-evaluations/current
-### Summary: Current
-### Description: Read the validated current retrieval evaluation and official leaderboard.
-############################################################################################
-
-
-GET {{baseUrl}}/api/retrieval-evaluations/current
-Content-Type: {{contentType}}
-Authorization: {{internalToken}}
-
-
-#################################################################################################
-### Request: GET /api/retrieval-evaluations/current/configurations/{configuration_id}/cases
-### Summary: Cases
-### Description: Inspect every reviewed question and ranked chunk for one stable configuration.
-#################################################################################################
-
-### Path Parameter: GetCurrentRetrievalEvaluationCases_configuration_id
-@GetCurrentRetrievalEvaluationCases_configuration_id = str
-
-
-GET {{baseUrl}}/api/retrieval-evaluations/current/configurations/{{GetCurrentRetrievalEvaluationCases_configuration_id}}/cases
-Content-Type: {{contentType}}
-Authorization: {{internalToken}}
-
-
-#######################################################################################################
-### Request: GET /api/retrieval-evaluations/current/chunks/{chunk_id}
-### Summary: Chunk
-### Description: Lazy-load full text and provenance for a chunk referenced by the current evaluation.
-#######################################################################################################
-
-### Path Parameter: GetCurrentRetrievalEvaluationChunk_chunk_id
-@GetCurrentRetrievalEvaluationChunk_chunk_id = str
-
-
-GET {{baseUrl}}/api/retrieval-evaluations/current/chunks/{{GetCurrentRetrievalEvaluationChunk_chunk_id}}
-Content-Type: {{contentType}}
-Authorization: {{internalToken}}
-
-
-###########################################################################
-### Request: GET /api/generation-evaluations/current
-### Summary: Current
-### Description: Read the current portable generation evaluation summary.
-###########################################################################
-
-
-GET {{baseUrl}}/api/generation-evaluations/current
-Content-Type: {{contentType}}
-Authorization: {{internalToken}}
-
-
-##########################################################################################
-### Request: GET /api/generation-evaluations/current/cases
-### Summary: Cases
-### Description: Read question-by-prompt verdicts for the current generation evaluation.
-##########################################################################################
-
-
-GET {{baseUrl}}/api/generation-evaluations/current/cases
-Content-Type: {{contentType}}
-Authorization: {{internalToken}}
-
-
-############################################################################
-### Request: GET /api/generation-evaluations/current/questions/{case_id}
-### Summary: Question
-### Description: Compare every generated answer for one reviewed question.
-############################################################################
-
-### Path Parameter: GetCurrentGenerationEvaluationQuestion_case_id
-@GetCurrentGenerationEvaluationQuestion_case_id = str
-
-
-GET {{baseUrl}}/api/generation-evaluations/current/questions/{{GetCurrentGenerationEvaluationQuestion_case_id}}
-Content-Type: {{contentType}}
-Authorization: {{internalToken}}
-
-
-##########################################################################
-### Request: GET /api/generation-evaluations/current/prompts/{prompt_id}
-### Summary: Prompt
-### Description: Read checksum-verified source for one evaluated prompt.
-##########################################################################
-
-### Path Parameter: GetCurrentGenerationEvaluationPrompt_prompt_id
-@GetCurrentGenerationEvaluationPrompt_prompt_id = str
-
-
-GET {{baseUrl}}/api/generation-evaluations/current/prompts/{{GetCurrentGenerationEvaluationPrompt_prompt_id}}
-Content-Type: {{contentType}}
-Authorization: {{internalToken}}
-
-
-###########################################################################################
-### Request: GET /api/generation-evaluations/current/chunks/{chunk_id}
-### Summary: Chunk
-### Description: Read optional database-backed evidence referenced by the generation run.
-###########################################################################################
-
-### Path Parameter: GetCurrentGenerationEvaluationChunk_chunk_id
-@GetCurrentGenerationEvaluationChunk_chunk_id = str
-
-
-GET {{baseUrl}}/api/generation-evaluations/current/chunks/{{GetCurrentGenerationEvaluationChunk_chunk_id}}
-Content-Type: {{contentType}}
-Authorization: {{internalToken}}
-
 
 #################################
 ### Request: POST /api/research
@@ -499,6 +523,25 @@ Authorization: {{internalToken}}
   "kestra_execution_id": "example"
 }
 
+###############################################################################################
+### Request: POST /internal/filing-batches/{batch_id}/launch-failures
+### Summary: Fail Launch
+### Description: Fail and reconcile a persisted batch whose processing subflow did not start.
+###############################################################################################
+
+### Path Parameter: PostFailFilingBatchLaunch_batch_id
+@PostFailFilingBatchLaunch_batch_id = str
+
+
+POST {{baseUrl}}/internal/filing-batches/{{PostFailFilingBatchLaunch_batch_id}}/launch-failures
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "error": "example",
+  "kestra_execution_id": "example"
+}
+
 ####################################################################################
 ### Request: POST /internal/providers/filing-items/{item_id}/selection
 ### Summary: Select
@@ -551,4 +594,20 @@ Authorization: {{internalToken}}
 
 {
   "kestra_execution_id": "example"
+}
+
+#####################################################################################################
+### Request: POST /internal/scheduled-filing-batches
+### Summary: Create Scheduled Batch
+### Description: Persist an idempotent scheduler-owned batch for the shared Kestra processing flow.
+#####################################################################################################
+
+
+POST {{baseUrl}}/internal/scheduled-filing-batches
+Content-Type: {{contentType}}
+Authorization: {{internalToken}}
+
+{
+  "fiscal_year": 0,
+  "tickers": ["item"]
 }

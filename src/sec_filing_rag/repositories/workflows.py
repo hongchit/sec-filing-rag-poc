@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Mapping
 from dataclasses import asdict
 from datetime import date, datetime
 from decimal import Decimal
@@ -17,6 +18,16 @@ from ..integrations.sec import (
     EdgarFilingMetadata,
 )
 from .database import Database
+
+
+def _aggregate_batch_status(mode: str, counts: Mapping[str, int]) -> str:
+    """Treat latest-mode reuse as healthy completion without masking real failures."""
+    succeeded = counts.get("succeeded", 0)
+    if mode == "latest":
+        succeeded += counts.get("skipped", 0)
+    total = sum(counts.values())
+    non_success = total - succeeded
+    return "failed" if succeeded == 0 else "partial_failure" if non_success else "succeeded"
 
 
 class WorkflowRepository:
@@ -35,12 +46,30 @@ class WorkflowRepository:
         default_budget_usd: Decimal,
         reservation_usd: Decimal,
         pricing_snapshot: dict[str, Any],
-    ) -> tuple[uuid.UUID, list[uuid.UUID]]:
+        launcher_execution_id: str | None = None,
+    ) -> tuple[uuid.UUID, list[uuid.UUID], bool]:
         batch_id = uuid.uuid4()
         item_ids: list[uuid.UUID] = []
         mode = "exact_year" if fiscal_year is not None else "latest"
         # Batch and ordered work items commit together. Kestra is submitted only afterwards.
         with self.database.transaction() as connection:
+            if launcher_execution_id is not None:
+                # Serialize retries before reserving budget so a lost HTTP response cannot create
+                # a second batch for the same launcher execution.
+                connection.execute(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                    (launcher_execution_id,),
+                )
+                existing = connection.execute(
+                    "SELECT id FROM public.filing_batch WHERE launcher_execution_id=%s",
+                    (launcher_execution_id,),
+                ).fetchone()
+                if existing is not None:
+                    item_rows = connection.execute(
+                        "SELECT id FROM public.filing_batch_item WHERE batch_id=%s ORDER BY position",
+                        (existing["id"],),
+                    ).fetchall()
+                    return existing["id"], [row["id"] for row in item_rows], False
             rows = connection.execute(
                 "SELECT id,ticker FROM public.company WHERE enabled AND ticker=ANY(%s)", (tickers,)
             ).fetchall()
@@ -50,8 +79,9 @@ class WorkflowRepository:
                 raise ValueError("unknown or disabled tickers: " + ", ".join(missing))
             reserve_cost(connection, user_id, default_budget_usd, reservation_usd)
             connection.execute(
-                "INSERT INTO public.filing_batch(id,mode,fiscal_year,request_id,user_id) VALUES (%s,%s,%s,%s,%s)",
-                (batch_id, mode, fiscal_year, request_id, user_id),
+                "INSERT INTO public.filing_batch(id,mode,fiscal_year,request_id,user_id,launcher_execution_id) "
+                "VALUES (%s,%s,%s,%s,%s,%s)",
+                (batch_id, mode, fiscal_year, request_id, user_id, launcher_execution_id),
             )
             connection.execute(
                 "INSERT INTO public.cost_action(id,user_id,kind,reserved_usd,pricing_snapshot,filing_batch_id) "
@@ -66,7 +96,22 @@ class WorkflowRepository:
                     "VALUES (%s,%s,%s,%s)",
                     (item_id, batch_id, companies[ticker], position),
                 )
-        return batch_id, item_ids
+        return batch_id, item_ids, True
+
+    def launch_failed(self, batch_id: uuid.UUID, execution_id: str | None, error: str) -> None:
+        """Terminally reconcile a persisted batch when its processing subflow never starts."""
+        with self.database.transaction() as connection:
+            connection.execute(
+                "UPDATE public.filing_batch_item SET status='failed',safe_error=%s,"
+                "finished_at=now(),updated_at=now() WHERE batch_id=%s AND status='pending'",
+                (safe_error(error), batch_id),
+            )
+            connection.execute(
+                "UPDATE public.filing_batch SET status='failed',kestra_execution_id=COALESCE(%s,kestra_execution_id),"
+                "safe_error=%s,finished_at=now(),updated_at=now() WHERE id=%s AND status='submitted'",
+                (execution_id, safe_error(error), batch_id),
+            )
+            self._reconcile_batch(connection, batch_id)
 
     def submitted(self, batch_id: uuid.UUID, execution_id: str) -> None:
         with self.database.transaction() as connection:
@@ -223,12 +268,13 @@ class WorkflowRepository:
     def finalize(self, batch_id: uuid.UUID, execution_id: str | None = None) -> str:
         with self.database.transaction() as connection:
             rows = connection.execute(
-                "SELECT status::text AS status,count(*)::integer AS count FROM public.filing_batch_item "
-                "WHERE batch_id=%s GROUP BY status",
+                "SELECT bi.status::text AS status,count(*)::integer AS count,b.mode::text AS mode "
+                "FROM public.filing_batch_item bi JOIN public.filing_batch b ON b.id=bi.batch_id "
+                "WHERE bi.batch_id=%s GROUP BY bi.status,b.mode",
                 (batch_id,),
             ).fetchall()
             counts = {row["status"]: row["count"] for row in rows}
-            success = counts.get("succeeded", 0)
+            mode = rows[0]["mode"] if rows else "latest"
             incomplete = sum(
                 counts.get(value, 0)
                 for value in ("pending", "selecting", "acquiring", "processing")
@@ -240,9 +286,7 @@ class WorkflowRepository:
                     "('pending','selecting','acquiring','processing')",
                     (batch_id,),
                 )
-            total = sum(counts.values())
-            non_success = total - success
-            status = "failed" if success == 0 else "partial_failure" if non_success else "succeeded"
+            status = _aggregate_batch_status(mode, counts)
             connection.execute(
                 "UPDATE public.filing_batch SET status=%s,kestra_execution_id=COALESCE(%s,kestra_execution_id),"
                 "finished_at=now(),updated_at=now() WHERE id=%s",

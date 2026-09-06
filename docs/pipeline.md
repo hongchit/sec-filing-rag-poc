@@ -137,8 +137,11 @@ flowchart TD
   R -- yes, exact year --> EH[Reuse without promotion]
 ```
 
-Reuse avoids repeated provider cost. Latest mode promotes a compatible ready historical corpus when
-needed. Exact-year mode records a skipped/reused run and never changes the active pointer.
+Reuse avoids repeated provider cost. After SEC discovery and acquisition reproduce the same
+accession, source checksum, and compatibility key, the pipeline returns before accessing OpenAI;
+there is no embedding or generation request for that company. Latest mode promotes a compatible
+ready historical corpus when needed. Exact-year mode records a skipped/reused run and never changes
+the active pointer.
 
 ## Transactional persistence and activation
 

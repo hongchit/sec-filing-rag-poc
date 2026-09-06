@@ -44,3 +44,9 @@ class ItemFailureRequest(BaseModel):
 class BatchFinalizationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kestra_execution_id: str | None = None
+
+
+class BatchLaunchFailureRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    error: str
+    kestra_execution_id: str | None = None

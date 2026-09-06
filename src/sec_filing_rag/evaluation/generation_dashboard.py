@@ -87,7 +87,10 @@ class GenerationEvaluationDashboardService:
             manifest = load_manifest(manifest_path)
         except (OSError, ValueError) as exc:
             raise ArtifactConflict("current generation evaluation artifacts are malformed") from exc
-        if artifact.dataset_sha256 != manifest.dataset_sha256 or artifact.dataset_sha256 != dataset_sha256(dataset_path):
+        if (
+            artifact.dataset_sha256 != manifest.dataset_sha256
+            or artifact.dataset_sha256 != dataset_sha256(dataset_path)
+        ):
             raise ArtifactConflict("generation evaluation dataset checksum is inconsistent")
         if artifact.corpus_snapshot_sha256 != manifest.corpus_snapshot_sha256:
             raise ArtifactConflict("generation evaluation corpus snapshot is inconsistent")
@@ -186,7 +189,10 @@ class GenerationEvaluationDashboardService:
         artifact, cases = self._load()
         audit_available = self._audit_available(artifact)
         referenced = {
-            chunk for prompt in artifact.prompts for case in prompt.cases for chunk in case.retrieved_chunk_ids
+            chunk
+            for prompt in artifact.prompts
+            for case in prompt.cases
+            for chunk in case.retrieved_chunk_ids
         } | {chunk for case in cases for chunk in case.relevant_chunk_ids}
         _, evidence_available = self._chunks(referenced)
         warnings: list[dict[str, Any]] = []
@@ -249,7 +255,10 @@ class GenerationEvaluationDashboardService:
 
     def cases(self) -> GenerationEvaluationCases:
         artifact, cases = self._load()
-        by_prompt = {prompt.prompt_id: {case.case_id: case for case in prompt.cases} for prompt in artifact.prompts}
+        by_prompt = {
+            prompt.prompt_id: {case.case_id: case for case in prompt.cases}
+            for prompt in artifact.prompts
+        }
         output = []
         for case in cases:
             results = []
@@ -291,7 +300,12 @@ class GenerationEvaluationDashboardService:
     @staticmethod
     def _chunk(row: dict[str, Any] | None, chunk_id: str, **extra: Any) -> dict[str, Any]:
         if row is None:
-            return {"chunk_id": chunk_id, "missing": True, "preview": "Evidence unavailable", **extra}
+            return {
+                "chunk_id": chunk_id,
+                "missing": True,
+                "preview": "Evidence unavailable",
+                **extra,
+            }
         return {
             "chunk_id": chunk_id,
             "missing": False,
@@ -318,7 +332,16 @@ class GenerationEvaluationDashboardService:
             prompt_results.append({"prompt_id": prompt.prompt_id, **result.model_dump(mode="json")})
         ids = set(retrieved_ids) | set(case.relevant_chunk_ids)
         chunks, complete = self._chunks(ids)
-        warnings = [] if complete else [_recovery_warning("evidence_unavailable", "Evidence is incomplete or unavailable in this deployment.")]
+        warnings = (
+            []
+            if complete
+            else [
+                _recovery_warning(
+                    "evidence_unavailable",
+                    "Evidence is incomplete or unavailable in this deployment.",
+                )
+            ]
+        )
         return GenerationEvaluationQuestion(
             question={
                 "id": case.id,
@@ -330,8 +353,16 @@ class GenerationEvaluationDashboardService:
                 "accession": case.accession,
             },
             results=prompt_results,
-            expected=[self._chunk(chunks.get(chunk), chunk, matched=True) for chunk in sorted(case.relevant_chunk_ids)],
-            retrieved=[self._chunk(chunks.get(chunk), chunk, rank=index, matched=chunk in case.relevant_chunk_ids) for index, chunk in enumerate(retrieved_ids, 1)],
+            expected=[
+                self._chunk(chunks.get(chunk), chunk, matched=True)
+                for chunk in sorted(case.relevant_chunk_ids)
+            ],
+            retrieved=[
+                self._chunk(
+                    chunks.get(chunk), chunk, rank=index, matched=chunk in case.relevant_chunk_ids
+                )
+                for index, chunk in enumerate(retrieved_ids, 1)
+            ],
             evidence_available=complete,
             warnings=warnings,
         )
@@ -342,17 +373,24 @@ class GenerationEvaluationDashboardService:
         if evaluated is None:
             raise ArtifactMissing("unknown current generation evaluation prompt")
         try:
-            source, current_hash = load_generation_configuration(self.settings.generation_config_path).prompt(prompt_id)
+            source, current_hash = load_generation_configuration(
+                self.settings.generation_config_path
+            ).prompt(prompt_id)
         except (OSError, ValueError) as exc:
             raise ArtifactMissing("evaluated prompt source is unavailable") from exc
         if current_hash != evaluated.prompt_sha256:
             raise ArtifactConflict("current prompt source does not match the evaluated artifact")
-        return GenerationPromptSource(prompt_id=prompt_id, prompt_sha256=current_hash, source=source)
+        return GenerationPromptSource(
+            prompt_id=prompt_id, prompt_sha256=current_hash, source=source
+        )
 
     def chunk(self, chunk_id: str) -> GenerationEvaluationChunk:
         artifact, cases = self._load()
         allowed = {chunk for case in cases for chunk in case.relevant_chunk_ids} | {
-            chunk for prompt in artifact.prompts for case in prompt.cases for chunk in case.retrieved_chunk_ids
+            chunk
+            for prompt in artifact.prompts
+            for case in prompt.cases
+            for chunk in case.retrieved_chunk_ids
         }
         if chunk_id not in allowed:
             raise ArtifactMissing("chunk is not referenced by the current generation evaluation")

@@ -4,6 +4,30 @@ The application schema is an audit-oriented store for source lineage, corpus ver
 references, research, and evaluation. Numbered migrations under `migrations/versions` are immutable;
 `public.schema_migration` records their checksums.
 
+## Medallion design
+
+The filing corpus uses a medallion-style design: bronze preserves what was acquired, silver turns
+that evidence into governed application knowledge, and gold serves a search-optimized projection.
+Each layer has one clear responsibility, so source evidence, citation truth, and search performance
+can evolve without silently changing one another.
+
+This separation also creates a controlled path for progressive transformation. Bronze retains the
+original filing, silver can clean and enrich its content, and gold can publish representations tuned
+for particular consumers. A transformation is not a benefit merely because it changes data: the
+benefit is that it can be versioned, validated, traced to its input, and rerun without reacquiring or
+overwriting the source.
+
+| Schema | Positioning and goal | Produced by | Primary consumers | Distinctive data | Principal benefit |
+| --- | --- | --- | --- | --- | --- |
+| Bronze | Preserve provider evidence before application transformations | SEC acquisition and transactional corpus persistence | Ingestion, lineage inspection, and audit | Exact HTML bytes, provider snapshots, acquisition metadata, byte lengths, and source checksums | A filing can be verified and processed again from the evidence actually received |
+| Silver | Govern the normalized, versioned corpus and own citation truth | Sanitization, Item extraction, deterministic chunking, and candidate validation | Corpus reader, citations, research evidence hydration, activation, and evaluation | Compatibility keys, lifecycle state, explicit coverage, normalized text, stable chunk IDs, citation handles, and source offsets | Research remains reproducible when filings or processing settings change |
+| Gold | Serve a replaceable, search-optimized projection | Embedding and persistence of validated silver chunks | Keyword, vector, and hybrid retrieval; evaluation; corpus-status reads | Repeated filter keys, provenance, embeddings, lexical documents, and search indexes | Retrieval stays fast without making the index the source of truth |
+
+The `public` schema is the control plane around these layers. It records configuration, users,
+batches, ingestion stages, activation history, research, evaluation, model usage, cost, and audit
+events. Those records explain who requested work, which corpus is active, and what happened; they
+are operational state rather than another stage of filing refinement.
+
 ## Principal relationships
 
 ```mermaid
@@ -33,8 +57,9 @@ the actual ownership model.
 
 - `configuration_version` stores normalized company configuration and SHA-256.
 - `company` stores configured ticker identity, enablement, SEC resolution, and bounded errors.
-- `filing_batch` stores latest/exact-year intent, optional fiscal year, request/execution
-  correlation, aggregate status, timestamps, and safe error.
+- `filing_batch` stores latest/exact-year intent, optional fiscal year, public request and unique
+  scheduled-launcher correlation, processing execution correlation, aggregate status, timestamps,
+  and safe error.
 - `filing_batch_item` stores ordered company work, lifecycle, selected accession, acquisition/corpus
   references, timestamps, and safe error.
 - `ingestion_run` and `ingestion_stage` record processing compatibility, stage counts, times, and
@@ -45,38 +70,121 @@ the actual ownership model.
 The application database stores references to Kestra execution IDs but has no foreign keys to
 Kestra PostgreSQL.
 
-## Bronze: immutable source evidence
+## Bronze: preserve source evidence
 
 `bronze.filing_acquisition` is the persisted boundary between provider acquisition and corpus
 processing. It stores primitive provider metadata, exact HTML bytes, media type, byte length,
 checksum, company, accession, and acquisition time.
 
-Company, filing, and document snapshot tables preserve canonical provider lineage. Mutation triggers
-reject updates/deletes, and checksum uniqueness provides replay identity. Bronze answers “what did
-the source/provider supply?” rather than “what text did retrieval use?”
+During acquisition, the application inserts or reuses these records:
 
-## Silver: application corpus authority
+- `filing_acquisition` safely hands an acquired filing from batch execution to corpus processing.
+- `edgar_company_snapshot` captures the provider's company identity and descriptive metadata.
+- `edgar_filing_snapshot` captures accession, dates, form, document identity, and SEC URLs.
+- `edgar_filing_document` stores the selected original `10-K` document and its exact UTF-8 HTML.
 
-- `silver.filing` identifies one original filing by CIK and accession and links source snapshots.
-- `silver.corpus_version` identifies one processing-compatible representation of a filing and stores
-  parser, chunker, embedding, index, source checksum, lifecycle, and readiness.
-- `silver.section` stores one of six Item coverage outcomes, exact normalized text, source offsets,
-  checksum, parser version, and safe reason.
-- `silver.chunk` stores deterministic identity, section/corpus relationships, ordinal, text, filing
-  offsets, citation, version, and checksum.
+The snapshot tables reject updates and deletes. Canonical metadata hashes deduplicate equivalent
+snapshots, while content length and SHA-256 fields make source integrity directly testable. The
+acquisition row is idempotent for a company, accession, and content checksum; unlike the three
+snapshot tables, its insert-only behavior currently relies on application ownership rather than a
+mutation trigger.
+
+Bronze answers “what did the provider supply?” Its main achievement is a replayable evidence
+boundary: later parser or index changes never require treating a derived search row as the original
+filing.
+
+## Silver: govern the application corpus
+
+After source validation, the pipeline sanitizes HTML, extracts six supported Items, creates
+deterministic chunks, and writes:
+
+- `silver.filing`, the canonical original filing identified by CIK and accession and linked to the
+  exact bronze snapshots and document.
+- `silver.corpus_version`, one processing-compatible representation of that filing, including its
+  source checksum, parser, chunker, embedding, dimensions, index contract, lifecycle, and readiness.
+- `silver.section`, exactly one coverage outcome for each supported Item, with normalized text,
+  filing-relative offsets, checksum, parser version, and a safe reason where applicable.
+- `silver.chunk`, a deterministic passage identity with section and corpus lineage, ordinal, exact
+  text, filing-relative offsets, stable citation handle, version, and checksum.
+
+The compatibility key binds the source checksum and all processing versions. A material source,
+parser, chunker, embedding, dimension, or index change therefore creates a distinct corpus instead
+of silently rewriting an old one. Coverage states distinguish present content and legitimate
+absence from extraction failure. Candidate validation requires complete coverage and consistent
+chunks before the corpus becomes ready.
 
 Silver is authoritative for source text, corpus version, citation identity, and offsets. Research
 evidence hydration and the corpus reader join silver rather than trusting a denormalized search row.
+This gives readers stable highlights and lets stored research pin the exact evidence used even after
+a newer filing becomes active.
 
-## Gold: retrieval projection
+Today, silver sanitization removes scripts, styles, active and hidden elements, controls, comments,
+and unwanted formatting characters; normalizes the remaining text; extracts supported Items; and
+represents tables as plain text. The same boundary can later add versioned table reconstruction,
+footnote and exhibit structure, OCR, and image or chart descriptions while preserving links to the
+original bronze document. These would be new processing capabilities, not changes to bronze source
+evidence.
+
+## Gold: serve the retrieval projection
 
 `gold.search_document` has one row per chunk with company/corpus/filing/Item filter keys, repeated
 text and citation, JSON provenance, embedding contract, vector, and lexical document. PostgreSQL BM25
 is pinned to English; B-tree indexes support prefilters before scoring.
 
+Gold is generated in the same transaction as its silver candidate after embeddings are returned.
+Before activation, validation checks one-to-one silver/gold counts, matching text and citations,
+valid vectors, source offsets, and required provenance. Retrieval then combines indexed keyword and
+semantic candidates while pinning the company, filing, and corpus version.
+
 `gold.corpus_status` summarizes the active default's filing, coverage, counts, embedding usage,
 activation, and latest successful ingestion. Gold is replaceable: it accelerates search but does not
-own source truth.
+own source truth. That separation allows search representation and indexing strategies to be rebuilt
+without moving citation coordinates or altering historical research.
+
+Gold can consequently evolve into multiple workload-specific projections. Narrative passages,
+structured financial tables, visual-content descriptions, graph relationships, or analytical facts
+could each receive an appropriate search or serving representation while silver remains the common
+governed authority.
+
+## Layer lifecycle and activation
+
+```mermaid
+---
+title: Medallion corpus lifecycle
+---
+flowchart LR
+  A[Acquire and checksum filing] --> B[Bronze: preserve evidence]
+  B --> X[Sanitize, extract, and chunk]
+  X --> S[Silver: version trusted corpus]
+  S --> E[Embed and index]
+  E --> G[Gold: serve retrieval]
+  G --> V{Candidate valid?}
+  V -- latest --> D[Activate as company default]
+  V -- exact year --> H[Keep as historical corpus]
+  V -- invalid --> P[Roll back and preserve prior default]
+```
+
+Bronze, silver, and gold candidate records are persisted together transactionally. A company row
+lock serializes activation, and a partial unique index permits at most one live default per company.
+Latest processing can activate a validated version; exact-year processing keeps a ready historical
+version. Research and evidence reference corpus and chunk identities directly, so changing the
+default never retargets prior answers.
+
+This design delivers several practical benefits:
+
+- complete lineage from a cited answer to normalized text and original filing bytes;
+- repeatable research and evaluation across source and processing versions;
+- safe reuse of a compatible corpus without repeated embedding cost;
+- atomic promotion that cannot replace a working corpus with a partial candidate;
+- independent optimization or rebuilding of the search projection;
+- progressive cleaning and enrichment of text, tables, and images without losing source fidelity;
+- reuse of bronze and silver data when only a parser, embedding, or serving strategy changes;
+- specialized serving models for narrative, structured, visual, relational, or analytical workloads;
+- observable failures and per-company isolation without querying the workflow engine.
+
+Together, these properties support progressive data-quality improvement, safe experimentation, and
+clear governance: operators can identify what was acquired, what was derived, which transformation
+produced it, and which representation was used by a consumer.
 
 ## Research, feedback, and usage
 
@@ -130,3 +238,17 @@ before ready state.
 
 Apply migrations with `uv run sec-rag-migrate`. Never edit a migration that may have been applied;
 add the next numbered file. Recovery and destructive reset belong to [Operations](operations.md).
+
+## Future review checklist
+
+The current model establishes the intended authority and activation boundaries. Future hardening or
+scale reviews can consider:
+
+- applying database-enforced insert-only behavior to `bronze.filing_acquisition`;
+- adding direct range checks for section and chunk offsets;
+- enforcing redundant filing, corpus, and embedding relationships with composite constraints where
+  that does not make ingestion needlessly rigid;
+- adding an approximate vector index when corpus size and measured query plans justify it;
+- defining long-term evidence retention and schema-specific database roles and grants;
+- replacing textual aggregation in `gold.corpus_status` if usage status needs an explicit severity
+  order.

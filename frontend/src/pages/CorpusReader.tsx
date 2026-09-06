@@ -67,7 +67,7 @@ export function CorpusRoot() {
           const status = await getJson<CompanyStatus>(`/api/companies/${company.ticker}/status`);
           if (status.active_corpus) return `/corpus/${company.ticker}/1`;
         }
-        throw new Error('No enabled company has a ready active corpus.');
+        throw new Error('No enabled company has a filing ready in the Library.');
       })
       .then(setTarget)
       .catch(() => setFailed(true));
@@ -77,8 +77,8 @@ export function CorpusRoot() {
     <AppShell>
       <Alert severity={failed ? 'info' : 'info'} aria-live="polite">
         {failed
-          ? 'No readable corpus is currently available.'
-          : 'Finding the first readable corpus…'}
+          ? 'No readable filing is currently available in the Library.'
+          : 'Finding the first readable filing in the Library…'}
       </Alert>
     </AppShell>
   );
@@ -155,7 +155,7 @@ export function CorpusReader() {
         (corpusParam && !uuid.test(corpusParam)) ||
         (chunkParam && !chunkHash.test(chunkParam))
       )
-        throw new Error('This corpus address is invalid.');
+        throw new Error('This filing address is invalid.');
       let corpusId = corpusParam;
       if (chunkParam) {
         // Location is authoritative for all route components. This also prevents a
@@ -176,7 +176,7 @@ export function CorpusReader() {
         );
         corpusId = companyStatus.active_corpus?.corpus_version_id ?? null;
       }
-      if (!corpusId) throw new Error('This company has no ready corpus.');
+      if (!corpusId) throw new Error('This company has no filing ready in the Library.');
       const metadata = await getJson<CorpusVersion>(`/api/corpus/versions/${corpusId}`);
       if (metadata.ticker !== normalizedTicker) {
         // A pinned corpus UUID outranks the human-readable ticker segment.
@@ -302,10 +302,10 @@ export function CorpusReader() {
     return (
       <AppShell>
         <Alert severity="warning">
-          <Typography variant="h5">Corpus page not found</Typography>
+          <Typography variant="h5">Filing page not found</Typography>
           <Typography>{error}</Typography>
           <Button component={RouterLink} to="/corpus">
-            Choose an available corpus
+            Choose an available filing
           </Button>
         </Alert>
       </AppShell>
@@ -315,7 +315,7 @@ export function CorpusReader() {
       <AppShell>
         <Stack direction="row" role="status" spacing={1}>
           <CircularProgress size={22} />
-          <Typography>Loading corpus reader…</Typography>
+          <Typography>Loading filing reader…</Typography>
         </Stack>
       </AppShell>
     );
@@ -418,7 +418,7 @@ export function CorpusReader() {
           <Breadcrumbs aria-label="Breadcrumb" sx={{ mb: 2 }}>
             {originCrumb}
             <Link component={RouterLink} to="/corpus">
-              Corpus
+              Library
             </Link>
             <Typography>
               {version.ticker} Item {item}
@@ -426,7 +426,7 @@ export function CorpusReader() {
           </Breadcrumbs>
           {!version.is_active && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              You are reading a historical corpus version.{' '}
+              You are reading a historical filing version.{' '}
               {version.active_corpus_version_id && (
                 <Link component={RouterLink} to={`/corpus/${version.ticker}/${item}`}>
                   Open the active version

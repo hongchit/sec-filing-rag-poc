@@ -2,6 +2,8 @@ from pathlib import Path
 
 import yaml
 
+from sec_filing_rag.repositories.workflows import _aggregate_batch_status
+
 
 def test_batch_flow_is_sequential_and_uses_only_protected_reference_contracts() -> None:
     path = Path("workflows/filing_batch.yaml")
@@ -57,3 +59,42 @@ def test_devcontainer_pins_httpgenerator_and_has_no_obsolete_flow_setting() -> N
     environment = Path(".env.example").read_text()
     assert "KESTRA_BATCH_FLOW_ID=filing_batch" in environment
     assert "KESTRA_HISTORICAL_FLOW_ID" not in environment
+
+
+def test_scheduled_launcher_reuses_batch_flow_with_daily_non_overlapping_trigger() -> None:
+    path = Path("workflows/scheduled_filing_launcher.yaml")
+    flow = yaml.safe_load(path.read_text())
+    create_batch, process_batch = flow["tasks"]
+    trigger = flow["triggers"][0]
+
+    assert create_batch["uri"].endswith("/internal/scheduled-filing-batches")
+    assert create_batch["headers"]["X-Kestra-Execution-ID"] == "{{ execution.id }}"
+    assert process_batch["type"] == "io.kestra.plugin.core.flow.Subflow"
+    assert process_batch["namespace"] == "sec_filings.ingestion"
+    assert process_batch["flowId"] == "filing_batch"
+    assert process_batch["wait"] is True
+    assert process_batch["transmitFailed"] is True
+    assert trigger == {
+        "id": "daily_latest_filings",
+        "type": "io.kestra.plugin.core.trigger.Schedule",
+        "cron": "8 6 * * *",
+        "timezone": "Etc/UTC",
+        "allowConcurrent": False,
+        "recoverMissedSchedules": "LAST",
+    }
+    assert "secret('INGESTION_API_TOKEN')" in path.read_text()
+    assert "launch-failures" in path.read_text()
+
+
+def test_latest_batch_aggregation_treats_unchanged_items_as_success() -> None:
+    assert _aggregate_batch_status("latest", {"skipped": 3}) == "succeeded"
+    assert _aggregate_batch_status("latest", {"succeeded": 1, "skipped": 2}) == "succeeded"
+    assert (
+        _aggregate_batch_status("latest", {"succeeded": 1, "skipped": 1, "failed": 1})
+        == "partial_failure"
+    )
+
+
+def test_exact_year_absence_and_real_failures_remain_non_success() -> None:
+    assert _aggregate_batch_status("exact_year", {"skipped": 3}) == "failed"
+    assert _aggregate_batch_status("latest", {"failed": 3}) == "failed"

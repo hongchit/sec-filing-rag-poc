@@ -5,7 +5,9 @@ import { ThemeProvider } from '@mui/material/styles';
 import { App } from './App';
 import { theme } from './theme';
 import { Help } from './components/Help';
+import { EvaluationTerm } from './components/EvaluationTerm';
 import { normalizedRoute } from './analytics';
+import { safeLocalReturnTo } from './returnTo';
 
 class ResizeObserverMock {
   observe() {}
@@ -20,16 +22,151 @@ const renderApp = () =>
     </ThemeProvider>,
   );
 
-test('redirects the root route to the research workspace', () => {
+test('renders the public landing page at the root route', async () => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(() => new Promise(() => {})),
+    vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      return Promise.resolve({
+        ok: url === '/api/showcase',
+        json: () => Promise.resolve(url === '/api/showcase' ? { examples: [] } : {}),
+      });
+    }),
   );
   renderApp();
-  expect(screen.getByRole('heading', { name: 'Investor research' })).toBeInTheDocument();
+  expect(
+    await screen.findByRole('heading', {
+      name: 'Ask an annual report a question. Get a cited answer.',
+    }),
+  ).toBeInTheDocument();
 });
 
-test('bootstraps latest filings when a fresh installation has no active corpus', async () => {
+test('renders configured showcase examples in order and prefills Query', async () => {
+  const examples = [
+    {
+      id: 'first',
+      question: 'What was cloud revenue?',
+      answer: 'Cloud revenue was $137.4 billion.',
+      ticker: 'MSFT',
+      filing_period: 'Fiscal year 2024',
+      accession: '0000950170-24-087843',
+      items: ['7'],
+      citations: ['0000950170-24-087843:item-7:0000'],
+      goal: 'management_analysis',
+    },
+    {
+      id: 'second',
+      question: 'Which products form the platform?',
+      answer: 'The platform combines hardware and software.',
+      ticker: 'NVDA',
+      filing_period: 'Fiscal year 2024',
+      accession: '0001045810-24-000029',
+      items: ['1'],
+      citations: ['0001045810-24-000029:item-1:0005'],
+      goal: 'business',
+    },
+  ];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      return Promise.resolve({
+        ok: url === '/api/showcase',
+        json: () => Promise.resolve(url === '/api/showcase' ? { examples } : {}),
+      });
+    }),
+  );
+
+  renderApp();
+
+  expect(await screen.findByText('What was cloud revenue?')).toBeInTheDocument();
+  const action = screen.getByRole('link', { name: 'Try this question in Query' });
+  expect(action).toHaveAttribute('href', expect.stringContaining('company%3DMSFT'));
+  fireEvent.click(screen.getByRole('button', { name: 'Next example' }));
+  expect(screen.getByText('Which products form the platform?')).toBeInTheDocument();
+  expect(screen.getByText('Example 2 of 2')).toBeInTheDocument();
+});
+
+test('accepts only safe local return destinations', () => {
+  expect(safeLocalReturnTo('/evaluation/answer-quality/questions?company=AAPL')).toBe(
+    '/evaluation/answer-quality/questions?company=AAPL',
+  );
+  expect(safeLocalReturnTo('https://example.com/private')).toBe('/research');
+  expect(safeLocalReturnTo('//example.com/private')).toBe('/research');
+});
+
+test('redirects an authenticated visitor away from the sign-in page', async () => {
+  history.replaceState(null, '', '/sign-in?return_to=%2Foverview');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            user_id: 'user-id',
+            email: 'user@example.com',
+            is_admin: false,
+            budget: { limit_usd: '10', used_usd: '0', reserved_usd: '0', remaining_usd: '10' },
+            action_reservations: { research_usd: '0.05', corpus_preparation_usd: '0.05' },
+          }),
+      }),
+    ),
+  );
+  renderApp();
+  expect(
+    await screen.findByRole('heading', {
+      name: 'Give a language model the evidence it needs, when it needs it.',
+    }),
+  ).toBeInTheDocument();
+});
+
+test('redirects a guest Data route before requesting evaluation data', async () => {
+  history.replaceState(null, '', '/evaluation/evidence-search/questions?outcome=miss');
+  const fetchMock = vi.fn((url: string) =>
+    Promise.resolve({
+      ok: false,
+      json: () => Promise.resolve(url === '/api/showcase' ? { examples: [] } : {}),
+    }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  render(
+    <ThemeProvider theme={theme}>
+      <App authenticate />
+    </ThemeProvider>,
+  );
+  expect(
+    await screen.findByRole('heading', {
+      name: 'Sign in required',
+    }),
+  ).toBeInTheDocument();
+  expect(window.location.search).toContain('return_to=%2Fevaluation%2Fevidence-search%2Fquestions');
+  expect(screen.getByRole('link', { name: 'Continue with Google' })).toHaveAttribute(
+    'href',
+    expect.stringContaining(
+      'return_to=%2Fevaluation%2Fevidence-search%2Fquestions%3Foutcome%3Dmiss',
+    ),
+  );
+  expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/cases'))).toBe(false);
+});
+
+test('checks authentication once while navigating public routes', async () => {
+  const fetchMock = vi.fn((url: string) =>
+    Promise.resolve({
+      ok: false,
+      json: () => Promise.resolve(url === '/api/showcase' ? { examples: [] } : {}),
+    }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  renderApp();
+  fireEvent.click(await screen.findByRole('link', { name: 'Why use RAG?' }));
+  await screen.findByRole('heading', { name: 'LLM alone vs RAG' });
+  fireEvent.click(screen.getByRole('link', { name: 'How it works' }));
+  await screen.findByRole('heading', { name: 'A basic RAG implementation, measured end to end.' });
+  expect(fetchMock.mock.calls.filter(([url]) => url === '/api/auth/me')).toHaveLength(1);
+});
+
+test('bootstraps latest filings when a fresh installation has no active filing collection', async () => {
   history.replaceState(null, '', '/research');
   let statusReads = 0;
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -86,13 +223,22 @@ test('bootstraps latest filings when a fresh installation has no active corpus',
     ),
   ).toBe(true);
   await waitFor(() =>
-    expect(screen.queryByText('No searchable filing corpus is ready yet.')).not.toBeInTheDocument(),
+    expect(
+      screen.queryByText('No searchable filing is ready in the Library yet.'),
+    ).not.toBeInTheDocument(),
   );
   expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('AAPL');
   expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('2025');
+  expect(screen.getByRole('link', { name: 'Query' })).toHaveAttribute('href', '/research');
+  expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('href', '/corpus');
+  expect(
+    screen
+      .getByRole('link', { name: 'How it works' })
+      .querySelector('[data-testid="AccountTreeOutlinedIcon"]'),
+  ).toBeInTheDocument();
 });
 
-test('keeps successful corpora available when latest bootstrap partially fails', async () => {
+test('keeps successful filing collections available when latest bootstrap partially fails', async () => {
   history.replaceState(null, '', '/research');
   let refreshed = false;
   vi.stubGlobal(
@@ -153,20 +299,22 @@ test('keeps successful corpora available when latest bootstrap partially fails',
 
   expect(await screen.findByText('MSFT filing preparation failed safely.')).toBeInTheDocument();
   await waitFor(() => expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('2025'));
-  expect(screen.queryByText('No searchable filing corpus is ready yet.')).not.toBeInTheDocument();
+  expect(
+    screen.queryByText('No searchable filing is ready in the Library yet.'),
+  ).not.toBeInTheDocument();
 });
 
-test('keeps policies public and sends protected routes to the landing page', async () => {
+test('keeps policies public and sends protected routes to the sign-in page', async () => {
   history.replaceState(null, '', '/privacy');
-  const fetchMock = vi.fn();
+  const fetchMock = vi.fn(() => Promise.resolve({ ok: false }));
   vi.stubGlobal('fetch', fetchMock);
   const view = render(
     <ThemeProvider theme={theme}>
       <App authenticate />
     </ThemeProvider>,
   );
-  expect(screen.getByRole('heading', { name: 'Privacy Policy' })).toBeInTheDocument();
-  expect(fetchMock).not.toHaveBeenCalled();
+  expect(await screen.findByRole('heading', { name: 'Privacy Policy' })).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
   view.unmount();
 
   history.replaceState(null, '', '/research');
@@ -181,13 +329,14 @@ test('keeps policies public and sends protected routes to the landing page', asy
   );
   expect(
     await screen.findByRole('heading', {
-      name: 'Understand annual filings without reading every page.',
+      name: 'Sign in required',
     }),
   ).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'Continue with Google' })).toHaveAttribute(
     'href',
-    expect.stringContaining('policy_acknowledged=true'),
+    expect.stringContaining('return_to=%2Fresearch'),
   );
+  expect(screen.getByText(/Saved queries, filing documents/)).toBeInTheDocument();
 });
 
 test('normalizes sensitive route values before analytics', () => {
@@ -196,6 +345,83 @@ test('normalizes sensitive route values before analytics', () => {
   );
   expect(normalizedRoute('/corpus/AAPL/1')).toBe('/corpus/:ticker/:item');
   expect(normalizedRoute('/unknown/private-value')).toBe('/other');
+  expect(normalizedRoute('/overview')).toBe('/overview');
+  expect(normalizedRoute('/how-it-works')).toBe('/how-it-works');
+  expect(normalizedRoute('/sign-in')).toBe('/sign-in');
+  expect(normalizedRoute('/evaluation/evidence-search/questions')).toBe(
+    '/evaluation/evidence-search/questions',
+  );
+});
+
+test('renders the public LLM versus RAG comparison without the RAG-loop diagram', async () => {
+  history.replaceState(null, '', '/overview');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => Promise.resolve({ ok: false })),
+  );
+
+  renderApp();
+
+  expect(
+    await screen.findByRole('heading', {
+      name: 'Give a language model the evidence it needs, when it needs it.',
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'LLM alone vs RAG' })).toBeInTheDocument();
+  expect(screen.getByText('Relies on training memory')).toBeInTheDocument();
+  expect(screen.getByText('Produces a cited answer')).toBeInTheDocument();
+  expect(screen.queryByRole('img', { name: /RAG flow/i })).not.toBeInTheDocument();
+});
+
+test('shows the RAG loop and trusted data layers only on How It Works', async () => {
+  history.replaceState(null, '', '/how-it-works');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => Promise.resolve({ ok: false })),
+  );
+  renderApp();
+  expect(
+    await screen.findByRole('img', { name: /filing preparation pipeline feeds an index/i }),
+  ).toHaveAttribute('src', '/diagrams/rag-loop.svg');
+  expect(
+    screen.getByRole('heading', { name: 'Three data layers, each with one clear job.' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('img', { name: /bronze preserves the original filing/i }),
+  ).toHaveAttribute('src', '/diagrams/medallion-data-layers.svg');
+  expect(screen.getByRole('heading', { name: 'Bronze — Preserve the source' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'Silver — Build trusted knowledge' }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Gold — Search efficiently' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'Future improvements for richer research' }),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Structured table understanding')).toBeInTheDocument();
+  expect(screen.getByText('Image and chart understanding')).toBeInTheDocument();
+  expect(
+    screen.getByText(/Only the strongest evidence reaches the answer model/),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Bounded agentic retrieval')).toBeInTheDocument();
+  expect(screen.getByText('Knowledge graph retrieval')).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Glossary' })).not.toBeInTheDocument();
+});
+
+test('renders exactly three landing process steps without Verify', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) =>
+      Promise.resolve({
+        ok: false,
+        json: () => Promise.resolve(url === '/api/showcase' ? { examples: [] } : {}),
+      }),
+    ),
+  );
+  renderApp();
+  expect(await screen.findByText('1. Ask')).toBeInTheDocument();
+  expect(screen.getByText('2. Find evidence')).toBeInTheDocument();
+  expect(screen.getByText('3. Answer')).toBeInTheDocument();
+  expect(screen.queryByText('4. Verify')).not.toBeInTheDocument();
 });
 
 test('help popovers dismiss with Escape and outside click', async () => {
@@ -216,6 +442,20 @@ test('help popovers dismiss with Escape and outside click', async () => {
   await waitFor(() =>
     expect(screen.queryByText('Highest-ranked chunks checked.')).not.toBeInTheDocument(),
   );
+});
+
+test('evaluation terms expose concise business definitions', () => {
+  render(
+    <ThemeProvider theme={theme}>
+      <EvaluationTerm term="mrr">MRR</EvaluationTerm>
+    </ThemeProvider>,
+  );
+  const trigger = screen.getByRole('button', { name: 'Help: MRR' });
+  expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+  fireEvent.click(trigger);
+  expect(screen.getByText(/how early the first relevant passage appears/i)).toBeInTheDocument();
+  expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  expect(trigger).toHaveAttribute('aria-controls');
 });
 
 test('retrying failed research restores its query and advanced settings', async () => {
@@ -257,7 +497,7 @@ test('retrying failed research restores its query and advanced settings', async 
   );
 
   renderApp();
-  fireEvent.click(await screen.findByRole('button', { name: 'Retry as new research' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry as new query' }));
 
   expect(await screen.findByDisplayValue(failedResearch.question)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Advanced settings' })).toHaveAttribute(
@@ -271,6 +511,90 @@ test('retrying failed research restores its query and advanced settings', async 
     expect(selects[1]).toHaveTextContent('2024');
     expect(selects[3]).toHaveTextContent('Item 1A, Item 7');
   });
+});
+
+test('prefills a benchmark question from validated research query parameters', async () => {
+  history.replaceState(
+    null,
+    '',
+    '/research?company=AAPL&goal=key_risks&items=1A%2C7&accession=0000320193-24-000123&question=Which+dependencies+create+risk%3F',
+  );
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const body =
+        url === '/api/companies'
+          ? [{ ticker: 'AAPL', enabled: true, name: 'Apple' }]
+          : url === '/api/companies/AAPL/status'
+            ? {
+                ticker: 'AAPL',
+                active_corpus: {
+                  corpus_version_id: 'corpus-aapl',
+                  accession: '0000320193-25-000079',
+                  report_date: '2025-09-27',
+                  filing_date: '2025-10-31',
+                },
+                historical_corpora: [
+                  {
+                    corpus_version_id: 'corpus-aapl-2024',
+                    accession: '0000320193-24-000123',
+                    report_date: '2024-09-28',
+                    filing_date: '2024-11-01',
+                  },
+                ],
+              }
+            : { items: [] };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+    }),
+  );
+
+  renderApp();
+
+  expect(await screen.findByDisplayValue('Which dependencies create risk?')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('AAPL'));
+  expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('2024');
+  expect(screen.getAllByRole('combobox')[2]).toHaveTextContent('Key Risks');
+  expect(screen.getAllByRole('combobox')[3]).toHaveTextContent('Item 1A, Item 7');
+});
+
+test('discloses when an evaluated filing prefill falls back to the latest filing', async () => {
+  history.replaceState(
+    null,
+    '',
+    '/research?company=AAPL&accession=unavailable&question=What+changed%3F',
+  );
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const body =
+        url === '/api/companies'
+          ? [{ ticker: 'AAPL', enabled: true, name: 'Apple' }]
+          : url === '/api/companies/AAPL/status'
+            ? {
+                ticker: 'AAPL',
+                active_corpus: {
+                  corpus_version_id: 'corpus-aapl',
+                  accession: 'latest',
+                  report_date: '2025-09-27',
+                  filing_date: '2025-10-31',
+                },
+                historical_corpora: [],
+              }
+            : { items: [] };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+    }),
+  );
+
+  renderApp();
+
+  expect(
+    await screen.findByText(
+      'The filing used in the evaluation is not available here. The latest available filing has been selected instead.',
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('2025');
 });
 
 test('shows interpretation paragraphs before filing facts while preserving group order', async () => {
@@ -323,6 +647,8 @@ test('shows interpretation paragraphs before filing facts while preserving group
     'Fact one',
     'Fact two',
   ]);
+  expect(screen.getAllByText('TL;DR')).toHaveLength(2);
+  expect(screen.queryByText('Filing fact')).not.toBeInTheDocument();
 });
 
 test('links administrators to research results in a user activity record', async () => {
@@ -464,7 +790,8 @@ test('shows operational executions separately without loading users', async () =
   ).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Users' })).not.toBeInTheDocument();
   expect(screen.getByText(/ground truth generation · succeeded/)).toBeInTheDocument();
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock).toHaveBeenCalledWith('/api/auth/me');
   expect(fetchMock).toHaveBeenCalledWith('/api/admin/model-executions?limit=25&offset=0');
 });
 
@@ -474,8 +801,8 @@ afterEach(() => {
   history.replaceState(null, '', '/');
 });
 
-test('renders the selected evaluation winner and question evidence', async () => {
-  history.replaceState(null, '', '/evaluation?outcome=miss');
+test('renders the public retrieval summary without fetching question evidence', async () => {
+  history.replaceState(null, '', '/evaluation/evidence-search?outcome=miss');
   const summary = {
     run: { status: 'succeeded', question_count: 1, finished_at: '2026-01-01T00:00:00Z' },
     coverage: { accepted_questions: 1 },
@@ -543,50 +870,169 @@ test('renders the selected evaluation winner and question evidence', async () =>
       },
     ],
   };
-  const cases = {
-    configuration_id: 'cfg-win',
-    warnings: [],
-    facets: {
-      tickers: ['AAPL'],
-      items: ['1'],
-      goals: ['business'],
-      query_types: ['exact_keyword'],
+  const fetchMock = vi.fn((url: string) =>
+    Promise.resolve({
+      ok: url !== '/api/auth/me',
+      json: () => Promise.resolve(summary),
+    }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  renderApp();
+  expect(
+    await screen.findByRole('heading', { name: 'Which search strategy finds the right passage?' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('What is the business?')).not.toBeInTheDocument();
+  expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/cases'));
+  fireEvent.click(screen.getByRole('button', { name: 'Help: Top-k' }));
+  expect(screen.getByText(/maximum number of highest-ranked passages/i)).toBeInTheDocument();
+  fireEvent.keyDown(screen.getByRole('presentation'), { key: 'Escape' });
+  const navigation = await screen.findByRole('navigation', { name: 'Evaluation' });
+  expect(navigation).toHaveTextContent(
+    'Evaluation overviewRetrieval evaluationEvaluation QuestionsRAG evaluationRAG Answer Comparison',
+  );
+  expect(screen.getByText('Evaluation Questions').closest('a')).toHaveAttribute(
+    'href',
+    '/sign-in?return_to=%2Fevaluation%2Fevidence-search%2Fquestions',
+  );
+  expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
+});
+
+test('renders the public benefit-led evaluation with model provenance and measured baselines', async () => {
+  history.replaceState(null, '', '/evaluation');
+  const overview = {
+    benchmark: {
+      question_count: 96,
+      finished_at: '2026-08-31T03:04:45Z',
+      human_reviewed: true,
     },
-    cases: [
+    retrieval: {
+      selected_strategy: 'weighted_hybrid',
+      selected_configuration_id: 'cfg-hybrid',
+      hit_count: 95,
+      question_count: 96,
+      hit_rate: 95 / 96,
+      mrr: 0.96,
+      median_latency_ms: 6.5,
+      rank_buckets: { rank_one: 90, rank_two_three: 5, rank_four_ten: 0, not_found: 1 },
+      baselines: {
+        keyword: {
+          configuration_id: 'cfg-keyword',
+          strategy: 'keyword',
+          hit_count: 95,
+          mrr: 0.951,
+          rank_buckets: { rank_one: 88, rank_two_three: 7, rank_four_ten: 0, not_found: 1 },
+          median_latency_ms: 2.1,
+          configuration: {},
+        },
+        vector: {
+          configuration_id: 'cfg-vector',
+          strategy: 'vector',
+          hit_count: 95,
+          mrr: 0.85,
+          rank_buckets: { rank_one: 75, rank_two_three: 15, rank_four_ten: 5, not_found: 1 },
+          median_latency_ms: 4.5,
+          configuration: {},
+        },
+      },
+    },
+    generation: {
+      selected_prompt_id: 'basic-grounded-v2',
+      promoted_prompt_id: 'basic-grounded-v2',
+      question_count: 96,
+      relevant_count: 95,
+      partly_relevant_count: 1,
+      non_relevant_count: 0,
+      valid_citation_handles: 253,
+      citation_handles: 253,
+      median_latency_ms: 2100,
+      generation_cost_per_answer_usd: '0.002',
+      failures: 0,
+    },
+    models: [
       {
-        id: 'q1',
-        question: 'What is the business?',
-        ticker: 'AAPL',
-        items: ['1'],
-        goal: 'business',
-        query_type: 'exact_keyword',
-        accession: 'x',
-        outcome: 'miss',
-        first_relevant_rank: null,
-        expected: [],
-        retrieved: [],
+        stage: 'evidence_search',
+        role: 'Question understanding and passage matching',
+        active_model: 'text-embedding-3-small',
+        evaluated_model: 'text-embedding-3-small',
+        matches: true,
+      },
+      {
+        stage: 'answer_generation',
+        role: 'Grounded answer drafting',
+        active_model: 'gpt-5.4-mini',
+        evaluated_model: 'gpt-5.4-mini',
+        matches: true,
+      },
+      {
+        stage: 'answer_judging',
+        role: 'Consistent answer-quality measurement',
+        active_model: null,
+        evaluated_model: 'gpt-5.4-mini',
+        matches: null,
       },
     ],
+    example: {
+      case_id: 'q1',
+      question: 'What risks affect the supply chain?',
+      ticker: 'AAPL',
+      accession: '0000320193-24-000123',
+      corpus_version_id: 'corpus-aapl-2024',
+      items: ['1A'],
+      goal: 'key_risks',
+      query_type: 'semantic_paraphrase',
+      consensus: true,
+      interpretation: 'Supplier concentration can make component availability less resilient.',
+      citations: ['0000320193-24-000123:item-1a:0001'],
+      prompt_id: 'basic-grounded-v2',
+      judge_label: 'RELEVANT',
+    },
+    warnings: [],
   };
   vi.stubGlobal(
     'fetch',
-    vi.fn((url: string) =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(url.endsWith('/cases') ? cases : summary),
-      }),
-    ),
+    vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      return Promise.resolve({
+        ok: url === '/api/evaluation-overview/current',
+        json: () => Promise.resolve(overview),
+      });
+    }),
   );
+
   renderApp();
+
   expect(
-    await screen.findByRole('heading', { name: 'Keyword leads this benchmark' }),
+    await screen.findByRole('heading', {
+      name: 'Measured before it was trusted.',
+    }),
   ).toBeInTheDocument();
-  expect(await screen.findByText('What is the business?')).toBeInTheDocument();
-  await waitFor(() => expect(location.search).toContain('outcome=miss'));
+  expect(screen.getByText('90 of 96')).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'Different models handle different stages' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'Find relevant filing passages' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'Generate an answer from retrieved evidence' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'Measure answer relevance consistently' }),
+  ).toBeInTheDocument();
+  expect(screen.getAllByText('Selection considerations')).toHaveLength(3);
+  expect(screen.getAllByText('Model used')).toHaveLength(3);
+  expect(screen.getAllByText('Strengths and benefits')).toHaveLength(3);
+  expect(screen.getAllByText('gpt-5.4-mini')).toHaveLength(2);
+  expect(screen.getByRole('link', { name: 'Try this question in Query' })).toHaveAttribute(
+    'href',
+    expect.stringContaining('question=What+risks+affect+the+supply+chain%3F'),
+  );
+  expect(screen.getByText(/tested and tuned before it was made available/)).toBeInTheDocument();
 });
 
 test('renders portable generation results and missing-database recovery guidance', async () => {
-  history.replaceState(null, '', '/evaluation/generation?attention=needs_attention');
+  history.replaceState(null, '', '/evaluation/answer-quality?attention=needs_attention');
   const summary = {
     run: {
       status: 'succeeded',
@@ -689,7 +1135,7 @@ test('renders portable generation results and missing-database recovery guidance
     'fetch',
     vi.fn((url: string) =>
       Promise.resolve({
-        ok: true,
+        ok: url !== '/api/auth/me',
         json: () => Promise.resolve(url.endsWith('/cases') ? cases : summary),
       }),
     ),
@@ -698,20 +1144,19 @@ test('renders portable generation results and missing-database recovery guidance
   renderApp();
 
   expect(
-    await screen.findByRole('heading', { name: 'Basic grounded v2 leads this run' }),
+    await screen.findByRole('heading', { name: 'Which prompt produces the strongest answers?' }),
   ).toBeInTheDocument();
-  expect(screen.getByText(/prepare the corpus using/)).toHaveTextContent('docs/getting-started.md');
-  expect(
-    screen.getByRole('grid', { name: 'Question by prompt result matrix' }),
-  ).toBeInTheDocument();
-  expect(screen.getAllByText('Partly relevant').length).toBeGreaterThan(0);
+  expect(screen.getByRole('link', { name: 'Open RAG Evaluation Data' })).toHaveAttribute(
+    'href',
+    '/evaluation/answer-quality/questions',
+  );
 });
 
 test('uses a single-open ranked evidence panel and replaces the selected chunk inspector', async () => {
   history.replaceState(
     null,
     '',
-    '/evaluation/configurations/cfg/questions/one?configuration=cfg&outcome=later_hit&page=1',
+    '/evaluation/evidence-search/configurations/cfg/questions/one?configuration=cfg&outcome=later_hit&page=1',
   );
   const configuration = {
     id: 'cfg',
@@ -790,7 +1235,11 @@ test('uses a single-open ranked evidence panel and replaces the selected chunk i
     ),
   );
   renderApp();
-  expect(await screen.findByRole('heading', { name: 'Question one' })).toHaveFocus();
+  await waitFor(() => expect(screen.getByRole('heading', { name: 'Question one' })).toHaveFocus());
+  expect(screen.getByRole('link', { name: 'Try this question in Query' })).toHaveAttribute(
+    'href',
+    expect.stringContaining('accession=x'),
+  );
   expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   expect(screen.getAllByTestId('ranked-evidence-panel')).toHaveLength(1);
   expect(screen.queryByText(/Drag to resize|\d+px/)).not.toBeInTheDocument();
@@ -829,9 +1278,9 @@ test('uses a single-open ranked evidence panel and replaces the selected chunk i
   expect(
     screen.queryByRole('heading', { name: 'Selected chunk: AAPL 10-K · Item 1 · second' }),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Back to questions' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'Back to Evaluation Questions' })).toHaveAttribute(
     'href',
-    '/evaluation?configuration=cfg&outcome=later_hit&page=1',
+    '/evaluation/evidence-search/questions?configuration=cfg&outcome=later_hit&page=1',
   );
   expect(screen.getByRole('link', { name: 'Next question' })).toHaveAttribute(
     'href',

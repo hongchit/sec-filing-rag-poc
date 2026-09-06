@@ -63,6 +63,41 @@ dataset can still produce misleadingly strong metrics.
 The benchmark evaluates parameterized configurations under the same reviewed cases. Retrieval uses
 one pinned corpus per case, so changes in active defaults cannot change the benchmark silently.
 
+### Future improvement: explicit evidence reranking
+
+The current retrieval path finds keyword and vector candidates, fuses their scores, and sends only
+the configured top-k passages to answer generation. A future reranking stage could take the larger
+candidate set and perform a second, more focused comparison between the complete question and each
+passage before choosing that top-k:
+
+```mermaid
+---
+title: Retrieval with an explicit reranking stage
+---
+flowchart TD
+  Q[Question] --> R[Fast retrieval: broad candidate set]
+  R --> X[Reranker: score question-passage relevance]
+  X --> K[Select strongest top-k evidence]
+  K --> A[Answer model]
+```
+
+A reranker can be a small local cross-encoder, a hosted reranking service, or a general-purpose LLM.
+The preferred first experiment for this project is a small local cross-encoder: it is specialized
+for relevance scoring, avoids another external LLM request, and keeps the answer prompt bounded. An
+LLM reranker may help with nuanced questions, but adds provider cost, latency, and output-consistency
+concerns and must be evaluated separately.
+
+Passing every candidate directly to the answer model is a useful larger-context baseline, but it is
+not equivalent to explicit reranking. In that approach, one model must identify evidence and write
+the answer simultaneously; weak passages consume context and can distract from stronger evidence.
+Explicit reranking separates those responsibilities, makes relevance quality independently
+measurable, and reserves answer-model context for the passages most likely to support a response.
+
+Any reranker should be promoted only when benchmark results show that improved retrieval and answer
+quality justify its additional latency and compute. Evaluation should compare at least the current
+top-k baseline, passing the full candidate set to generation, and reranking candidates before the
+same bounded top-k generation step.
+
 ## Metrics
 
 - **Hit Rate:** fraction of questions with at least one relevant chunk inside the returned top-k.
@@ -113,18 +148,29 @@ Database audit rows preserve run status and checksums; usage rows preserve provi
 Validation rejects malformed artifacts, changed datasets, inconsistent winners, incomplete question
 sets, or missing referenced chunks.
 
-## Dashboard and evidence inspection
+## Public overview, dashboards, and evidence inspection
 
-The `/evaluation` route presents the selected winner, strategy comparison, metrics, filters,
-warnings, and question outcomes. Question detail shows expected and retrieved chunks, relevance,
-full text, technical provenance, EDGAR source, and a corpus-pinned reader link. URL-backed filters
-make a diagnostic view repeatable without changing benchmark artifacts.
+The public `/evaluation` route explains the benefit of grounding an existing LLM in current source
+material without training a custom model. It anchors results to reviewed-question counts and the
+best tested keyword baseline, visualizes where expected evidence ranked, names the active and
+evaluated models by role, and discloses benchmark limitations. Exact metrics remain available in an
+expandable technical panel.
 
-The `/evaluation/generation` sub-page presents the current prompt winner, business-facing quality,
-citation, latency, and cost measures, a prompt leaderboard, and a question-by-prompt verdict matrix.
-Question detail compares two structured answers and their judge explanations against the shared
-retrieved evidence. Metric definitions and exact checksum-verified prompt source remain available
-through contextual help and dialogs without crowding the decision view.
+The authenticated `/evaluation/evidence-search` route presents the selected retrieval winner,
+strategy comparison, exact metrics, filters, warnings, and question outcomes. Question detail shows
+expected and retrieved chunks, relevance, full text, technical provenance, EDGAR source, and a
+corpus-pinned reader link. URL-backed filters make a diagnostic view repeatable without changing
+benchmark artifacts.
+
+The authenticated `/evaluation/answer-quality` route presents the current prompt winner,
+business-facing quality, citation, latency, and cost measures, a prompt leaderboard, and a
+question-by-prompt verdict matrix. Question detail compares two structured answers and their judge
+explanations against shared retrieved evidence. Model identifiers, metric definitions, and exact
+checksum-verified prompt source remain available through progressive disclosure.
+
+The public API exposes only curated aggregates and model provenance at
+`GET /api/evaluation-overview/current`. Evaluation cases, chunk content, prompt source, full lineage,
+and user research remain authenticated.
 
 ### Artifact-only deployments
 

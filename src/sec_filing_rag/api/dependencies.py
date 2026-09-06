@@ -13,6 +13,7 @@ from ..core.pricing import load_pricing_configuration
 from ..core.resources import AppResources
 from ..evaluation.dashboard import EvaluationDashboardService
 from ..evaluation.generation_dashboard import GenerationEvaluationDashboardService
+from ..evaluation.overview import EvaluationOverviewService
 from ..generation.service import (
     OpenAIAnswerProvider,
     ResearchService,
@@ -35,7 +36,12 @@ from ..retrieval.service import (
     load_retrieval_configuration,
 )
 from ..services.ingestion import IngestionPipeline
-from ..services.workflows import FilingBatchService, FilingExecutionService
+from ..services.workflows import (
+    FilingBatchCreator,
+    FilingBatchService,
+    FilingExecutionService,
+    ScheduledFilingBatchService,
+)
 
 
 @lru_cache
@@ -120,6 +126,21 @@ def model_execution_repository(
     )
 
 
+def filing_batch_creator(
+    repository: Annotated[WorkflowRepository, Depends(workflow_repository)],
+    ingestion: Annotated[IngestionRepository, Depends(ingestion_repository)],
+) -> FilingBatchCreator:
+    config = settings()
+    return FilingBatchCreator(
+        config,
+        repository,
+        ingestion,
+        config.default_user_lifetime_budget_usd,
+        config.corpus_preparation_cost_reservation_usd,
+        load_pricing_configuration(config.model_pricing_config_path),
+    )
+
+
 def evaluation_dashboard(
     db: Annotated[Database, Depends(database)], config: Annotated[Settings, Depends(settings)]
 ) -> EvaluationDashboardService:
@@ -132,6 +153,16 @@ def generation_evaluation_dashboard(
     return GenerationEvaluationDashboardService(db, config)
 
 
+def evaluation_overview(
+    retrieval: Annotated[EvaluationDashboardService, Depends(evaluation_dashboard)],
+    generation: Annotated[
+        GenerationEvaluationDashboardService, Depends(generation_evaluation_dashboard)
+    ],
+    config: Annotated[Settings, Depends(settings)],
+) -> EvaluationOverviewService:
+    return EvaluationOverviewService(retrieval, generation, config)
+
+
 def provider_gateway() -> EdgarGateway:
     config = settings()
     return EdgarGateway(
@@ -142,8 +173,8 @@ def provider_gateway() -> EdgarGateway:
 
 
 def batch_service(
+    creator: Annotated[FilingBatchCreator, Depends(filing_batch_creator)],
     repository: Annotated[WorkflowRepository, Depends(workflow_repository)],
-    ingestion: Annotated[IngestionRepository, Depends(ingestion_repository)],
     app_resources: Annotated[AppResources, Depends(resources)],
     user: Annotated[Principal, Depends(current_user)],
 ) -> FilingBatchService:
@@ -160,14 +191,18 @@ def batch_service(
     )
     return FilingBatchService(
         config,
+        creator,
         repository,
         kestra,
-        ingestion,
         user.id,
-        config.default_user_lifetime_budget_usd,
-        config.corpus_preparation_cost_reservation_usd,
-        load_pricing_configuration(config.model_pricing_config_path),
     )
+
+
+def scheduled_batch_service(
+    creator: Annotated[FilingBatchCreator, Depends(filing_batch_creator)],
+    auth: Annotated[AuthRepository, Depends(auth_repository)],
+) -> ScheduledFilingBatchService:
+    return ScheduledFilingBatchService(settings(), creator, auth)
 
 
 def execution_service(

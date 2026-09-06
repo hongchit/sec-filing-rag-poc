@@ -54,14 +54,31 @@ export function detailPath(
   const next = new URLSearchParams(params);
   next.set('configuration', configurationId);
   if (page) next.set('page', String(page));
-  return `/evaluation/configurations/${encodeURIComponent(configurationId)}/questions/${encodeURIComponent(questionId)}?${next}`;
+  return `/evaluation/evidence-search/configurations/${encodeURIComponent(configurationId)}/questions/${encodeURIComponent(questionId)}?${next}`;
 }
 
 export function overviewPath(params: URLSearchParams) {
-  return `/evaluation${params.size ? `?${params}` : ''}`;
+  return `/evaluation/evidence-search/questions${params.size ? `?${params}` : ''}`;
 }
 
 export function casePage(cases: Cases, questionId: string, query: EvaluationQuery) {
   const index = filterCases(cases.cases, query).findIndex((value) => value.id === questionId);
   return index < 0 ? 1 : Math.floor(index / PAGE_SIZE) + 1;
+}
+
+export function researchPath(question: {
+  ticker: string;
+  question: string;
+  goal: string;
+  items: string[];
+  accession?: string;
+}) {
+  const params = new URLSearchParams({
+    company: question.ticker,
+    goal: question.goal === 'legal_and_regulatory_risk' ? 'legal_regulatory_risk' : question.goal,
+    items: question.items.join(','),
+    question: question.question,
+  });
+  if (question.accession) params.set('accession', question.accession);
+  return `/research?${params}`;
 }

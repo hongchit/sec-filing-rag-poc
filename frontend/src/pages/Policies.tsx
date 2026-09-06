@@ -85,7 +85,7 @@ export function Privacy() {
           sign out, your account is suspended, or an administrator responds to abuse.
         </Typography>
         <Typography>
-          We retain questions, research settings, generated answers, feedback, cost records, audit
+          We retain questions, query settings, generated answers, feedback, cost records, audit
           events, and operational metadata needed to provide and protect the service. Administrators
           may review these records for operations, support, security, and abuse prevention.
         </Typography>
@@ -99,7 +99,7 @@ export function Privacy() {
           Your questions and selected public filing passages are sent to the configured model
           provider to generate an answer. Infrastructure, identity, model, and filing providers
           process data under their own terms. Do not submit confidential, personal, or sensitive
-          information in a research question.
+          information in a query.
         </Typography>
       </Section>
       <Section id="cookies" title="Cookies and analytics">
@@ -119,7 +119,7 @@ export function Privacy() {
           When configured, Google Analytics 4 is loaded directly or through Google Tag Manager—not
           both—and Google processes analytics data. Before consent, no Google analytics or
           tag-manager script is loaded. You may reject or later withdraw analytics in Cookie
-          settings without affecting sign-in, research, or corpus access; known Google analytics
+          settings without affecting sign-in, research, or filing access; known Google analytics
           cookies are then cleared.
         </Typography>
         <Typography>

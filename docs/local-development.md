@@ -49,8 +49,10 @@ In a second terminal:
 npm --prefix frontend run dev
 ```
 
-Import or re-import `workflows/filing_batch.yaml` in Kestra. Its namespace is
-`sec_filings.ingestion` and its flow ID is `filing_batch`.
+Import or re-import `workflows/filing_batch.yaml` and
+`workflows/scheduled_filing_launcher.yaml` in Kestra. Both use namespace
+`sec_filings.ingestion`; the launcher runs daily at 06:08 UTC and calls `filing_batch` as a subflow.
+The first configured Google administrator must sign in once before the launcher can reserve cost.
 
 Confirm local readiness:
 

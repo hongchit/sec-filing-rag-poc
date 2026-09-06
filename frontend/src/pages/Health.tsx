@@ -18,7 +18,8 @@ export function Health() {
           </Typography>
           <Typography variant="h1">Ingestion and retrieval foundation</Typography>
           <Typography color="text.secondary">
-            Versioned latest and historical 10-K corpora with traceable SEC provenance.
+            A Library of versioned current and historical 10-K filings with traceable SEC
+            provenance.
           </Typography>
           <Alert
             severity={status === 'unavailable' ? 'error' : status === 'ready' ? 'success' : 'info'}

@@ -60,11 +60,11 @@ production knowledge system must address.
 ---
 #### Sample screenshots
 
-##### Investor Research
+##### Query
 Investor research input on a specific goal and target:
-![Research question Input](<docs/assets/screenshots/101 - research-question-input.png>)
+![Query input](<docs/assets/screenshots/101 - research-question-input.png>)
 The Corresponding research result:
-![Research result](<docs/assets/screenshots/102 - research-result.png>)
+![Query result](<docs/assets/screenshots/102 - research-result.png>)
 
 ##### Retrieval evaluation metrics
 ![Evaluation](<docs/assets/screenshots/301 - Retrieval evaluation · SEC Filing RAG.png>)
@@ -96,7 +96,7 @@ title: SEC filing research flow
 flowchart TD
   SEC[SEC EDGAR filings] --> P[Governed corpus preparation]
   P --> C[(Versioned searchable corpus)]
-  Q[Research question] --> R[Measured hybrid retrieval]
+  Q[Query] --> R[Measured hybrid retrieval]
   C --> R
   R --> G[Grounded generation]
   G --> A[Answer with citations]
@@ -140,7 +140,9 @@ uv run sec-rag-api
 npm --prefix frontend run dev
 ```
 
-Import `workflows/filing_batch.yaml` through the Kestra UI at <http://127.0.0.1:18082>. FastAPI is
+Import `workflows/filing_batch.yaml` and `workflows/scheduled_filing_launcher.yaml` through the
+Kestra UI at <http://127.0.0.1:18082>. The launcher checks enabled companies daily at 06:08 UTC and
+reuses the shared batch flow. FastAPI is
 available on port 8000 and the frontend on port 5173. Complete initial setup and ingestion are in
 [Getting started](docs/getting-started.md); recurring developer commands are in
 [local development](docs/local-development.md).
@@ -152,7 +154,7 @@ The complete project journey is:
 1. Install the prerequisites, clone the repository, and reopen it in the Dev Container.
 2. Create `.env`, configure SEC/OpenAI/Google/Kestra/PostgreSQL values, and start the backend and
    frontend.
-3. Import the Kestra filing workflow, sign in, and use **Prepare latest filings** to create the
+3. Import both Kestra filing workflows, sign in, and use **Prepare latest filings** to create the
    initial searchable corpora.
 4. Use the checked-in promoted retrieval and generation defaults for a fast functional review, or
    continue with the full quality workflow.
@@ -168,14 +170,15 @@ are in [Getting started: set up, evaluate, and use the system](docs/getting-star
 
 ## Usage
 
-After Google sign-in, a fresh installation shows **Prepare latest filings** on the Research page.
+After Google sign-in, a fresh installation shows **Prepare latest filings** on the Query page.
 Submit it once and wait for the UI to report ready corpora. The browser supplies the authenticated
 session and CSRF protection required by the ingestion API.
 
-Open <http://127.0.0.1:5173/research> for grounded research,
-<http://127.0.0.1:5173/evaluation> for retrieval evaluation, or
-<http://127.0.0.1:5173/corpus> to browse indexed filings. API conventions and generated contracts
-are described in [API reference](docs/api.md).
+Open <http://127.0.0.1:5173/> for the public journey, <http://127.0.0.1:5173/overview> for why RAG
+helps, <http://127.0.0.1:5173/how-it-works> for the implementation, and
+<http://127.0.0.1:5173/evaluation> for measured results. Aggregate retrieval and answer-quality
+dashboards are public; question-level evaluation, Query, and the Library require
+sign-in. API conventions and generated contracts are described in [API reference](docs/api.md).
 
 ## Documentation
 

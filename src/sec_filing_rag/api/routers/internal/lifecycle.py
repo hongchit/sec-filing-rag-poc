@@ -7,7 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ....domain.filings import safe_error
 from ....repositories.workflows import WorkflowRepository
-from ....schemas.internal import BatchFinalizationRequest, ItemFailureRequest
+from ....schemas.internal import (
+    BatchFinalizationRequest,
+    BatchLaunchFailureRequest,
+    ItemFailureRequest,
+)
 from ....schemas.system import StatusResponse
 from ....schemas.workflows import FilingBatchStatus
 from ...dependencies import workflow_repository
@@ -61,3 +65,23 @@ def finalize(
     repository: Annotated[WorkflowRepository, Depends(workflow_repository)],
 ) -> StatusResponse:
     return StatusResponse(status=repository.finalize(batch_id, payload.kestra_execution_id))
+
+
+@router.post(
+    "/filing-batches/{batch_id}/launch-failures",
+    response_model=StatusResponse,
+    tags=["internal-lifecycle"],
+    operation_id="failFilingBatchLaunch",
+    description="Fail and reconcile a persisted batch whose processing subflow did not start.",
+)
+def fail_launch(
+    batch_id: uuid.UUID,
+    payload: BatchLaunchFailureRequest,
+    repository: Annotated[WorkflowRepository, Depends(workflow_repository)],
+) -> StatusResponse:
+    repository.launch_failed(
+        batch_id,
+        payload.kestra_execution_id,
+        payload.error,
+    )
+    return StatusResponse(status="failed")

@@ -20,8 +20,12 @@ Startup never echoes supplied values. [Configuration](configuration.md) lists va
 | Symptom | Inspection | Remediation |
 | --- | --- | --- |
 | Batch remains `submitted` | FastAPI submission log and Kestra availability | Restore Kestra, then resubmit; failed submission marks pending items safely |
+| Daily launcher returns `scheduled_ingestion_owner_unavailable` | First configured administrator has not signed in or is disabled | Sign in once with the first `GOOGLE_ADMIN_EMAILS` address or reactivate that account |
+| Daily launcher fails before `filing_batch` starts | Launcher HTTP/subflow attempts and batch safe error | Restore the dependency and rerun the launcher; its execution ID prevents duplicate batch creation |
+| Expected daily execution is absent | Launcher trigger state, 06:08 UTC schedule, and missed-run policy | Enable the trigger; after downtime Kestra recovers only the last missed occurrence |
 | Item remains non-terminal | Kestra task attempts and batch finalization | Allow/retry finalization; it closes stranded items |
 | Exact-year item is `skipped` | `safe_error` and requested report year | Expected when no original 10-K exists; do not substitute a nearby year |
+| Latest batch succeeds with `skipped` items | Item ingestion runs show `stage='unchanged'` | Healthy no-change result; the compatible corpus was reused without OpenAI |
 | One company fails, others continue | Item/run/stage rows | Correct that company's source/provider issue and submit a new batch |
 | `401` on internal callback | Kestra secret and raw ingestion token correspondence | Re-encode the same raw token; never paste it into logs |
 
@@ -36,6 +40,7 @@ finalization semantics.
 | Item coverage is failed | Ambiguous/unbounded headings or unusable content | Inspect safe parser reason and fixture; do not activate partial corpus |
 | Embedding fails | Provider, model, count, or dimensions | Align tracked/runtime contract and retry a new run |
 | Compatible corpus is not reused | Source or compatibility component changed | Compare checksum/parser/chunker/model/dimensions/index version |
+| Unchanged daily run shows OpenAI usage | Accession, source checksum, or compatibility key differs | Treat it as new/incompatible work and inspect the recorded key before retrying |
 | Historical run changed active corpus | Policy regression | Exact-year mode must never promote; stop and investigate |
 
 Candidate failures should preserve the previous ready/default corpus. [Pipeline](pipeline.md) owns

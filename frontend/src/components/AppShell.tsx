@@ -4,8 +4,11 @@ import AssessmentOutlined from '@mui/icons-material/AssessmentOutlined';
 import CookieOutlined from '@mui/icons-material/CookieOutlined';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import LogoutOutlined from '@mui/icons-material/LogoutOutlined';
+import GitHub from '@mui/icons-material/GitHub';
 import MonitorHeartOutlined from '@mui/icons-material/MonitorHeartOutlined';
 import TravelExploreOutlined from '@mui/icons-material/TravelExploreOutlined';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import AccountTreeOutlined from '@mui/icons-material/AccountTreeOutlined';
 import { AppBar, Box, Button, Container, Link, Stack, Toolbar, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
@@ -29,7 +32,7 @@ export function AppShell({
       <AppBar position="static" color="primary" elevation={0}>
         <Toolbar>
           <Box sx={{ flexGrow: 1 }}>
-            <Brand destination="/research" />
+            <Brand destination="/" />
           </Box>
           <Box
             component="nav"
@@ -45,10 +48,26 @@ export function AppShell({
             <Button
               color="inherit"
               component={RouterLink}
+              to="/overview"
+              startIcon={<InfoOutlined />}
+            >
+              Why RAG
+            </Button>
+            <Button
+              color="inherit"
+              component={RouterLink}
+              to="/how-it-works"
+              startIcon={<AccountTreeOutlined />}
+            >
+              How it works
+            </Button>
+            <Button
+              color="inherit"
+              component={RouterLink}
               to="/research"
               startIcon={<TravelExploreOutlined />}
             >
-              Research
+              Query
             </Button>
             <Button
               color="inherit"
@@ -56,7 +75,7 @@ export function AppShell({
               to="/corpus"
               startIcon={<DescriptionOutlined />}
             >
-              Corpus
+              Library
             </Button>
             <Button
               color="inherit"
@@ -89,7 +108,7 @@ export function AppShell({
               sx={{ opacity: 0.85, display: 'flex', alignItems: 'center', gap: 0.5 }}
             >
               <AccountBalanceWalletOutlined fontSize="small" />$
-              {Number(account?.budget.remaining_usd ?? 0).toFixed(2)} left
+              {Number(account?.budget?.remaining_usd ?? 0).toFixed(2)} left
             </Typography>
             <Button color="inherit" onClick={() => void logout()} startIcon={<LogoutOutlined />}>
               Logout
@@ -103,6 +122,16 @@ export function AppShell({
       <Box component="footer" sx={{ borderTop: 1, borderColor: 'divider', py: 2.5 }}>
         <Container maxWidth={maxWidth}>
           <Stack direction="row" spacing={2.5} alignItems="center" flexWrap="wrap">
+            <Link
+              href="https://github.com/hongchit/sec-filing-rag-poc"
+              target="_blank"
+              rel="noreferrer"
+              display="inline-flex"
+              alignItems="center"
+              gap={0.5}
+            >
+              <GitHub fontSize="small" /> GitHub
+            </Link>
             <Link component={RouterLink} to="/privacy">
               Privacy
             </Link>

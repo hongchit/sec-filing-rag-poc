@@ -10,9 +10,10 @@ from ....evaluation.dashboard import (
     EvaluationDashboardService,
     EvaluationSummary,
 )
-from ...dependencies import evaluation_dashboard
+from ...dependencies import current_user, evaluation_dashboard
 
 router = APIRouter(prefix="/retrieval-evaluations/current", tags=["retrieval-evaluations"])
+protected = APIRouter(dependencies=[Depends(current_user)])
 Service = Annotated[EvaluationDashboardService, Depends(evaluation_dashboard)]
 
 
@@ -31,7 +32,7 @@ def current(service: Service) -> EvaluationSummary:
         raise translate(exc) from exc
 
 
-@router.get(
+@protected.get(
     "/configurations/{configuration_id}/cases",
     response_model=EvaluationCases,
     operation_id="getCurrentRetrievalEvaluationCases",
@@ -44,7 +45,7 @@ def cases(configuration_id: str, service: Service) -> EvaluationCases:
         raise translate(exc) from exc
 
 
-@router.get(
+@protected.get(
     "/chunks/{chunk_id}",
     response_model=EvaluationChunk,
     operation_id="getCurrentRetrievalEvaluationChunk",
@@ -55,3 +56,6 @@ def chunk(chunk_id: str, service: Service) -> EvaluationChunk:
         return service.chunk(chunk_id)
     except (ArtifactMissing, ArtifactConflict) as exc:
         raise translate(exc) from exc
+
+
+router.include_router(protected)

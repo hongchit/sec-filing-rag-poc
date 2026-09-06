@@ -21,6 +21,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { getJson } from '../api';
+import { EvaluationTerm } from './EvaluationTerm';
 import type { Chunk, EvaluationCase, FullChunk } from '../types';
 function ExpectedCard({
   chunk,
@@ -79,7 +80,7 @@ function ExpectedCard({
             }}
             size="small"
           >
-            Open in corpus reader
+            Open in filing reader
           </Button>
         )}
         {!chunk.missing && (
@@ -180,7 +181,7 @@ function RankedRow({
               }}
               size="small"
             >
-              Open in corpus reader
+              Open in filing reader
             </Button>
           )}
           {!chunk.missing && (
@@ -240,7 +241,8 @@ export function EvidenceReview({
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2 }}>
       <section>
         <Typography component="h2" variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-          Expected filing evidence
+          Expected filing evidence (<EvaluationTerm term="groundTruth">Ground Truth</EvaluationTerm>
+          )
         </Typography>
         <Stack spacing={1} sx={{ maxHeight: { xs: 360, md: 520 }, overflowY: 'auto' }}>
           {item.expected.length ? (
@@ -259,7 +261,7 @@ export function EvidenceReview({
       </section>
       <section>
         <Typography component="h2" variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-          Ranked retrieved evidence
+          Ranked retrieved <EvaluationTerm term="chunk">evidence chunks</EvaluationTerm>
         </Typography>
         <Stack
           data-testid="ranked-evidence-panel"
@@ -330,7 +332,7 @@ export function EvidenceReview({
                   },
                 }}
               >
-                Open in corpus reader
+                Open in filing reader
               </Button>
             )}
             <Typography sx={{ my: 2, whiteSpace: 'pre-wrap' }}>{full.text}</Typography>

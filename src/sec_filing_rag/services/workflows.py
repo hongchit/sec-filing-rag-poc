@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
+from ..auth import AuthRepository
 from ..core.config import Settings, load_companies
 from ..core.errors import UpstreamServiceError
 from ..core.pricing import PricingConfiguration
@@ -14,30 +15,32 @@ from ..repositories.workflows import WorkflowRepository
 from .ingestion import IngestionPipeline
 
 
-class FilingBatchService:
+class FilingBatchCreator:
     def __init__(
         self,
         settings: Settings,
         repository: WorkflowRepository,
-        kestra: KestraGateway,
         store: IngestionRepository,
-        user_id: uuid.UUID,
         default_budget_usd: Decimal,
         reservation_usd: Decimal,
         pricing: PricingConfiguration,
     ) -> None:
         self.settings = settings
         self.repository = repository
-        self.kestra = kestra
         self.store = store
-        self.user_id = user_id
         self.default_budget_usd = default_budget_usd
         self.reservation_usd = reservation_usd
         self.pricing = pricing
 
-    def submit(
-        self, *, tickers: list[str] | None, fiscal_year: int | None, request_id: str | None
-    ) -> tuple[uuid.UUID, str, list[str]]:
+    def create(
+        self,
+        *,
+        tickers: list[str] | None,
+        fiscal_year: int | None,
+        request_id: str | None,
+        user_id: uuid.UUID,
+        launcher_execution_id: str | None = None,
+    ) -> tuple[uuid.UUID, list[str], bool]:
         configuration = load_companies(self.settings.company_config_path)
         self.store.load_configuration(configuration, self.settings.company_config_path)
         configured = configuration.companies
@@ -48,17 +51,50 @@ class FilingBatchService:
         unavailable = [ticker for ticker in selected if ticker not in enabled]
         if unavailable:
             raise ValueError("unknown or disabled tickers: " + ", ".join(unavailable))
-        batch_id, _ = self.repository.create_batch(
+        batch_id, _, created = self.repository.create_batch(
             tickers=selected,
             fiscal_year=fiscal_year,
             request_id=request_id,
-            user_id=self.user_id,
+            user_id=user_id,
             default_budget_usd=self.default_budget_usd,
             reservation_usd=self.reservation_usd,
             pricing_snapshot=self.pricing.snapshot(
                 embedding_model=self.settings.openai_embedding_model,
                 chat_model=self.settings.openai_chat_model,
             ),
+            launcher_execution_id=launcher_execution_id,
+        )
+        if not created:
+            existing = self.repository.batch(batch_id)
+            if existing is None:
+                raise RuntimeError("idempotent filing batch disappeared")
+            selected = [item["ticker"] for item in existing["items"]]
+        return batch_id, selected, created
+
+
+class FilingBatchService:
+    def __init__(
+        self,
+        settings: Settings,
+        creator: FilingBatchCreator,
+        repository: WorkflowRepository,
+        kestra: KestraGateway,
+        user_id: uuid.UUID,
+    ) -> None:
+        self.settings = settings
+        self.creator = creator
+        self.repository = repository
+        self.kestra = kestra
+        self.user_id = user_id
+
+    def submit(
+        self, *, tickers: list[str] | None, fiscal_year: int | None, request_id: str | None
+    ) -> tuple[uuid.UUID, str, list[str]]:
+        batch_id, selected, _ = self.creator.create(
+            tickers=tickers,
+            fiscal_year=fiscal_year,
+            request_id=request_id,
+            user_id=self.user_id,
         )
         try:
             execution = self.kestra.submit_batch(batch_id=str(batch_id))
@@ -70,6 +106,37 @@ class FilingBatchService:
             ) from exc
         self.repository.submitted(batch_id, execution.id)
         return batch_id, execution.id, selected
+
+
+class ScheduledFilingBatchService:
+    """Create scheduler-owned batches while leaving subflow submission to Kestra."""
+
+    def __init__(
+        self, settings: Settings, creator: FilingBatchCreator, auth: AuthRepository
+    ) -> None:
+        self.settings = settings
+        self.creator = creator
+        self.auth = auth
+
+    def create(
+        self,
+        *,
+        tickers: list[str] | None,
+        fiscal_year: int | None,
+        request_id: str,
+        launcher_execution_id: str,
+    ) -> tuple[uuid.UUID, list[str]]:
+        owner_id = self.auth.active_user_id_by_email(self.settings.primary_admin_email)
+        if owner_id is None:
+            raise LookupError("scheduled ingestion owner has not signed in or is disabled")
+        batch_id, selected, _ = self.creator.create(
+            tickers=tickers,
+            fiscal_year=fiscal_year,
+            request_id=request_id,
+            user_id=owner_id,
+            launcher_execution_id=launcher_execution_id,
+        )
+        return batch_id, selected
 
 
 class FilingExecutionService:

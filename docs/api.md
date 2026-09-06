@@ -18,10 +18,12 @@ flowchart LR
   I --> A
 ```
 
-Only authentication callbacks and minimal health are anonymous. Application routes require a
-revocable server-side session; unsafe requests also require the session CSRF value. Cross-user
-resource identifiers return `404`. Internal routes use constant-time bearer-token comparison and
-return `401` when credentials are missing or invalid. Kestra submission is different:
+Authentication callbacks, health, the editorial showcase, evaluation overviews, and aggregate
+evaluation summaries are anonymous. Research, filing access, question-level evaluation artifacts,
+and other application routes require a revocable server-side session; unsafe requests also require
+the session CSRF value. Cross-user resource identifiers return `404`. Internal routes use
+constant-time bearer-token comparison and return `401` when credentials are missing or invalid.
+Kestra submission is different:
 FastAPI authenticates to Kestra with Basic authentication and sends only a batch identifier.
 
 Never place source HTML, `.env` values, provider credentials, authorization headers, or private data
@@ -33,11 +35,12 @@ in route parameters, workflow payloads, logs, or error messages.
 | --- | --- | --- |
 | Authentication | Google login/callback, current account, logout | OIDC and local session lifecycle |
 | Health | `GET /api/health` | Anonymous application/database readiness |
+| Showcase | `GET /api/showcase` | Optional anonymous landing-page examples from deployment configuration |
 | Companies | `GET /api/companies`, `GET /api/companies/{ticker}/status` | Configured discovery, active/historical corpus status |
 | Filing batches | `POST /api/filing-batches`, one-company preparation, batch GET | Persist ingestion intent and expose durable progress |
 | Research | synchronous/streaming POST, history GET, result GET | Grounded answer lifecycle and replay |
 | Feedback | `POST /api/feedback` | One upsertable rating per research result |
-| Evaluation | current summary, cases, and chunk GETs | Validated retrieval benchmark presentation |
+| Evaluation | anonymous current summaries; protected cases, questions, prompts, and chunks | Aggregate benchmark presentation with signed-in evidence inspection |
 | Corpus | version, Item, and chunk-location GETs | Read-only source context and canonical citation locations |
 | Administration | users, account activity, account mutation | Admin-only consumption review, disabling, and budget overrides |
 
@@ -53,16 +56,23 @@ their response schemas.
 | Route | Purpose |
 | --- | --- |
 | `GET /internal/filing-batches/{batch_id}` | Return persisted item UUIDs for iteration |
+| `POST /internal/scheduled-filing-batches` | Idempotently persist a first-admin-owned batch for the Kestra launcher |
 | `POST /internal/providers/filing-items/{item_id}/selection` | Select exact/latest accession or record a skip |
 | `POST /internal/providers/filing-items/{item_id}/acquisitions` | Acquire, validate, and persist source HTML |
 | `POST /internal/corpus-executions/{item_id}` | Reuse, promote, or build a corpus from persisted acquisition |
 | `POST /internal/filing-items/{item_id}/failures` | Safely terminate one orchestration failure |
 | `POST /internal/filing-batches/{batch_id}/finalizations` | Close stranded items and calculate aggregate state |
+| `POST /internal/filing-batches/{batch_id}/launch-failures` | Fail and reconcile a batch whose processing subflow never started |
 
 Internal POST bodies contain only the optional Kestra execution identifier; failure callbacks add a
 generic bounded error. Acquisition responses return reference metadata such as UUID, accession,
 checksum, and size—not bytes or provider objects. Workflow sequencing belongs to
 [Orchestration](orchestration.md).
+
+The scheduled creation request also requires `X-Kestra-Execution-ID`. Repeating that ID returns the
+same durable batch, so a lost HTTP response does not duplicate work or reserve cost twice. The
+endpoint never submits Kestra itself; the launcher passes its returned `batch_id` to the shared
+subflow.
 
 ## Validation and errors
 

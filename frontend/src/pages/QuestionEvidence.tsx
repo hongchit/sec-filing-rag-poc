@@ -1,18 +1,7 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import {
-  Alert,
-  Box,
-  Breadcrumbs,
-  Button,
-  Chip,
-  Link,
-  Paper,
-  Skeleton,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Chip, Paper, Skeleton, Stack, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useParams, useSearchParams } from 'react-router-dom';
 import { errorMessage, getJson } from '../api';
@@ -24,6 +13,7 @@ import {
   filterCases,
   overviewPath,
   readEvaluationQuery,
+  researchPath,
 } from '../evaluation';
 import { labels, type Cases, type Summary } from '../types';
 export function QuestionEvidence() {
@@ -65,7 +55,7 @@ export function QuestionEvidence() {
           <Typography variant="h5">Question evidence unavailable</Typography>
           <Typography>{error}</Typography>
           <Button component={RouterLink} to={back}>
-            Back to evaluation overview
+            Back to Evaluation Questions
           </Button>
         </Alert>
       </AppShell>
@@ -86,7 +76,7 @@ export function QuestionEvidence() {
           <Typography variant="h5">Question not found</Typography>
           <Typography>This question is not available in the selected configuration.</Typography>
           <Button component={RouterLink} to={back}>
-            Back to evaluation overview
+            Back to Evaluation Questions
           </Button>
         </Alert>
       </AppShell>
@@ -100,19 +90,13 @@ export function QuestionEvidence() {
   return (
     <AppShell>
       <Stack spacing={3}>
-        <Breadcrumbs aria-label="Breadcrumb">
-          <Link component={RouterLink} to="/evaluation" underline="hover">
-            Evaluation
-          </Link>
-          <Typography color="text.primary">Question evidence</Typography>
-        </Breadcrumbs>
         <Button
           component={RouterLink}
           to={back}
           startIcon={<ArrowBackIcon />}
           sx={{ alignSelf: 'flex-start' }}
         >
-          Back to questions
+          Back to Evaluation Questions
         </Button>
         <Paper sx={{ p: { xs: 2, md: 3 } }}>
           <Stack
@@ -137,9 +121,22 @@ export function QuestionEvidence() {
                 {item.ticker} · Item {item.items.join(', ')} · {item.goal.replaceAll('_', ' ')} ·{' '}
                 {item.query_type.replaceAll('_', ' ')}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Configuration {configurationId}
-              </Typography>
+              <Button
+                variant="contained"
+                component={RouterLink}
+                to={researchPath(item)}
+                sx={{ mt: 2 }}
+              >
+                Try this question in Query
+              </Button>
+              <Paper component="details" variant="outlined" sx={{ p: 1.5, mt: 2 }}>
+                <Typography component="summary" variant="caption" sx={{ cursor: 'pointer' }}>
+                  Technical test details
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Configuration {configurationId}
+                </Typography>
+              </Paper>
             </Box>
           </Stack>
         </Paper>

@@ -59,6 +59,7 @@ snapshot. Prices are estimates, not billing reconciliation.
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL` |
 | `INGESTION_API_TOKEN` | required | Secret, at least 16 characters; shared with Kestra callbacks |
 | `COMPANY_CONFIG_PATH` | `config/companies.yaml` | Ordered ticker discovery and enabled flags |
+| `SHOWCASE_CONFIG_PATH` | `config/showcase.json` | Optional ordered editorial examples for the public landing page |
 | `CHUNK_SIZE_CHARS` | `2400` | Character chunk limit, 500–8000 |
 | `CHUNK_OVERLAP_CHARS` | `240` | Neighbor overlap, 0–1000 and less than chunk size |
 | `PARSER_VERSION` | `corpus-heading-sanitized-v2` | Compatibility-sensitive parser identity |
@@ -132,11 +133,18 @@ initialization credentials match.
 
 Encode the raw token without a newline as shown in `.env.example`. Never log either representation.
 
+Kestra scheduling is tracked in `workflows/scheduled_filing_launcher.yaml`, not an application
+environment setting. It runs at 06:08 UTC, recovers the last missed occurrence, disallows overlap,
+and invokes the configured `filing_batch` flow. Scheduled preparation is charged to the first
+address in `GOOGLE_ADMIN_EMAILS`; that administrator must have an active account created by signing
+in once.
+
 ## Tracked behavioral configuration
 
 | File | Authority |
 | --- | --- |
 | `config/companies.yaml` | Ordered configured tickers and enabled discovery |
+| `config/showcase.json` | Ordered landing-page questions, answers, filing labels, citations, and Research prefill values |
 | `config/retrieval.json` | Embedding contract, selected strategy, candidate/top-k parameters |
 | `config/generation.json` | Prompt, model behavior, evidence and policy contract |
 | `config/ground-truth.json` | Sampling, model, workers, and question-generation budget |

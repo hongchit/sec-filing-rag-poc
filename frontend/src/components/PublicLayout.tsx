@@ -1,8 +1,24 @@
 import CookieOutlined from '@mui/icons-material/CookieOutlined';
-import { Box, Button, Container, Link, Stack, Typography } from '@mui/material';
+import GitHub from '@mui/icons-material/GitHub';
+import MenuIcon from '@mui/icons-material/Menu';
+import AccountTreeOutlined from '@mui/icons-material/AccountTreeOutlined';
+import {
+  Box,
+  Button,
+  Container,
+  IconButton,
+  Link,
+  ListItemIcon,
+  Menu,
+  MenuItem,
+  Stack,
+  Typography,
+} from '@mui/material';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { showCookiePreferences } from '../consent';
+import { InfoOutlined, AssessmentOutlined } from '@mui/icons-material';
 
 export function Brand({ destination = '/' }: { destination?: string }) {
   return (
@@ -24,6 +40,7 @@ export function Brand({ destination = '/' }: { destination?: string }) {
 }
 
 export function PublicHeader({ signIn = true }: { signIn?: boolean }) {
+  const [anchor, setAnchor] = useState<null | HTMLElement>(null);
   return (
     <Box
       component="header"
@@ -37,11 +54,52 @@ export function PublicHeader({ signIn = true }: { signIn?: boolean }) {
           sx={{ minHeight: 72 }}
         >
           <Brand />
-          {signIn && (
-            <Button href="/api/auth/google/login?policy_acknowledged=true" variant="outlined">
-              Sign in
-            </Button>
-          )}
+          <Stack direction="row" gap={1} alignItems="center">
+            <Stack
+              component="nav"
+              aria-label="Public"
+              direction="row"
+              sx={{ display: { xs: 'none', md: 'flex' } }}
+            >
+              <Button component={RouterLink} to="/overview" startIcon={<InfoOutlined />}>
+                Why RAG
+              </Button>
+              <Button component={RouterLink} to="/how-it-works" startIcon={<AccountTreeOutlined />}>
+                How it works
+              </Button>
+              <Button component={RouterLink} to="/evaluation" startIcon={<AssessmentOutlined />}>
+                Evaluation
+              </Button>
+            </Stack>
+            <IconButton
+              aria-label="Open navigation"
+              onClick={(event) => setAnchor(event.currentTarget)}
+              sx={{ display: { md: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+              {[
+                ['Why RAG', '/overview'],
+                ['How it works', '/how-it-works'],
+                ['Evaluation', '/evaluation'],
+              ].map(([label, to]) => (
+                <MenuItem key={to} component={RouterLink} to={to} onClick={() => setAnchor(null)}>
+                  {to === '/how-it-works' && (
+                    <ListItemIcon>
+                      <AccountTreeOutlined fontSize="small" />
+                    </ListItemIcon>
+                  )}
+                  {label}
+                </MenuItem>
+              ))}
+            </Menu>
+            {signIn && (
+              <Button href="/api/auth/google/login?policy_acknowledged=true" variant="outlined">
+                Sign in
+              </Button>
+            )}
+          </Stack>
         </Stack>
       </Container>
     </Box>
@@ -57,6 +115,16 @@ export function SiteFooter() {
             SEC Filing Research · Not investment advice
           </Typography>
           <Stack direction="row" spacing={2.5} flexWrap="wrap">
+            <Link
+              href="https://github.com/hongchit/sec-filing-rag-poc"
+              target="_blank"
+              rel="noreferrer"
+              display="inline-flex"
+              alignItems="center"
+              gap={0.5}
+            >
+              <GitHub fontSize="small" /> GitHub
+            </Link>
             <Link component={RouterLink} to="/privacy">
               Privacy
             </Link>

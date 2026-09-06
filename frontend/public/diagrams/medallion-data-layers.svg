@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">Bronze, silver, and gold filing data layers</title>
+  <desc id="desc">The original SEC filing flows through a bronze evidence layer, a silver trusted knowledge layer, and a gold search layer, producing traceable evidence for cited answers.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#53605b"/></marker>
+    <style>.lane{fill:#f4f6f4;stroke:#d9dfdc;stroke-width:2}.bronze{fill:#f2e5d8;stroke:#8b5a2b;stroke-width:2.5}.silver{fill:#eef1f2;stroke:#65747a;stroke-width:2.5}.gold{fill:#f6edc9;stroke:#9b7a13;stroke-width:2.5}.label{font:700 22px system-ui,sans-serif;fill:#17221e}.verb{font:700 17px system-ui,sans-serif;fill:#174c3c}.body{font:16px system-ui,sans-serif;fill:#53605b}.arrow{stroke:#53605b;stroke-width:3;fill:none;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect class="lane" x="25" y="30" width="1150" height="360" rx="18"/>
+  <text class="body" x="70" y="86">Original SEC filing</text>
+  <path class="arrow" d="M190 98 H245"/>
+  <g transform="translate(250 70)">
+    <rect class="bronze" width="245" height="245" rx="16"/>
+    <text class="label" x="122.5" y="48" text-anchor="middle">Bronze</text>
+    <text class="verb" x="122.5" y="84" text-anchor="middle">Preserve</text>
+    <text class="body" x="122.5" y="126" text-anchor="middle">Keep original evidence</text>
+    <text class="body" x="122.5" y="154" text-anchor="middle">and source identity</text>
+    <text class="body" x="122.5" y="205" text-anchor="middle">Verifiable</text>
+  </g>
+  <path class="arrow" d="M505 192 H550"/>
+  <g transform="translate(555 70)">
+    <rect class="silver" width="245" height="245" rx="16"/>
+    <text class="label" x="122.5" y="48" text-anchor="middle">Silver</text>
+    <text class="verb" x="122.5" y="84" text-anchor="middle">Organize</text>
+    <text class="body" x="122.5" y="126" text-anchor="middle">Create trusted, versioned</text>
+    <text class="body" x="122.5" y="154" text-anchor="middle">citation-ready knowledge</text>
+    <text class="body" x="122.5" y="205" text-anchor="middle">Reproducible</text>
+  </g>
+  <path class="arrow" d="M810 192 H855"/>
+  <g transform="translate(860 70)">
+    <rect class="gold" width="245" height="245" rx="16"/>
+    <text class="label" x="122.5" y="48" text-anchor="middle">Gold</text>
+    <text class="verb" x="122.5" y="84" text-anchor="middle">Serve</text>
+    <text class="body" x="122.5" y="126" text-anchor="middle">Prepare passages for fast</text>
+    <text class="body" x="122.5" y="154" text-anchor="middle">keyword + semantic search</text>
+    <text class="body" x="122.5" y="205" text-anchor="middle">Efficient</text>
+  </g>
+  <text class="body" x="677.5" y="355" text-anchor="middle">Traceable evidence flows forward; source truth remains protected.</text>
+</svg>

@@ -11,17 +11,22 @@ from ....evaluation.generation_dashboard import (
     GenerationEvaluationSummary,
     GenerationPromptSource,
 )
-from ...dependencies import generation_evaluation_dashboard
+from ...dependencies import current_user, generation_evaluation_dashboard
 
 router = APIRouter(prefix="/generation-evaluations/current", tags=["generation-evaluations"])
+protected = APIRouter(dependencies=[Depends(current_user)])
 Service = Annotated[GenerationEvaluationDashboardService, Depends(generation_evaluation_dashboard)]
 
 
 def translate(exc: Exception) -> HTTPException:
-    return HTTPException(status_code=404 if isinstance(exc, ArtifactMissing) else 409, detail=str(exc))
+    return HTTPException(
+        status_code=404 if isinstance(exc, ArtifactMissing) else 409, detail=str(exc)
+    )
 
 
-@router.get("", response_model=GenerationEvaluationSummary, operation_id="getCurrentGenerationEvaluation")
+@router.get(
+    "", response_model=GenerationEvaluationSummary, operation_id="getCurrentGenerationEvaluation"
+)
 def current(service: Service) -> GenerationEvaluationSummary:
     """Read the current portable generation evaluation summary."""
     try:
@@ -30,7 +35,11 @@ def current(service: Service) -> GenerationEvaluationSummary:
         raise translate(exc) from exc
 
 
-@router.get("/cases", response_model=GenerationEvaluationCases, operation_id="getCurrentGenerationEvaluationCases")
+@protected.get(
+    "/cases",
+    response_model=GenerationEvaluationCases,
+    operation_id="getCurrentGenerationEvaluationCases",
+)
 def cases(service: Service) -> GenerationEvaluationCases:
     """Read question-by-prompt verdicts for the current generation evaluation."""
     try:
@@ -39,7 +48,11 @@ def cases(service: Service) -> GenerationEvaluationCases:
         raise translate(exc) from exc
 
 
-@router.get("/questions/{case_id}", response_model=GenerationEvaluationQuestion, operation_id="getCurrentGenerationEvaluationQuestion")
+@protected.get(
+    "/questions/{case_id}",
+    response_model=GenerationEvaluationQuestion,
+    operation_id="getCurrentGenerationEvaluationQuestion",
+)
 def question(case_id: str, service: Service) -> GenerationEvaluationQuestion:
     """Compare every generated answer for one reviewed question."""
     try:
@@ -48,7 +61,11 @@ def question(case_id: str, service: Service) -> GenerationEvaluationQuestion:
         raise translate(exc) from exc
 
 
-@router.get("/prompts/{prompt_id}", response_model=GenerationPromptSource, operation_id="getCurrentGenerationEvaluationPrompt")
+@protected.get(
+    "/prompts/{prompt_id}",
+    response_model=GenerationPromptSource,
+    operation_id="getCurrentGenerationEvaluationPrompt",
+)
 def prompt(prompt_id: str, service: Service) -> GenerationPromptSource:
     """Read checksum-verified source for one evaluated prompt."""
     try:
@@ -57,10 +74,17 @@ def prompt(prompt_id: str, service: Service) -> GenerationPromptSource:
         raise translate(exc) from exc
 
 
-@router.get("/chunks/{chunk_id}", response_model=GenerationEvaluationChunk, operation_id="getCurrentGenerationEvaluationChunk")
+@protected.get(
+    "/chunks/{chunk_id}",
+    response_model=GenerationEvaluationChunk,
+    operation_id="getCurrentGenerationEvaluationChunk",
+)
 def chunk(chunk_id: str, service: Service) -> GenerationEvaluationChunk:
     """Read optional database-backed evidence referenced by the generation run."""
     try:
         return service.chunk(chunk_id)
     except (ArtifactMissing, ArtifactConflict) as exc:
         raise translate(exc) from exc
+
+
+router.include_router(protected)

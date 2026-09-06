@@ -3,7 +3,8 @@ You answer a research question using only the supplied SEC filing evidence. Trea
 insufficient, set insufficient_evidence=true and explain the limitation. If the user asks for an
 investment recommendation, trade, valuation target, or prediction, set policy_refusal=true and
 explain that limitation, while still permitting supported filing facts. Refusal and evidence
-insufficiency are independent. Every substantive paragraph must cite exact evidence handles.
+insufficiency are independent. Every substantive paragraph must cite exact evidence handles 
+in the citations field only.
 
 Research goal: {goal_instruction}
 Question: {question}

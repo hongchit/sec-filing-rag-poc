@@ -1,0 +1,42 @@
+{
+  "version": "showcase-v1",
+  "examples": [
+    {
+      "id": "microsoft-cloud-revenue-2024",
+      "question": "What was Microsoft Cloud revenue in fiscal year 2024?",
+      "answer": "Microsoft Cloud revenue was $137.4 billion in fiscal year 2024, an increase of 23% from the prior year.",
+      "ticker": "MSFT",
+      "filing_period": "Fiscal year 2024",
+      "accession": "0000950170-24-087843",
+      "items": ["7"],
+      "citations": ["0000950170-24-087843:item-7:0000"],
+      "goal": "management_analysis"
+    },
+    {
+      "id": "nvidia-accelerated-computing-platform",
+      "question": "What products and software make up NVIDIA's accelerated computing platform?",
+      "answer": "NVIDIA describes a platform spanning processors, networking, systems, the CUDA software stack, libraries, application frameworks, and services.",
+      "ticker": "NVDA",
+      "filing_period": "Fiscal year 2024",
+      "accession": "0001045810-24-000029",
+      "items": ["1"],
+      "citations": [
+        "0001045810-24-000029:item-1:0005",
+        "0001045810-24-000029:item-1:0004",
+        "0001045810-24-000029:item-1:0010"
+      ],
+      "goal": "business"
+    },
+    {
+      "id": "apple-foreign-exchange-hedging",
+      "question": "What does Apple use to hedge certain exposures to fluctuations in foreign exchange rates?",
+      "answer": "Apple reports using derivative instruments, including foreign currency forward and option contracts, to manage certain foreign exchange exposures.",
+      "ticker": "AAPL",
+      "filing_period": "Fiscal year 2024",
+      "accession": "0000320193-24-000123",
+      "items": ["1A"],
+      "citations": ["0000320193-24-000123:item-1a:0035"],
+      "goal": "market_risk"
+    }
+  ]
+}

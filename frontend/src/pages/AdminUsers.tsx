@@ -194,8 +194,8 @@ export function AdminUsers() {
 function UserActivity({ activity }: { activity: Activity }) {
   return (
     <>
-      <Typography variant="h3">Research questions</Typography>
-      {activity.research.length === 0 && <Typography>No research recorded.</Typography>}
+      <Typography variant="h3">Queries</Typography>
+      {activity.research.length === 0 && <Typography>No queries recorded.</Typography>}
       {activity.research.map((item, index) => (
         <Typography key={item.id}>
           {index + 1}. {item.ticker} ·{' '}
@@ -205,9 +205,9 @@ function UserActivity({ activity }: { activity: Activity }) {
           · {item.status} · ${item.charged_usd ?? 'reserved'}
         </Typography>
       ))}
-      <Typography variant="h3">Corpus preparations</Typography>
+      <Typography variant="h3">Library preparations</Typography>
       {activity.filing_batches.length === 0 && (
-        <Typography>No corpus preparations recorded.</Typography>
+        <Typography>No Library preparations recorded.</Typography>
       )}
       {activity.filing_batches.map((batch, index) => (
         <Paper key={batch.id} variant="outlined" sx={{ p: 2 }}>
@@ -252,7 +252,9 @@ function UserActivity({ activity }: { activity: Activity }) {
                   <Typography variant="caption">Acquisition ID: {item.acquisition_id}</Typography>
                 )}
                 {item.corpus_version_id && (
-                  <Typography variant="caption">Corpus ID: {item.corpus_version_id}</Typography>
+                  <Typography variant="caption">
+                    Library version ID: {item.corpus_version_id}
+                  </Typography>
                 )}
                 {item.safe_error && (
                   <Alert severity={item.status === 'skipped' ? 'info' : 'error'}>

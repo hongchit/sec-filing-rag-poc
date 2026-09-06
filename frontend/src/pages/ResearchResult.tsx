@@ -26,17 +26,17 @@ export function ResearchResult() {
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   useEffect(() => {
     if (!uuid.test(id)) {
-      setError('Invalid research ID.');
+      setError('Invalid query ID.');
       return;
     }
     void fetch(`/api/research/${id}`)
       .then((r) => {
-        if (!r.ok) throw new Error('Research not found.');
+        if (!r.ok) throw new Error('Query not found.');
         return r.json();
       })
       .then((body: unknown) => setValue(body as Research))
       .catch((error: unknown) =>
-        setError(error instanceof Error ? error.message : 'Research unavailable.'),
+        setError(error instanceof Error ? error.message : 'Query unavailable.'),
       );
   }, [id]);
   function cite(handle: string) {
@@ -63,7 +63,7 @@ export function ResearchResult() {
     return (
       <AppShell>
         <Alert severity="info" aria-live="polite">
-          Loading research…
+          Loading query…
         </Alert>
       </AppShell>
     );
@@ -71,7 +71,7 @@ export function ResearchResult() {
     return (
       <AppShell>
         <Stack spacing={2}>
-          <Typography variant="h1">Research could not be completed</Typography>
+          <Typography variant="h1">Query could not be completed</Typography>
           <Alert severity="error">{value.safe_error ?? 'A provider operation failed.'}</Alert>
           <Typography>{value.question}</Typography>
           <Typography>ID: {value.research_id}</Typography>
@@ -83,7 +83,7 @@ export function ResearchResult() {
               })
             }
           >
-            Retry as new research
+            Retry as new query
           </Button>
         </Stack>
       </AppShell>
@@ -127,10 +127,7 @@ export function ResearchResult() {
           <Stack spacing={2}>
             {paragraphs.map((paragraph, index) => (
               <Paper key={index} sx={{ p: 3 }}>
-                <Chip
-                  size="small"
-                  label={paragraph.kind === 'filing_fact' ? 'Filing fact' : 'Interpretation'}
-                />
+                {paragraph.kind === 'interpretation' && <Chip size="small" label="TL;DR" />}
                 <Typography sx={{ my: 1 }}>{paragraph.text}</Typography>
                 {paragraph.citations.map((handle) => (
                   <Button key={handle} size="small" onClick={() => cite(handle)}>
@@ -173,7 +170,7 @@ export function ResearchResult() {
                   component={Link}
                   to={`/corpus/${source.ticker}/${source.item}?corpus=${source.corpus_version_id || value.corpus_version_id}&chunk=${source.chunk_id}`}
                   state={{
-                    origin: { to: `/research/${value.research_id}`, label: 'Research result' },
+                    origin: { to: `/research/${value.research_id}`, label: 'Query result' },
                   }}
                 >
                   Read in context
@@ -189,7 +186,9 @@ export function ResearchResult() {
           <Collapse in={details}>
             <Paper sx={{ p: 2 }}>
               <Typography>
-                <Link to="/evaluation">Weighted hybrid, α=0.25 — selected by MRR</Link>
+                <Link to="/evaluation/evidence-search">
+                  Weighted hybrid, α=0.25 — selected by MRR
+                </Link>
               </Typography>
               <pre style={{ whiteSpace: 'pre-wrap' }}>
                 {JSON.stringify(value.run_details, null, 2)}

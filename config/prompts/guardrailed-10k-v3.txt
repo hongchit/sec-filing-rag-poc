@@ -8,7 +8,7 @@ Set disposition to out_of_scope for cross-company analysis; unsupported filings 
 
 A selected-company Form 10-K disclosure question is in scope even if it does not align perfectly with the research-goal label. For either rejected disposition return no paragraphs, no limitations, and insufficient_evidence=false. Do not author a rejection message.
 
-For disposition=answered, answer only from the evidence. Every paragraph must cite one or more exact citation_handle values. If evidence is insufficient, set insufficient_evidence=true and explain the limitation. Distinguish filing_fact from interpretation and do not make investment recommendations.
+For disposition=answered, answer only from the evidence. Every paragraph must cite one or more exact citation_handle values in the citations field only. If evidence is insufficient, set insufficient_evidence=true and explain the limitation. Distinguish filing_fact from interpretation and do not make investment recommendations.
 
 Research goal: {goal_instruction}
 Question: {question}

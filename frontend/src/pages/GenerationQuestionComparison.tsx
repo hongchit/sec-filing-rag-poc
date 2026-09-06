@@ -2,14 +2,12 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {
   Alert,
   Box,
-  Breadcrumbs,
   Button,
   Card,
   CardContent,
   Chip,
   FormControl,
   InputLabel,
-  Link,
   MenuItem,
   Paper,
   Select,
@@ -21,8 +19,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useParams, useSearchParams } from 'react-router-dom';
 import { errorMessage, getJson } from '../api';
 import { AppShell } from '../components/AppShell';
-import { EvaluationNav } from '../components/EvaluationNav';
 import { EvidenceReview } from '../components/Evidence';
+import { EvaluationTerm } from '../components/EvaluationTerm';
+import { researchPath } from '../evaluation';
 import {
   labels,
   type EvaluationCase,
@@ -81,8 +80,8 @@ export function GenerationQuestionComparison() {
         <Alert severity="error">
           <Typography variant="h5">Answer comparison unavailable</Typography>
           {error}
-          <Button component={RouterLink} to="/evaluation/generation">
-            Back to generation evaluation
+          <Button component={RouterLink} to="/evaluation/answer-quality/questions">
+            Back to RAG Answer Comparison
           </Button>
         </Alert>
       </AppShell>
@@ -107,20 +106,13 @@ export function GenerationQuestionComparison() {
   return (
     <AppShell>
       <Stack spacing={3}>
-        <EvaluationNav />
-        <Breadcrumbs aria-label="Breadcrumb">
-          <Link component={RouterLink} to="/evaluation/generation">
-            RAG generation evaluation
-          </Link>
-          <Typography color="text.primary">Answer comparison</Typography>
-        </Breadcrumbs>
         <Button
           component={RouterLink}
-          to={`/evaluation/generation${backParams.size ? `?${backParams}` : ''}`}
+          to={`/evaluation/answer-quality/questions${backParams.size ? `?${backParams}` : ''}`}
           startIcon={<ArrowBackIcon />}
           sx={{ alignSelf: 'flex-start' }}
         >
-          Back to result matrix
+          Back to RAG Answer Comparison
         </Button>
         <Paper sx={{ p: { xs: 2, md: 3 } }}>
           <Typography variant="overline" color="primary">
@@ -134,6 +126,14 @@ export function GenerationQuestionComparison() {
             {detail.question.goal.replaceAll('_', ' ')} ·{' '}
             {detail.question.query_type.replaceAll('_', ' ')}
           </Typography>
+          <Button
+            variant="contained"
+            component={RouterLink}
+            to={researchPath(detail.question)}
+            sx={{ mt: 2 }}
+          >
+            Try this question in Query
+          </Button>
         </Paper>
         <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={2}>
           <ResultColumn
@@ -153,7 +153,7 @@ export function GenerationQuestionComparison() {
           <Typography variant="overline" color="primary">
             Shared evidence
           </Typography>
-          <Typography variant="h2">What every prompt received</Typography>
+          <Typography variant="h2">The evidence supplied to every prompt</Typography>
           <Typography color="text.secondary" sx={{ mb: 2 }}>
             The evaluated prompts used the same retrieved context, so answer differences reflect
             prompt behavior rather than different evidence.
@@ -167,7 +167,7 @@ export function GenerationQuestionComparison() {
             <Alert severity="warning">
               <Typography fontWeight={700}>Evidence is unavailable in this deployment.</Typography>
               The generated answers and recorded citation audits remain visible. Administrator:
-              prepare the corpus using <code>docs/getting-started.md</code>, then regenerate and
+              prepare the Library using <code>docs/getting-started.md</code>, then regenerate and
               validate the evaluation using <code>docs/rag-evaluation-workflow.md</code>.
             </Alert>
           )}
@@ -248,12 +248,14 @@ function ResultColumn({
               ))}
             </Box>
             <Box>
-              <Typography variant="h3">Judge assessment</Typography>
+              <Typography variant="h3">
+                <EvaluationTerm term="llmJudge">LLM-as-a-judge</EvaluationTerm> assessment
+              </Typography>
               <Typography fontWeight={700}>
                 {result.judge ? labels[result.judge.label] : 'No verdict'}
               </Typography>
               <Typography>
-                {result.judge?.explanation || 'The judge did not produce an assessment.'}
+                {result.judge?.explanation || 'LLM-as-a-judge did not produce an assessment.'}
               </Typography>
             </Box>
             <Box display="grid" gridTemplateColumns="repeat(2,1fr)" gap={1}>
@@ -262,11 +264,11 @@ function ResultColumn({
                 value={`${result.citation_audit.valid_citation_handles}/${result.citation_audit.citation_handles}`}
               />
               <SmallMetric
-                label="Cross-corpus"
+                label="Citations outside the Library"
                 value={String(result.citation_audit.cross_corpus_citations)}
               />
               <SmallMetric
-                label="Latency"
+                label={<EvaluationTerm term="latency">Latency</EvaluationTerm>}
                 value={
                   result.generation_latency_ms == null
                     ? '—'
@@ -274,7 +276,7 @@ function ResultColumn({
                 }
               />
               <SmallMetric
-                label="Generation tokens"
+                label={<EvaluationTerm term="generationTokens">Generation tokens</EvaluationTerm>}
                 value={result.generation_usage?.total_tokens?.toLocaleString() || '—'}
               />
             </Box>
@@ -284,7 +286,7 @@ function ResultColumn({
     </Card>
   );
 }
-function SmallMetric({ label, value }: { label: string; value: string }) {
+function SmallMetric({ label, value }: { label: React.ReactNode; value: string }) {
   return (
     <Paper variant="outlined" sx={{ p: 1.5 }}>
       <Typography variant="caption" color="text.secondary">

@@ -153,3 +153,67 @@ export type GenerationQuestion = {
   evidence_available: boolean;
   warnings: Array<{ message: string }>;
 };
+
+export type EvaluationOverviewValue = {
+  benchmark: { question_count: number; finished_at: string; human_reviewed: boolean };
+  retrieval: {
+    selected_strategy: string;
+    selected_configuration_id: string;
+    hit_count: number;
+    question_count: number;
+    hit_rate: number;
+    mrr: number;
+    median_latency_ms: number;
+    rank_buckets: Record<'rank_one' | 'rank_two_three' | 'rank_four_ten' | 'not_found', number>;
+    baselines: Record<
+      'keyword' | 'vector',
+      {
+        configuration_id: string;
+        strategy: string;
+        hit_count: number;
+        mrr: number;
+        rank_buckets: Record<string, number>;
+        median_latency_ms: number;
+        configuration: Config;
+      }
+    >;
+  };
+  generation: {
+    selected_prompt_id: string | null;
+    promoted_prompt_id: string | null;
+    question_count: number;
+    relevant_count: number;
+    partly_relevant_count: number;
+    non_relevant_count: number;
+    valid_citation_handles: number;
+    citation_handles: number;
+    median_latency_ms: number | null;
+    generation_cost_per_answer_usd: string | null;
+    failures: number;
+  };
+  models: Array<{
+    stage: string;
+    role: string;
+    active_model: string | null;
+    evaluated_model: string;
+    matches: boolean | null;
+    active_prompt?: string;
+    evaluated_prompt?: string;
+  }>;
+  example: {
+    case_id: string;
+    question: string;
+    ticker: string;
+    accession: string;
+    corpus_version_id: string;
+    items: string[];
+    goal: string;
+    query_type: string;
+    consensus: boolean;
+    interpretation: string;
+    citations: string[];
+    prompt_id: string;
+    judge_label: 'RELEVANT';
+  } | null;
+  warnings: Array<{ message?: string; code?: string }>;
+};

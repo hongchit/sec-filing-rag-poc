@@ -26,6 +26,22 @@ import type { Company, CompanyStatus, Evidence, Research as ResearchValue } from
 const items = ['1', '1A', '3', '7', '7A', '8'];
 export function Research() {
   const location = useLocation();
+  const prefill = useRef(() => {
+    const params = new URLSearchParams(location.search);
+    const requestedGoal = params.get('goal');
+    const validGoal =
+      requestedGoal && requestedGoal in goals ? (requestedGoal as ResearchGoal) : null;
+    const requestedItems = (params.get('items') || '')
+      .split(',')
+      .filter((value) => items.includes(value));
+    return {
+      ticker: (params.get('company') || '').toUpperCase(),
+      goal: validGoal,
+      question: (params.get('question') || '').slice(0, 2000),
+      items: requestedItems,
+      accession: (params.get('accession') || '').slice(0, 32),
+    };
+  }).current();
   const retry = useRef(
     (location.state as { retry?: ResearchValue; advanced?: boolean } | null) ?? null,
   ).current;
@@ -39,15 +55,16 @@ export function Research() {
   const [statuses, setStatuses] = useState<Record<string, CompanyStatus>>({});
   const [ticker, setTicker] = useState('');
   const [corpus, setCorpus] = useState('');
-  const [goal, setGoal] = useState<ResearchGoal>(retry?.retry?.goal ?? 'business');
-  const [question, setQuestion] = useState(retry?.retry?.question ?? '');
-  const [allowed, setAllowed] = useState<string[]>(retry?.retry?.allowed_items ?? []);
+  const [goal, setGoal] = useState<ResearchGoal>(retry?.retry?.goal ?? prefill.goal ?? 'business');
+  const [question, setQuestion] = useState(retry?.retry?.question ?? prefill.question);
+  const [allowed, setAllowed] = useState<string[]>(retry?.retry?.allowed_items ?? prefill.items);
   const [advanced, setAdvanced] = useState(
-    retry?.advanced ?? Array.isArray(retry?.retry?.allowed_items),
+    retry?.advanced ?? (Array.isArray(retry?.retry?.allowed_items) || prefill.items.length > 0),
   );
   const [stage, setStage] = useState('');
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [error, setError] = useState('');
+  const [prefillNotice, setPrefillNotice] = useState('');
   const [recent, setRecent] = useState<ResearchValue[]>([]);
   const [prepareOpen, setPrepareOpen] = useState(false);
   const [prepareYear, setPrepareYear] = useState(String(new Date().getUTCFullYear() - 1));
@@ -71,15 +88,34 @@ export function Research() {
       setCorpus(retry.retry.corpus_version_id);
     } else {
       setTicker((current) => {
+        const requested = values.find(
+          (value) => value.enabled && value.ticker === prefill.ticker && ready[value.ticker],
+        );
         const selected =
+          requested?.ticker ??
           (current && ready[current]?.active_corpus ? current : undefined) ??
           firstReady?.ticker ??
           (current || firstEnabled?.ticker || '');
-        setCorpus(ready[selected]?.active_corpus?.corpus_version_id ?? '');
+        const status = ready[selected];
+        const filing = prefill.accession
+          ? [status?.active_corpus, ...(status?.historical_corpora || [])].find(
+              (value) => value?.accession === prefill.accession,
+            )
+          : null;
+        setCorpus(filing?.corpus_version_id ?? status?.active_corpus?.corpus_version_id ?? '');
+        setPrefillNotice(
+          !prefill.accession || filing
+            ? ''
+            : requested && status?.active_corpus
+              ? 'The filing used in the evaluation is not available here. The latest available filing has been selected instead.'
+              : requested
+                ? 'The filing used in the evaluation is not currently available in Query.'
+                : 'The company and filing used in the evaluation are not available here. Another available company has been selected instead.',
+        );
         return selected;
       });
     }
-  }, [retry]);
+  }, [prefill.accession, prefill.ticker, retry]);
   const pollLatestBatch = useCallback(
     async function poll(batchId: string, started = Date.now()) {
       if (Date.now() - started >= 10 * 60_000) {
@@ -101,7 +137,7 @@ export function Research() {
           else
             setLatestPreparation(
               batch.items.find((item) => item.safe_error)?.safe_error ??
-                'Some latest filings could not be prepared. Ready corpora remain available.',
+                'Some latest filings could not be prepared. Ready Library filings remain available.',
             );
           return;
         }
@@ -252,7 +288,7 @@ export function Research() {
         void navigate(`/research/${result.research_id}`);
       } catch {
         setError(
-          'Research could not be completed. You can safely retry; the same request will not create duplicate provider work.',
+          'The query could not be completed. You can safely retry; the same request will not create duplicate provider work.',
         );
         setStage('');
       }
@@ -262,16 +298,17 @@ export function Research() {
     <AppShell>
       <Stack spacing={3}>
         <Box>
-          <Typography variant="h1">Investor research</Typography>
+          <Typography variant="h1">Query annual filings</Typography>
           <Typography color="text.secondary">
             Ask grounded questions of stored SEC filings.
           </Typography>
         </Box>
         {error && <Alert severity="error">{error}</Alert>}
+        {prefillNotice && <Alert severity="info">{prefillNotice}</Alert>}
         {companies.length > 0 && !hasActiveCorpus && (
           <Alert severity="info">
             <Stack spacing={1} alignItems="flex-start">
-              <Typography>No searchable filing corpus is ready yet.</Typography>
+              <Typography>No searchable filing is ready in the Library yet.</Typography>
               <Button
                 variant="contained"
                 disabled={
@@ -346,9 +383,9 @@ export function Research() {
                 </Select>
               </FormControl>
               <FormControl fullWidth>
-                <InputLabel>Research goal</InputLabel>
+                <InputLabel>Query goal</InputLabel>
                 <Select
-                  label="Research goal"
+                  label="Query goal"
                   value={goal}
                   onChange={(event) => setGoal(event.target.value)}
                 >
@@ -395,7 +432,7 @@ export function Research() {
                 {!canPrepare && (
                   <Alert severity="warning">
                     Your remaining lifetime allowance is below the amount required to prepare a
-                    filing. Existing corpora remain available.
+                    filing. Existing Library filings remain available.
                   </Alert>
                 )}
                 {preparation && (
@@ -420,7 +457,7 @@ export function Research() {
               ))}
             </Stack>
             <TextField
-              label="Research question"
+              label="Question"
               multiline
               minRows={3}
               value={question}
@@ -465,12 +502,12 @@ export function Research() {
               disabled={!question.trim() || !corpus || Boolean(stage) || !canResearch}
               onClick={() => void submit()}
             >
-              Research filing
+              Run query
             </Button>
             {!canResearch && (
               <Alert severity="warning">
-                Your remaining lifetime allowance is below the amount required for a research query.
-                Existing research and corpora remain available.
+                Your remaining lifetime allowance is below the amount required for a query. Existing
+                queries and Library filings remain available.
               </Alert>
             )}
             {stage && (
@@ -495,7 +532,7 @@ export function Research() {
         )}
         <Box>
           <Stack direction="row" justifyContent="space-between">
-            <Typography variant="h2">Recent research</Typography>
+            <Typography variant="h2">Recent queries</Typography>
             <Button onClick={() => void navigate('/research/history')}>View history</Button>
           </Stack>
           {recent.map((run) => (

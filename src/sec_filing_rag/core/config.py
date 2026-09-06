@@ -92,6 +92,7 @@ class Settings(BaseSettings):
     generation_config_path: Path = Path("config/generation.json")
     generation_evaluation_result_path: Path = Path("evaluation/results/generation-v1.json")
     model_pricing_config_path: Path = Path("config/model-pricing-v1.json")
+    showcase_config_path: Path = Path("config/showcase.json")
     public_base_url: str = "http://localhost:8000"
     google_client_id: str = "__required__"
     google_client_secret: str = "__required__"
@@ -107,6 +108,13 @@ class Settings(BaseSettings):
     @property
     def admin_emails(self) -> frozenset[str]:
         return frozenset(
+            value.strip().lower() for value in self.google_admin_emails.split(",") if value.strip()
+        )
+
+    @property
+    def primary_admin_email(self) -> str:
+        """Return the configured cost owner for unattended ingestion."""
+        return next(
             value.strip().lower() for value in self.google_admin_emails.split(",") if value.strip()
         )
 

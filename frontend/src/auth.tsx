@@ -1,9 +1,13 @@
 import { CircularProgress } from '@mui/material';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useState, type ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { AccountContext, type Account } from './account';
-import { Landing } from './pages/Landing';
+import { AuthStateContext, type AuthState } from './authState';
+import { signInPath } from './returnTo';
 
 const nativeFetch = window.fetch.bind(window);
+let redirectingAfterUnauthorized = false;
+
 function cookie(name: string): string | undefined {
   return document.cookie
     .split('; ')
@@ -11,7 +15,24 @@ function cookie(name: string): string | undefined {
     ?.slice(name.length + 1);
 }
 
-window.fetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
+function requestPath(input: RequestInfo | URL): string {
+  const value = input instanceof Request ? input.url : String(input);
+  try {
+    return new URL(value, window.location.origin).pathname;
+  } catch {
+    return '';
+  }
+}
+
+function isPublicApi(path: string): boolean {
+  return (
+    path === '/api/showcase' ||
+    path === '/api/retrieval-evaluations/current' ||
+    path === '/api/generation-evaluations/current'
+  );
+}
+
+window.fetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
   const method = (init.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
   const headers = new Headers(
     init.headers ?? (input instanceof Request ? input.headers : undefined),
@@ -20,18 +41,65 @@ window.fetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
     const csrf = cookie('sec-rag-csrf');
     if (csrf) headers.set('X-CSRF-Token', decodeURIComponent(csrf));
   }
-  return nativeFetch(input, { ...init, headers, credentials: 'same-origin' });
+  const response = await nativeFetch(input, { ...init, headers, credentials: 'same-origin' });
+  const path = requestPath(input);
+  if (
+    response.status === 401 &&
+    path.startsWith('/api/') &&
+    !path.startsWith('/api/auth/') &&
+    !isPublicApi(path) &&
+    !redirectingAfterUnauthorized
+  ) {
+    redirectingAfterUnauthorized = true;
+    const returnTo = `${window.location.pathname}${window.location.search}`;
+    window.location.assign(signInPath(returnTo));
+  }
+  return response;
 };
 
-export function AuthGate({ children }: { children: ReactNode }) {
-  const [account, setAccount] = useState<Account | null>();
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AuthState>({ status: 'loading', account: null });
   useEffect(() => {
-    void fetch('/api/auth/me').then(async (response) => {
-      setAccount(response.ok ? ((await response.json()) as Account) : null);
-    });
+    let active = true;
+    void fetch('/api/auth/me')
+      .then(async (response) => {
+        const account = response.ok ? ((await response.json()) as Account) : null;
+        if (active)
+          setState(
+            account ? { status: 'authenticated', account } : { status: 'guest', account: null },
+          );
+      })
+      .catch(() => {
+        if (active) setState({ status: 'guest', account: null });
+      });
+    return () => {
+      active = false;
+    };
   }, []);
-  if (account === undefined)
+  return <AuthStateContext.Provider value={state}>{children}</AuthStateContext.Provider>;
+}
+
+export function AuthGate({ children }: { children: ReactNode }) {
+  const state = useContext(AuthStateContext);
+  const location = useLocation();
+  if (state.status === 'loading')
     return <CircularProgress aria-label="Checking authentication" sx={{ m: 4 }} />;
-  if (account === null) return <Landing />;
-  return <AccountContext.Provider value={account}>{children}</AccountContext.Provider>;
+  if (state.status === 'guest') {
+    const returnTo = `${location.pathname}${location.search}`;
+    return <Navigate to={signInPath(returnTo)} replace />;
+  }
+  return <AccountContext.Provider value={state.account}>{children}</AccountContext.Provider>;
+}
+
+export function OptionalAuth({ children }: { children: (account: Account | null) => ReactNode }) {
+  const state = useContext(AuthStateContext);
+  if (state.status === 'loading')
+    return <CircularProgress aria-label="Checking authentication" sx={{ m: 4 }} />;
+  return state.status === 'authenticated' ? (
+    <AccountContext.Provider value={state.account}>
+      {children(state.account)}
+    </AccountContext.Provider>
+  ) : (
+    children(null)
+  );
 }

@@ -1,0 +1,70 @@
+id: scheduled_filing_launcher
+namespace: sec_filings.ingestion
+description: Create an application-owned filing batch and execute the shared processing flow.
+inputs:
+  - id: tickers
+    type: ARRAY
+    itemType: STRING
+    required: false
+    description: Optional ordered ticker subset; omission selects all enabled companies.
+  - id: fiscal_year
+    type: INT
+    min: 1900
+    max: 9999
+    required: false
+    description: Optional exact SEC report-date year; omission selects each latest original 10-K.
+tasks:
+  - id: create_batch
+    type: io.kestra.plugin.core.http.Request
+    uri: http://app:8000/internal/scheduled-filing-batches
+    method: POST
+    contentType: application/json
+    headers:
+      Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+      X-Kestra-Execution-ID: "{{ execution.id }}"
+      X-Request-ID: "kestra-launcher:{{ execution.id }}"
+    body: "{{ {'tickers': inputs.tickers ?? null, 'fiscal_year': inputs.fiscal_year ?? null} | toJson }}"
+    options:
+      connectTimeout: PT10S
+      readTimeout: PT30S
+    retry:
+      type: constant
+      interval: PT5S
+      maxAttempts: 3
+  - id: process_batch
+    type: io.kestra.plugin.core.flow.Subflow
+    namespace: sec_filings.ingestion
+    flowId: filing_batch
+    inputs:
+      batch_id: "{{ outputs.create_batch.body | jq('.batch_id') | first }}"
+    wait: true
+    transmitFailed: true
+    retry:
+      type: constant
+      interval: PT5S
+      maxAttempts: 3
+errors:
+  - id: fail_unlaunched_batch
+    type: io.kestra.plugin.core.http.Request
+    runIf: "{{ outputs.create_batch is defined }}"
+    uri: "http://app:8000/internal/filing-batches/{{ outputs.create_batch.body | jq('.batch_id') | first }}/launch-failures"
+    method: POST
+    contentType: application/json
+    headers:
+      Authorization: "Bearer {{ secret('INGESTION_API_TOKEN') }}"
+    body: "{{ {'error': 'Kestra processing subflow did not start', 'kestra_execution_id': execution.id} | toJson }}"
+    options:
+      connectTimeout: PT10S
+      readTimeout: PT30S
+    retry:
+      type: constant
+      interval: PT5S
+      maxAttempts: 3
+    allowFailure: true
+triggers:
+  - id: daily_latest_filings
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "8 6 * * *"
+    timezone: Etc/UTC
+    allowConcurrent: false
+    recoverMissedSchedules: LAST

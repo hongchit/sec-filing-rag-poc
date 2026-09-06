@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">The prepare-time and question-time RAG loop</title>
+  <desc id="desc">A filing is cleaned, split into chunks, embedded and indexed. A question searches that index, then relevant passages are placed in a prompt for a language model that returns a cited answer.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#53605b"/></marker>
+    <style>.lane{fill:#f4f6f4;stroke:#d9dfdc;stroke-width:2}.box{fill:#fff;stroke:#174c3c;stroke-width:2}.accent{fill:#dcebe5;stroke:#174c3c;stroke-width:2}.label{font:700 20px system-ui,sans-serif;fill:#17221e}.body{font:16px system-ui,sans-serif;fill:#53605b}.arrow{stroke:#53605b;stroke-width:2.5;fill:none;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect class="lane" x="25" y="35" width="1150" height="215" rx="16"/><text class="label" x="50" y="72">Prepare once per filing</text>
+  <g transform="translate(55 105)"><rect class="box" width="160" height="85" rx="10"/><text class="label" x="80" y="35" text-anchor="middle">Form 10-K</text><text class="body" x="80" y="62" text-anchor="middle">source filing</text></g>
+  <path class="arrow" d="M220 148 H260"/><g transform="translate(265 105)"><rect class="box" width="160" height="85" rx="10"/><text class="label" x="80" y="35" text-anchor="middle">Clean text</text><text class="body" x="80" y="62" text-anchor="middle">extract Items</text></g>
+  <path class="arrow" d="M430 148 H470"/><g transform="translate(475 105)"><rect class="box" width="160" height="85" rx="10"/><text class="label" x="80" y="35" text-anchor="middle">Chunks</text><text class="body" x="80" y="62" text-anchor="middle">small passages</text></g>
+  <path class="arrow" d="M640 148 H680"/><g transform="translate(685 105)"><rect class="box" width="160" height="85" rx="10"/><text class="label" x="80" y="35" text-anchor="middle">Embeddings</text><text class="body" x="80" y="62" text-anchor="middle">meaning as numbers</text></g>
+  <path class="arrow" d="M850 148 H890"/><g transform="translate(895 105)"><rect class="accent" width="220" height="85" rx="10"/><text class="label" x="110" y="35" text-anchor="middle">Search index</text><text class="body" x="110" y="62" text-anchor="middle">keyword + vector</text></g>
+  <rect class="lane" x="25" y="290" width="1150" height="225" rx="16"/><text class="label" x="50" y="328">Answer every question</text>
+  <g transform="translate(55 370)"><rect class="box" width="170" height="85" rx="10"/><text class="label" x="85" y="35" text-anchor="middle">Question</text><text class="body" x="85" y="62" text-anchor="middle">company + goal</text></g>
+  <path class="arrow" d="M230 413 H280"/><g transform="translate(285 370)"><rect class="accent" width="190" height="85" rx="10"/><text class="label" x="95" y="35" text-anchor="middle">Retrieve top-k</text><text class="body" x="95" y="62" text-anchor="middle">best passages</text></g>
+  <path class="arrow" d="M480 413 H530"/><g transform="translate(535 370)"><rect class="box" width="190" height="85" rx="10"/><text class="label" x="95" y="35" text-anchor="middle">Build prompt</text><text class="body" x="95" y="62" text-anchor="middle">question + evidence</text></g>
+  <path class="arrow" d="M730 413 H780"/><g transform="translate(785 370)"><rect class="box" width="150" height="85" rx="10"/><text class="label" x="75" y="35" text-anchor="middle">LLM</text><text class="body" x="75" y="62" text-anchor="middle">draft answer</text></g>
+  <path class="arrow" d="M940 413 H970"/><g transform="translate(975 370)"><rect class="accent" width="160" height="85" rx="10"/><text class="label" x="80" y="35" text-anchor="middle">Cited answer</text><text class="body" x="80" y="62" text-anchor="middle">check the source</text></g>
+  <path class="arrow" stroke-dasharray="8 7" d="M1005 195 C1005 275 380 275 380 365"/><text class="body" x="650" y="276" text-anchor="middle">the index supplies passages at question time</text>
+</svg>

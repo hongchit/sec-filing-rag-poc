@@ -53,7 +53,7 @@ flowchart TB
   SVC --> REP
   SVC --> DOM
   REP --> DB[(PostgreSQL)]
-  K[Kestra filing_batch] --> INT
+  K[Kestra launcher and filing_batch] --> INT
   SVC --> EXT[SEC and OpenAI integrations]
 ```
 

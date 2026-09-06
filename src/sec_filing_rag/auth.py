@@ -108,6 +108,15 @@ class AuthRepository:
         with self.database.transaction() as connection:
             return budget_summary(connection, user_id, default)
 
+    def active_user_id_by_email(self, email: str) -> uuid.UUID | None:
+        """Resolve a configured scheduler owner without creating a login identity."""
+        with self.database.transaction() as connection:
+            row = connection.execute(
+                "SELECT id FROM public.app_user WHERE lower(email)=%s AND status='active'",
+                (email.lower(),),
+            ).fetchone()
+        return row["id"] if row is not None else None
+
     def audit(
         self,
         event_type: str,

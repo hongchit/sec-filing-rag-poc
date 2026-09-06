@@ -84,3 +84,8 @@ def test_execution_accounting_migration_adds_direct_lineage_and_pricing_snapshot
     assert "filing_batch_item" in migration
     assert "ingestion_run_id uuid UNIQUE REFERENCES public.ingestion_run(id)" in migration
     assert migration.count("ADD COLUMN pricing_snapshot jsonb") == 3
+
+
+def test_scheduled_ingestion_migration_adds_unique_launcher_correlation() -> None:
+    migration = Path("migrations/versions/0006_scheduled_ingestion.sql").read_text(encoding="utf-8")
+    assert "ADD COLUMN launcher_execution_id text UNIQUE" in migration
