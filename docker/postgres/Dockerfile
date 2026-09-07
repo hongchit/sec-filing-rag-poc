@@ -44,6 +44,8 @@ RUN set -eux; \
     apt-get remove -y build-essential postgresql-server-dev-"${PG_MAJOR}" unzip; \
     apt-get autoremove -y; \
     apt-mark unhold locales; \
+    # Remove the unused default TLS certificate pair before image inspection.
+    rm -f /etc/ssl/private/ssl-cert-snakeoil.key /etc/ssl/certs/ssl-cert-snakeoil.pem; \
     rm -rf /var/lib/apt/lists/*
 
 COPY docker/postgres/init-databases.sh /docker-entrypoint-initdb.d/10-init-databases.sh
