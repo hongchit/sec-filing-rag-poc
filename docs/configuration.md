@@ -56,6 +56,7 @@ snapshot. Prices are estimates, not billing reconciliation.
 | Variable | Default | Rule and effect |
 | --- | --- | --- |
 | `APP_HOST` / `APP_PORT` | `0.0.0.0` / `8000` | FastAPI bind address |
+| `FRONTEND_DIST_PATH` | unset | Optional compiled SPA directory; the production image sets `/app/frontend` |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL` |
 | `INGESTION_API_TOKEN` | required | Secret, at least 16 characters; shared with Kestra callbacks |
 | `COMPANY_CONFIG_PATH` | `config/companies.yaml` | Ordered ticker discovery and enabled flags |

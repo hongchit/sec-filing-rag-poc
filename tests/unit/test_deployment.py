@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import yaml
+
+
+def test_production_dockerfile_uses_selective_copies_and_no_secret_inputs() -> None:
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+
+    assert not re.search(r"^\s*(?:COPY|ADD)\s+\.\s", dockerfile, flags=re.MULTILINE)
+    assert not re.search(
+        r"^\s*(?:ARG|ENV)\s+.*(?:SECRET|PASSWORD|TOKEN|API_KEY)",
+        dockerfile,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+    assert "FRONTEND_DIST_PATH=/app/frontend" in dockerfile
+    assert "USER 10001:10001" in dockerfile
+    assert dockerfile.count("@sha256:") == 3
+
+
+def test_deployment_manifests_reference_secrets_without_defining_them() -> None:
+    manifests = sorted(Path("deploy/k3s").glob("**/*.yaml"))
+    documents = [
+        document
+        for path in manifests
+        for document in yaml.safe_load_all(path.read_text(encoding="utf-8"))
+        if isinstance(document, dict)
+    ]
+
+    assert all(document.get("kind") != "Secret" for document in documents)
+    assert {"sec-rag-app", "sec-rag-postgres", "sec-rag-kestra"} <= {
+        match
+        for path in manifests
+        for match in re.findall(
+            r"name:\s+(sec-rag-(?:app|postgres|kestra))", path.read_text(encoding="utf-8")
+        )
+    }
+    assert "tls.secretName" not in "\n".join(path.read_text(encoding="utf-8") for path in manifests)
+
+
+def test_production_overlay_has_concrete_origin_and_digest_placeholders() -> None:
+    directory = Path("deploy/k3s/overlays/production")
+    content = "\n".join(path.read_text(encoding="utf-8") for path in directory.glob("*.yaml"))
+
+    assert "https://sec-filing-rag-poc.henrychan.dev" in content
+    assert "host: sec-filing-rag-poc.henrychan.dev" in content
+    assert content.count("sha256:" + "0" * 64) == 2
+
+
+def test_publish_workflow_scans_before_registry_login() -> None:
+    workflow = Path(".github/workflows/publish-images.yml").read_text(encoding="utf-8")
+
+    assert "gitleaks/gitleaks-action" not in workflow
+    assert "scan-source" not in workflow
+    assert workflow.index("Scan image layers for secrets") < workflow.index("Sign in to GHCR")
+    assert workflow.index("Inspect image metadata and filesystem") < workflow.index(
+        "Sign in to GHCR"
+    )
+    assert not re.search(r"uses:\s+[^\s]+@(v|main|master)(?:\s|$)", workflow)
+
+
+def test_secret_scanning_workflow_runs_only_for_pull_requests() -> None:
+    workflow = Path(".github/workflows/security.yml").read_text(encoding="utf-8")
+
+    assert re.search(r"^on:\n  pull_request:\n\npermissions:", workflow, flags=re.MULTILINE)
+    assert "push:" not in workflow
+    assert "workflow_dispatch:" not in workflow
+    assert "fetch-depth: 0" in workflow
+    assert "gitleaks/gitleaks-action" in workflow
+    assert "# v3.0.0" in workflow
+    assert not re.search(r"uses:\s+[^\s]+@(v|main|master)(?:\s|$)", workflow)

@@ -19,7 +19,7 @@ acceptable fact.
 
 ## Prompt roles in full-RAG evaluation
 
-The two prompt groups have different jobs. The five templates under `config/prompts/` are candidate
+The two prompt groups have different jobs. The three templates under `config/prompts/` are candidate
 runtime behaviors: each receives the same research goal, question, and retrieved evidence and
 produces a structured answer. `evaluation/prompts/rag-judge-v1.txt` is a measurement instrument: it
 receives a candidate answer plus human-reviewed reference evidence and assigns a relevance label. It
@@ -34,7 +34,7 @@ title: Prompt roles in full-RAG evaluation
 ---
 flowchart TD
   Q[Reviewed question] --> R[One fixed retrieval result]
-  R --> P[Five candidate generation prompts]
+  R --> P[Three candidate generation prompts]
   P --> V[Schema and citation validation]
   V --> J[One fixed judge prompt]
   E[Reviewed reference evidence] --> J
@@ -42,7 +42,7 @@ flowchart TD
   S --> D{Manual promotion decision}
 ```
 
-### Five candidate answer prompts
+### Three candidate answer prompts
 
 The comparison preserves earlier prompt variants intentionally. It tests whether extra role,
 structure, refusal, and classification instructions improve grounded answers or instead add enough
@@ -51,23 +51,26 @@ instruction burden to reduce responsiveness.
 | Prompt | Characteristics and purpose | Strengths | Weaknesses and considerations |
 | --- | --- | --- | --- |
 | `basic-grounded-v1` | Minimal baseline requiring supplied evidence, exact handles, limitations, and no investment advice. | Short, direct, and useful for measuring the value of later instructions. | A prose prohibition does not explicitly map advice requests to the structured refusal field. |
-| `structured-investor-v1` | Adds an investor-research role, synthesis, and explicit separation of filing facts from interpretation. | Encourages analytical organization and makes interpretations visible. | More framing can encourage elaboration; refusal behavior remains implicit rather than field-specific. |
 | `basic-grounded-v2` | Adds explicit `policy_refusal` handling and separates policy refusal from insufficient evidence. | Keeps the compact baseline while making advice handling machine-readable and allowing supported filing facts. | Its mixed refusal-plus-facts instruction can conflict with the application model that normalizes rejected dispositions to no answer content. |
-| `structured-investor-v2` | Combines analyst framing with explicit refusal and independent insufficiency states. | Tests whether structured synthesis and refusal semantics work well together. | It is the densest incremental variant and may trade responsiveness for instruction following. |
 | `guardrailed-10k-v3` | Classifies answered, investment-advice, and out-of-scope requests in one structured response with detailed 10-K boundaries. | Most explicit scope taxonomy and closest prompt-level match to the application-owned disposition contract. | The long exclusion list increases prompt complexity and may reject useful borderline filing questions or distract from synthesis. |
 
-Together, the basic and structured pairs isolate presentation style; v1 versus v2 isolates explicit
-refusal-state instructions; and v3 tests a stricter classification approach. This is a purposeful
-controlled set, not five claims about universally best wording. A prompt can be stronger for policy
+Together, basic v1 supplies a minimal baseline, basic v2 isolates explicit refusal-state
+instructions, and v3 tests a stricter classification approach. This is a purposeful controlled
+set, not three claims about universally best wording. A prompt can be stronger for policy
 classification yet weaker for answer completeness, so results must be inspected by case and
 disposition as well as by aggregate score.
 
-The checked-in `generation-v1` run found all five candidates eligible. `structured-investor-v1` and
-`basic-grounded-v2` tied at a mean label score of about `1.990` with 95 of 96 answers labeled
-`RELEVANT`; `basic-grounded-v2` won the documented median-generation-latency tie-break. That result
-supports the promoted prompt for the recorded dataset, retrieval configuration, generation model,
-judge, and pricing snapshot. It does not establish that the same prompt wins after any of those
-inputs change.
+The checked-in `generation-v1` artifact remains the historical five-prompt run. It found
+`structured-investor-v1` and `basic-grounded-v2` tied at a mean label score of about `1.990` with 95
+of 96 answers labeled `RELEVANT`; `basic-grounded-v2` won the documented latency tie-break.
+`structured-investor-v1` produced the same labels as basic v2 at higher recorded cost, while
+`structured-investor-v2` was weakest at 90 relevant answers. Their source files are no longer part
+of the active configuration, and the retained prompts now explicitly reserve citation handles for
+the structured citations field. Source drill-down for the historical candidates therefore remains
+unavailable until a new three-prompt evaluation records the current prompt checksums.
+The three active candidates reduce the recorded generation-and-judge cost from about `$2.20` to
+`$1.26` for 96 cases, excluding the shared retrieval cost. Results remain specific to the recorded
+dataset, retrieval configuration, models, judge, and pricing snapshot.
 
 ### Judge prompt and score interpretation
 

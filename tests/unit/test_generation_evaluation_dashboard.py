@@ -3,7 +3,10 @@ from __future__ import annotations
 from contextlib import contextmanager
 from pathlib import Path
 
+import pytest
+
 from sec_filing_rag.core.config import Settings
+from sec_filing_rag.evaluation.dashboard import ArtifactConflict, ArtifactMissing
 from sec_filing_rag.evaluation.generation_dashboard import GenerationEvaluationDashboardService
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -59,8 +62,11 @@ def test_matrix_and_answers_are_artifact_backed_when_evidence_is_missing() -> No
     assert all(chunk["missing"] for chunk in [*question.expected, *question.retrieved])
 
 
-def test_evaluated_prompt_source_requires_matching_hash() -> None:
-    prompt = service().prompt("basic-grounded-v2")
+def test_changed_active_prompt_is_not_misreported_as_evaluated_source() -> None:
+    with pytest.raises(ArtifactConflict, match="does not match"):
+        service().prompt("basic-grounded-v2")
 
-    assert prompt.prompt_id == "basic-grounded-v2"
-    assert "{question}" in prompt.source
+
+def test_removed_historical_prompt_source_is_unavailable() -> None:
+    with pytest.raises(ArtifactMissing, match="source is unavailable"):
+        service().prompt("structured-investor-v1")

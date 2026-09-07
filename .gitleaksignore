@@ -1,0 +1,19 @@
+# Reviewed historical test values and documented placeholders; new commits remain scanned.
+391a15ddcd7b238293885052829ce8217b8eac9e:tests/unit/test_ingestion.py:generic-api-key:49
+391a15ddcd7b238293885052829ce8217b8eac9e:tests/unit/test_scheduled_batches.py:generic-api-key:31
+391a15ddcd7b238293885052829ce8217b8eac9e:tests/unit/test_evaluation_overview.py:generic-api-key:62
+1b30bc35322661dee4aad36882b212cf8358d621:tests/unit/test_generation_evaluation_dashboard.py:generic-api-key:21
+1b2baa03c607916a2fd3ac26135f693dccfa8eef:src/sec_filing_rag/core/config.py:generic-api-key:98
+1b2baa03c607916a2fd3ac26135f693dccfa8eef:src/sec_filing_rag/main.py:sec-rag-runtime-secret-assignment:77
+1b2baa03c607916a2fd3ac26135f693dccfa8eef:tests/unit/test_auth.py:generic-api-key:52
+1b2baa03c607916a2fd3ac26135f693dccfa8eef:tests/unit/test_authentication.py:generic-api-key:58
+d3c644f1ce6519bccbbcf85693effb07fc4b0572:tests/unit/test_evaluation_dashboard.py:generic-api-key:27
+86fb900184f0db579bd74c694d7a6d55fba679b6:tests/api/test_lifecycle.py:generic-api-key:24
+e6b1f77166ec1af65e3b5c655f19c7f385327f28:tests/api/test_api.py:generic-api-key:36
+e0442f387b638882b6474ec149c1158b51416a34:tests/api/test_api.py:generic-api-key:17
+e0442f387b638882b6474ec149c1158b51416a34:.env.example:sec-rag-runtime-secret-assignment:20
+e6b1f77166ec1af65e3b5c655f19c7f385327f28:.env.example:sec-rag-runtime-secret-assignment:39
+e6b1f77166ec1af65e3b5c655f19c7f385327f28:tests/api/test_api.py:generic-api-key:84
+e6b1f77166ec1af65e3b5c655f19c7f385327f28:tests/api/test_api.py:generic-api-key:113
+212d3e10607275e9cdafbb577297d5ecbd6bee96:.env.example:sec-rag-runtime-secret-assignment:5
+212d3e10607275e9cdafbb577297d5ecbd6bee96:.env.example:sec-rag-runtime-secret-assignment:17

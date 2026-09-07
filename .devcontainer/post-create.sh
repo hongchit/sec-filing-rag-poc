@@ -11,6 +11,9 @@ if ! git config --global --get-all safe.directory |
   git config --global --add safe.directory "${workspace_dir}"
 fi
 
+# Enable the tracked staged-secret scan for this checkout.
+git -C "${workspace_dir}" config --local core.hooksPath .githooks
+
 uv sync --frozen --all-packages
 cargo install httpgenerator --version 1.1.0 --locked
 npm --prefix frontend ci --no-audit --no-fund

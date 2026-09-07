@@ -47,6 +47,7 @@ class ResultArtifact(BaseModel):
 class EvaluationSummary(BaseModel):
     run: dict[str, Any]
     coverage: dict[str, Any]
+    availability: dict[str, bool]
     warnings: list[dict[str, Any]]
     selected_default_id: str
     strategy_best: dict[str, str]
@@ -118,15 +119,18 @@ class EvaluationDashboardService:
             raise ArtifactConflict("selected default does not follow the official ranking rules")
         return result, cases, manifest
 
-    def _run(self, result: ResultArtifact) -> dict[str, Any]:
-        with self.database.transaction() as connection:
-            row = connection.execute(
-                "SELECT id,status::text AS status,dataset_sha256,configuration_sha256,started_at,finished_at "
-                "FROM public.retrieval_evaluation_run WHERE id=%s",
-                (result.evaluation_run_id,),
-            ).fetchone()
+    def _run(self, result: ResultArtifact) -> dict[str, Any] | None:
+        try:
+            with self.database.transaction() as connection:
+                row = connection.execute(
+                    "SELECT id,status::text AS status,dataset_sha256,configuration_sha256,started_at,finished_at "
+                    "FROM public.retrieval_evaluation_run WHERE id=%s",
+                    (result.evaluation_run_id,),
+                ).fetchone()
+        except Exception:
+            return None
         if row is None:
-            raise ArtifactConflict("evaluation run is absent from the database")
+            return None
         if (
             str(row["dataset_sha256"]) != result.dataset_sha256
             or str(row["configuration_sha256"]) != result.configuration_sha256
@@ -141,6 +145,18 @@ class EvaluationDashboardService:
                 else value
             )
             for key, value in row.items()
+        }
+
+    @staticmethod
+    def _recovery_warning(code: str, message: str) -> dict[str, Any]:
+        return {
+            "code": code,
+            "message": message,
+            "audience": "administrator",
+            "recovery_docs": [
+                "docs/getting-started.md",
+                "docs/retrieval-evaluation-workflow.md",
+            ],
         }
 
     @staticmethod
@@ -173,18 +189,55 @@ class EvaluationDashboardService:
     def summary(self) -> EvaluationSummary:
         result, cases, manifest = self._load()
         configurations = self._configs(result)
+        run = self._run(result)
+        audit_available = run is not None
+        referenced = {chunk for case in cases for chunk in case.relevant_chunk_ids} | {
+            chunk
+            for row in result.results
+            for question in row["questions"]
+            for chunk in question["chunk_ids"]
+        }
+        _, evidence_available = self._chunks(referenced)
+        warnings = [*manifest.warnings, *result.warnings]
+        if run is None:
+            warnings.append(
+                self._recovery_warning(
+                    "audit_record_unavailable",
+                    "The artifact is available, but this deployment has no matching evaluation audit record.",
+                )
+            )
+            run = {
+                "id": result.evaluation_run_id,
+                "status": "succeeded",
+                "started_at": None,
+                "finished_at": None,
+                "dataset_sha256": result.dataset_sha256,
+                "configuration_sha256": result.configuration_sha256,
+            }
+        if not evidence_available:
+            warnings.append(
+                self._recovery_warning(
+                    "evidence_unavailable",
+                    "Rankings remain reviewable, but filing evidence is incomplete or unavailable in this deployment.",
+                )
+            )
         best = {
             strategy: next(row["id"] for row in configurations if row["strategy"] == strategy)
             for strategy in ("keyword", "vector", "weighted_hybrid", "rrf")
         }
         return EvaluationSummary(
             run={
-                **self._run(result),
+                **run,
                 "course_commit": result.course_commit,
                 "question_count": len(cases),
             },
             coverage=manifest.coverage,
-            warnings=[*manifest.warnings, *result.warnings],
+            availability={
+                "artifact_loaded": True,
+                "audit_record_available": audit_available,
+                "evidence_available": evidence_available,
+            },
+            warnings=warnings,
             selected_default_id=configuration_id(result.selected_default),
             strategy_best=best,
             configurations=configurations,
@@ -200,17 +253,21 @@ class EvaluationDashboardService:
             },
         )
 
-    def _chunks(self, ids: set[str]) -> dict[str, dict[str, Any]]:
+    def _chunks(self, ids: set[str]) -> tuple[dict[str, dict[str, Any]], bool]:
         if not ids:
-            return {}
-        with self.database.transaction() as connection:
-            rows = connection.execute(
-                "SELECT gd.chunk_id,gd.corpus_version_id,gd.text_content,gd.citation_handle,gd.item,gd.provenance,c.ticker,"
-                "f.accession,f.source_url FROM gold.search_document gd JOIN public.company c ON c.id=gd.company_id "
-                "JOIN silver.filing f ON f.id=gd.filing_id WHERE gd.chunk_id=ANY(%s)",
-                (sorted(ids),),
-            ).fetchall()
-        return {str(row["chunk_id"]): dict(row) for row in rows}
+            return {}, True
+        try:
+            with self.database.transaction() as connection:
+                rows = connection.execute(
+                    "SELECT gd.chunk_id,gd.corpus_version_id,gd.text_content,gd.citation_handle,gd.item,gd.provenance,c.ticker,"
+                    "f.accession,f.source_url FROM gold.search_document gd JOIN public.company c ON c.id=gd.company_id "
+                    "JOIN silver.filing f ON f.id=gd.filing_id WHERE gd.chunk_id=ANY(%s)",
+                    (sorted(ids),),
+                ).fetchall()
+        except Exception:
+            return {}, False
+        chunks = {str(row["chunk_id"]): dict(row) for row in rows}
+        return chunks, len(chunks) == len(ids)
 
     @staticmethod
     def _chunk(
@@ -253,7 +310,7 @@ class EvaluationDashboardService:
         questions = {item["case_id"]: item for item in row["questions"]}
         all_ids = {chunk for case in cases for chunk in case.relevant_chunk_ids}
         all_ids |= {chunk for question in questions.values() for chunk in question["chunk_ids"]}
-        chunks = self._chunks(all_ids)
+        chunks, evidence_available = self._chunks(all_ids)
         missing = sorted(all_ids - chunks.keys())
         output: list[dict[str, Any]] = []
         for case in cases:
@@ -299,6 +356,22 @@ class EvaluationDashboardService:
                 item["id"],
             )
         )
+        warnings = [
+            {
+                "code": "missing_chunk",
+                "message": f"Referenced chunk {chunk} is missing",
+                "chunk_id": chunk,
+            }
+            for chunk in missing
+        ]
+        if not evidence_available:
+            warnings.insert(
+                0,
+                self._recovery_warning(
+                    "evidence_unavailable",
+                    "Evidence is incomplete or unavailable in this deployment.",
+                ),
+            )
         return EvaluationCases(
             configuration_id=config_id,
             cases=output,
@@ -308,14 +381,7 @@ class EvaluationDashboardService:
                 "goals": sorted({case.goal for case in cases}),
                 "query_types": sorted({case.query_type for case in cases}),
             },
-            warnings=[
-                {
-                    "code": "missing_chunk",
-                    "message": f"Referenced chunk {chunk} is missing",
-                    "chunk_id": chunk,
-                }
-                for chunk in missing
-            ],
+            warnings=warnings,
         )
 
     def chunk(self, chunk_id: str) -> EvaluationChunk:
@@ -329,7 +395,7 @@ class EvaluationDashboardService:
         }
         if chunk_id not in allowed:
             raise ArtifactMissing("chunk is not referenced by the current evaluation")
-        row = self._chunks({chunk_id}).get(chunk_id)
+        row = self._chunks({chunk_id})[0].get(chunk_id)
         if row is None:
             raise ArtifactMissing("referenced chunk is missing")
         return EvaluationChunk(

@@ -46,7 +46,12 @@ export type Summary = {
     [key: string]: unknown;
   };
   coverage: Record<string, number>;
-  warnings: Array<{ message?: string }>;
+  availability: {
+    artifact_loaded: boolean;
+    audit_record_available: boolean;
+    evidence_available: boolean;
+  };
+  warnings: Array<{ code?: string; message?: string; recovery_docs?: string[] }>;
   selected_default_id: string;
   strategy_best: Record<string, string>;
   configurations: Config[];

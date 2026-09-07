@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     database_startup_timeout_seconds: float = Field(default=10, gt=0, le=60)
     app_host: str = "0.0.0.0"
     app_port: int = 8000
+    frontend_dist_path: Path | None = None
     log_level: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
     ingestion_api_token: str = Field(min_length=16)
     company_config_path: Path = Path("config/companies.yaml")
@@ -137,3 +138,4 @@ class SessionSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     public_base_url: str = "http://localhost:8000"
     session_secret: str = "development-only-session-secret"
+    frontend_dist_path: Path | None = None

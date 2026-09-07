@@ -174,10 +174,12 @@ and user research remain authenticated.
 
 ### Artifact-only deployments
 
-Generation summary, verdict, and answer data comes from the configured JSON artifact and remains
-available when a deployment does not contain the original evaluation run or filing chunks in
-PostgreSQL. The dashboard warns reviewers that operational reconciliation or evidence inspection is
-unavailable; it does not misreport the evaluation as failed.
+Retrieval and generation aggregates come from the configured, checksum-validated artifacts and
+remain available when a deployment does not contain the original evaluation runs or filing chunks
+in PostgreSQL. Question rankings and generated answers also remain reviewable after sign-in. The
+dashboards warn that operational reconciliation or evidence inspection is unavailable; they do not
+misreport the recorded evaluations as failed. Full chunk endpoints remain unavailable until the
+matching corpus exists in the deployment.
 
 An administrator restoring a deployment must first follow [Getting started](getting-started.md) to
 prepare the required corpus and database records, then follow the
@@ -198,6 +200,6 @@ warnings and misses, and the deterministic selection rule.
 
 Generation evaluation is separate: it judges answer behavior after retrieval and applies citation
 and policy gates. Its candidate designs are compared in
-[Five candidate answer prompts](rag-evaluation-workflow.md#five-candidate-answer-prompts), while
+[Three candidate answer prompts](rag-evaluation-workflow.md#three-candidate-answer-prompts), while
 operational validation and promotion commands live in [Operations](operations.md); retrieval
 benchmark preparation remains in the review runbook.

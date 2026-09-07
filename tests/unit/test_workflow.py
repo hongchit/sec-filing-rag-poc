@@ -61,6 +61,23 @@ def test_devcontainer_pins_httpgenerator_and_has_no_obsolete_flow_setting() -> N
     assert "KESTRA_HISTORICAL_FLOW_ID" not in environment
 
 
+def test_devcontainer_installs_gitleaks_and_enables_staged_scan() -> None:
+    dockerfile = Path(".devcontainer/Dockerfile").read_text()
+    post_create = Path(".devcontainer/post-create.sh").read_text()
+    hook_path = Path(".githooks/pre-commit")
+    hook = hook_path.read_text()
+
+    assert "GITLEAKS_VERSION=8.30.1" in dockerfile
+    assert "GITLEAKS_SHA256_AMD64=551f6fc8" in dockerfile
+    assert "GITLEAKS_SHA256_ARM64=e4a487ee" in dockerfile
+    assert "sha256sum -c -" in dockerfile
+    assert "Unsupported Gitleaks architecture" in dockerfile
+    assert "gitleaks version" in dockerfile
+    assert "config --local core.hooksPath .githooks" in post_create
+    assert hook_path.stat().st_mode & 0o111
+    assert "gitleaks git --pre-commit --staged --redact --config .gitleaks.toml ." in hook
+
+
 def test_scheduled_launcher_reuses_batch_flow_with_daily_non_overlapping_trigger() -> None:
     path = Path("workflows/scheduled_filing_launcher.yaml")
     flow = yaml.safe_load(path.read_text())
@@ -77,6 +94,7 @@ def test_scheduled_launcher_reuses_batch_flow_with_daily_non_overlapping_trigger
     assert trigger == {
         "id": "daily_latest_filings",
         "type": "io.kestra.plugin.core.trigger.Schedule",
+        "disabled": True,
         "cron": "8 6 * * *",
         "timezone": "Etc/UTC",
         "allowConcurrent": False,

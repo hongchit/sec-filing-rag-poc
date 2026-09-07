@@ -1,5 +1,14 @@
 # SEC Filing RAG proof of concept
 
+**Live demo:** [sec-filing-rag-poc.henrychan.dev](https://sec-filing-rag-poc.henrychan.dev)
+
+[![Screenshot](docs/assets/screenshots/000%20-%20Landing-page.png)](https://sec-filing-rag-poc.henrychan.dev)
+
+This repository is a capstone project for the
+[DataTalksClub LLM Zoomcamp](https://github.com/DataTalksClub/llm-zoomcamp). It applies the
+course's end-to-end RAG, retrieval evaluation, LLM evaluation, orchestration, and monitoring
+practices to public SEC filings.
+
 This project demonstrates how retrieval-augmented generation (RAG) can turn long SEC Form 10-K
 filings into a governed, searchable knowledge source. Instead of asking a language model to rely on
 its training memory, the application retrieves relevant filing passages, generates a grounded
@@ -86,6 +95,27 @@ The Corresponding research result:
   and exposes health and batch status through FastAPI.
 - **Authenticated access and budgets:** signs users in through Google, keeps research private to its
   owner and administrators, and reserves a configurable lifetime allowance before provider work.
+
+## Implemented capabilities
+
+| Capability | What is implemented | Further details |
+| --- | --- | --- |
+| Investor research problem | The product turns lengthy, changing Form 10-K disclosures into evidence-grounded research for self-directed investors. | [Why this system](#why-this-system) and [research design](docs/research.md) |
+| End-to-end RAG flow | PostgreSQL, pgvector, and pg_textsearch retrieve versioned keyword and semantic evidence before OpenAI produces a validated, cited answer. | [Retrieval service](src/sec_filing_rag/retrieval/service.py) and [generation service](src/sec_filing_rag/generation/service.py) |
+| Retrieval quality measurement | A human-reviewed 96-question benchmark compares keyword, vector, weighted-hybrid, and reciprocal-rank-fusion retrieval; the measured winner is promoted explicitly. | [Retrieval results](evaluation/results/retrieval-v1.md) and [selected configuration](config/retrieval.json) |
+| Generated-answer quality measurement | Multiple answer prompts are tested over the same 96 cases with citation audits and an LLM judge; the accepted prompt is promoted explicitly. | [Generation results](evaluation/results/generation-v1.md) and [selected configuration](config/generation.json) |
+| Web application and API | FastAPI and React provide authenticated research, history, evaluation, corpus reading, citation inspection, usage details, and feedback. | [API routers](src/sec_filing_rag/api/routers/public) and [frontend pages](frontend/src/pages) |
+| Automated ingestion | Kestra coordinates repeat-safe scheduled and operator-requested SEC ingestion while FastAPI owns durable batch, filing, and corpus state. | [Kestra batch workflow](workflows/filing_batch.yaml) and [ingestion service](src/sec_filing_rag/services/ingestion.py) |
+| Feedback and quality visibility | Users can submit persisted answer feedback, and public plus authenticated dashboards expose retrieval and generation quality. | [Feedback endpoint](src/sec_filing_rag/api/routers/public/feedback.py), [research repository](src/sec_filing_rag/repositories/research.py), and [evaluation UI](frontend/src/pages/EvaluationOverview.tsx) |
+| Containerized runtime | The repository provides a production application image, containerized PostgreSQL and Kestra dependencies, a Dev Container, and K3s manifests. | [Application Dockerfile](Dockerfile), [development Compose stack](.devcontainer/docker-compose.yml), and [K3s base](deploy/k3s/base) |
+| Reproducible setup | Dependencies are locked, migrations and safe environment templates are tracked, evaluation artifacts are checksum-validated, and validation commands are documented. | [Dependency lock](uv.lock), [getting started](docs/getting-started.md), and [testing guide](docs/testing.md) |
+| Advanced retrieval | Weighted hybrid search and course-style reciprocal-rank-fusion re-ranking are both implemented and evaluated. | [Retrieval implementation](src/sec_filing_rag/retrieval/service.py) and [benchmark report](evaluation/results/retrieval-v1.md) |
+| Working deployment | The application and its supporting services run on a single-node K3s deployment using immutable image identities and externally managed secrets. | [Live application](https://sec-filing-rag-poc.henrychan.dev) and [deployment manifests](deploy/k3s) |
+
+The implementation's strongest advantages are exact citation provenance, immutable corpus versions,
+benchmark-selected defaults, failure-isolated ingestion, provider-usage and cost records, and
+reviewable security gates. These controls make results easier to inspect, reproduce, and update as
+new filings become available. User feedback is persisted.
 
 ## Architecture
 
@@ -197,10 +227,14 @@ Start with the [documentation index](docs/README.md), or go directly to:
 
 ## Development and testing
 
-The following sequence checks Python formatting, lint, and types; runs backend and frontend tests;
-builds the production UI; and confirms that generated API contracts match the application.
+The following sequence scans Git history for secrets; checks Python formatting, lint, and types;
+runs backend and frontend tests; builds the production UI; and confirms that generated API
+contracts match the application.
 
 ```bash
+# Scan complete Git history using the tracked rules without printing secret values.
+gitleaks git --config .gitleaks.toml --redact .
+
 # Verify Python formatting without modifying files.
 uv run ruff format --check .
 

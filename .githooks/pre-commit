@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Reject staged secrets using the tracked project rules without printing their values.
+exec gitleaks git --pre-commit --staged --redact --config .gitleaks.toml .

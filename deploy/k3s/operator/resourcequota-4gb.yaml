@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: default-quota
+  namespace: project-sec-filing-rag-poc
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 2Gi
+    limits.cpu: "3"
+    limits.memory: 3Gi
+    requests.storage: 25Gi
+    persistentvolumeclaims: "4"
+    pods: "10"

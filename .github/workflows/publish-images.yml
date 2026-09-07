@@ -1,0 +1,86 @@
+name: Publish deployment images
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Image target to publish
+        required: true
+        default: all
+        type: choice
+        options: [all, app, postgres]
+      version:
+        description: Immutable release label, for example 2026-09-07.1
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-scan-push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ inputs.target == 'all' && fromJSON('["app", "postgres"]') || fromJSON(format('["{0}"]', inputs.target)) }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate release label
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          # Reject labels that cannot be used safely as OCI tags.
+          [[ "${RELEASE_VERSION}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]]
+      - name: Configure Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Run Dockerfile checks
+        env:
+          DOCKERFILE: ${{ matrix.target == 'app' && 'Dockerfile' || 'docker/postgres/Dockerfile' }}
+        run: |
+          # Fail on Dockerfile checks, including secret-like ARG and ENV declarations.
+          docker buildx build --check --file "${DOCKERFILE}" .
+      - name: Build local image for inspection
+        env:
+          DOCKERFILE: ${{ matrix.target == 'app' && 'Dockerfile' || 'docker/postgres/Dockerfile' }}
+          IMAGE_TARGET: ${{ matrix.target }}
+        run: |
+          # Build locally first so no unverified image reaches GHCR.
+          docker buildx build --load --platform linux/amd64 \
+            --file "${DOCKERFILE}" --tag "local/sec-rag-${IMAGE_TARGET}:scan" .
+      - name: Scan image layers for secrets
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: local/sec-rag-${{ matrix.target }}:scan
+          scan-type: image
+          scanners: secret
+          exit-code: "1"
+          hide-progress: true
+      - name: Inspect image metadata and filesystem
+        env:
+          IMAGE_TARGET: ${{ matrix.target }}
+        run: |
+          # Reject forbidden runtime-secret metadata and credential files.
+          scripts/verify-image.sh "local/sec-rag-${IMAGE_TARGET}:scan"
+      - name: Sign in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish verified image
+        env:
+          IMAGE_TARGET: ${{ matrix.target }}
+          PACKAGE: ${{ matrix.target == 'app' && 'sec-filing-rag-poc-app' || 'sec-filing-rag-poc-postgres' }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          # Push the inspected local image and record its immutable registry digest.
+          owner=$(printf '%s' "${REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
+          release_ref="ghcr.io/${owner}/${PACKAGE}:${RELEASE_VERSION}"
+          docker image tag "local/sec-rag-${IMAGE_TARGET}:scan" "${release_ref}"
+          docker image push "${release_ref}"
+          digest=$(docker image inspect "${release_ref}" --format '{{index .RepoDigests 0}}')
+          printf '### %s image\n\n`%s`\n' "${IMAGE_TARGET}" "${digest}" >>"${GITHUB_STEP_SUMMARY}"

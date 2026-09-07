@@ -5,8 +5,12 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import Response
+from starlette.types import Scope
 
 from .api.dependencies import settings
 from .api.routers.internal import router as internal_router
@@ -17,6 +21,20 @@ from .core.resources import AppResources, StartupSchemaError, create_resources
 from .core.startup import StartupConfigurationError, safe_startup_event
 
 ResourceFactory = Callable[[Settings], AppResources]
+
+
+class SPAStaticFiles(StaticFiles):
+    """Serve index.html for client-side routes without hiding missing asset errors."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            normalized = path.lstrip("/")
+            reserved = normalized == "api" or normalized.startswith(("api/", "internal/"))
+            if exc.status_code != 404 or reserved or "." in path.rsplit("/", 1)[-1]:
+                raise
+            return await super().get_response("index.html", scope)
 
 
 def create_app(
@@ -90,6 +108,9 @@ def create_app(
     install_observability(app)
     app.include_router(public_router)
     app.include_router(internal_router)
+    selected_frontend = middleware_config.frontend_dist_path
+    if selected_frontend is not None:
+        app.mount("/", SPAStaticFiles(directory=selected_frontend, html=True), name="frontend")
     return app
 
 

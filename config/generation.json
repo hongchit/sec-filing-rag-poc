@@ -1,5 +1,5 @@
 {
-  "version": "generation-v3",
+  "version": "generation-v4",
   "promoted_prompt_id": "basic-grounded-v2",
   "promotion_reason": "Accepted generation-v1 evaluation run 0aeaeb47-8538-46b8-a654-0fc3ac7cdfc4: mean label score 1.9895833333333333, 95 of 96 RELEVANT verdicts, zero failures, 253 of 253 valid citation handles, and zero cross-corpus citations; won the quality tie on median generation latency at 2152 ms.",
   "context_max_chars": 30000,
@@ -10,9 +10,7 @@
   "max_retries": 2,
   "prompts": [
     {"id": "basic-grounded-v1", "path": "config/prompts/basic-grounded-v1.txt"},
-    {"id": "structured-investor-v1", "path": "config/prompts/structured-investor-v1.txt"},
     {"id": "basic-grounded-v2", "path": "config/prompts/basic-grounded-v2.txt"},
-    {"id": "structured-investor-v2", "path": "config/prompts/structured-investor-v2.txt"},
     {"id": "guardrailed-10k-v3", "path": "config/prompts/guardrailed-10k-v3.txt"}
   ]
 }

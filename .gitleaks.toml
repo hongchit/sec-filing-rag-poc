@@ -1,0 +1,40 @@
+title = "SEC Filing RAG secret detection"
+
+[extend]
+useDefault = true
+
+# Allow this exact dummy token only in test files.
+[[allowlists]]
+description = "Known dummy token used in tests"
+condition = "AND"
+paths = ['''^tests/''']
+regexTarget = "secret"
+regexes = ['''^0123456789abcdef$''']
+
+[[rules]]
+id = "sec-rag-runtime-secret-assignment"
+description = "Project runtime secret assigned a literal value"
+regex = '''(?i)(?:OPENAI_API_KEY|GOOGLE_CLIENT_SECRET|SESSION_SECRET|INGESTION_API_TOKEN|POSTGRES_PASSWORD|APP_DATABASE_PASSWORD|KESTRA_DATABASE_PASSWORD|KESTRA_BASIC_AUTH_PASSWORD)\s*["']?\s*[:=]\s*["']?([A-Za-z0-9_./+=:@-]{8,})'''
+path = '''(?i)(^|/)(?:[^/]*\.env(?:\.[^/]*)?|[^/]+\.(?:ya?ml|json|toml)|Dockerfile)$'''
+secretGroup = 1
+keywords = [
+  "openai_api_key",
+  "google_client_secret",
+  "session_secret",
+  "ingestion_api_token",
+  "postgres_password",
+  "app_database_password",
+  "kestra_database_password",
+  "kestra_basic_auth_password",
+]
+
+[[rules.allowlists]]
+condition = "OR"
+regexTarget = "secret"
+regexes = [
+  '''^change-me''',
+  '''^replace-with-''',
+  '''^__required__''',
+  '''^0123456789abcdef$''',
+]
+paths = ['''^tests/''']

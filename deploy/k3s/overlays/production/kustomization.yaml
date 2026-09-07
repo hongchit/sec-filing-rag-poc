@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: project-sec-filing-rag-poc
+resources:
+  - ../../base
+  - ingress.yaml
+images:
+  - name: ghcr.io/hongchit/sec-filing-rag-poc-app
+    newName: ghcr.io/hongchit/sec-filing-rag-poc-app
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  - name: ghcr.io/hongchit/sec-filing-rag-poc-postgres
+    newName: ghcr.io/hongchit/sec-filing-rag-poc-postgres
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+patches:
+  - path: app-environment.yaml

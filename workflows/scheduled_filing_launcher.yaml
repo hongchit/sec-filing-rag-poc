@@ -64,6 +64,7 @@ errors:
 triggers:
   - id: daily_latest_filings
     type: io.kestra.plugin.core.trigger.Schedule
+    disabled: true
     cron: "8 6 * * *"
     timezone: Etc/UTC
     allowConcurrent: false

@@ -87,9 +87,24 @@ export function HowItWorks() {
               </Typography>
               <Typography variant="h1">A basic RAG implementation, measured end to end.</Typography>
               <Typography variant="h6" color="text.secondary" fontWeight={400} mt={2}>
-                This portfolio project applies RAG concepts learnt from DataTalkClub LLM Zoomcamp on
-                public SEC filings: ingestion, hybrid retrieval, grounded generation, evaluation,
-                monitoring, and cost tracking.
+                This portfolio project applies RAG concepts learnt from{' '}
+                <Link
+                  href="https://github.com/DataTalksClub/llm-zoomcamp"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  DataTalkClub LLM Zoomcamp
+                </Link>{' '}
+                on{' '}
+                <Link
+                  href="https://www.sec.gov/submit-filings/about-edgar"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  public SEC filings
+                </Link>
+                : ingestion, hybrid retrieval, grounded generation, evaluation, monitoring, and cost
+                tracking.
               </Typography>
               <Typography variant="h6" color="text.secondary" fontWeight={400} mt={2}>
                 In data retrieval, the system uses a combination of keyword and semantic search to

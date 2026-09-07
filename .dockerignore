@@ -1,6 +1,9 @@
 # Version-control metadata
 .git
 .gitignore
+.github
+.agents
+.codex
 
 # Python bytecode and caches
 __pycache__/
@@ -30,10 +33,27 @@ frontend/node_modules/
 frontend/dist/
 *.egg-info/
 
+# Development, tests, and operator-only material
+.devcontainer/
+.ignore/
+api/
+docs/
+k3s/
+sql/
+tests/
+
 # Local configuration and secrets
 .env
 .env.*
 !.env.example
+.deploy-secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
 
 # Editor and operating-system files
 .idea/

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import anyio.to_thread
 import httpx
+import pytest
 from fastapi import HTTPException
 
 from sec_filing_rag.api.dependencies import (
@@ -250,3 +251,42 @@ def test_routers_are_mounted_only_in_their_namespaces() -> None:
     assert all(
         path.startswith(("/api", "/internal", "/openapi", "/docs", "/redoc")) for path in routes
     )
+
+
+def test_production_frontend_serves_assets_and_spa_routes_without_hiding_missing_assets(
+    tmp_path: Path,
+) -> None:
+    frontend = tmp_path / "frontend"
+    frontend.mkdir()
+    (frontend / "index.html").write_text("<main>SEC Filing RAG</main>", encoding="utf-8")
+    (frontend / "app.js").write_text("console.log('app')", encoding="utf-8")
+    company_file = tmp_path / "companies.yaml"
+    company_file.write_text("companies:\n  - ticker: AAPL\n    enabled: true\n", encoding="utf-8")
+    config = Settings(
+        ingestion_api_token="0123456789abcdef",
+        edgar_identity="Test test@example.com",
+        openai_api_key="key",
+        company_config_path=company_file,
+        frontend_dist_path=frontend,
+    )
+    api = ApiClient(create_app(config))
+    api.app.dependency_overrides[system_repository] = FakeSystemRepository
+
+    assert api.get("/").text == "<main>SEC Filing RAG</main>"
+    assert api.get("/research/history").text == "<main>SEC Filing RAG</main>"
+    assert api.get("/app.js").text == "console.log('app')"
+    assert api.get("/missing.js").status_code == 404
+    assert api.get("/api/missing").status_code == 404
+    assert api.get("/internal/missing").status_code == 404
+    assert api.get("/api/health").status_code == 200
+
+
+def test_module_style_app_reads_frontend_path_from_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    frontend = tmp_path / "frontend"
+    frontend.mkdir()
+    (frontend / "index.html").write_text("<main>Production</main>", encoding="utf-8")
+    monkeypatch.setenv("FRONTEND_DIST_PATH", str(frontend))
+
+    assert ApiClient(create_app()).get("/").text == "<main>Production</main>"

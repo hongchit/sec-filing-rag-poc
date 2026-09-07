@@ -78,7 +78,7 @@ interpretations and must carry one or more known citation handles.
 that template with the goal instruction, exact user question, and bounded evidence context, then
 records both the generation-configuration and prompt checksums with the request. Prompt comparison
 and manual promotion are explained in
-[Five candidate answer prompts](rag-evaluation-workflow.md#five-candidate-answer-prompts) and
+[Three candidate answer prompts](rag-evaluation-workflow.md#three-candidate-answer-prompts) and
 [Promote an accepted prompt](rag-evaluation-workflow.md#promote-an-accepted-prompt).
 
 Application validation rejects blank text, duplicate/unknown handles, malformed structure, and

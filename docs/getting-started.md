@@ -132,9 +132,11 @@ Use the platform at:
   to inspect question-level outcomes;
 - `/research/history` to revisit stored work and `/admin` for authorized operational inspection.
 
-The checked-in benchmark records its original corpus UUIDs. A newly ingested database has different
-corpus-version UUIDs, so its case-level evidence cannot satisfy the checked-in database-lineage
-check. Follow the full path to produce lineage-valid local evaluation artifacts.
+The checked-in benchmark records its original corpus UUIDs. On a fresh migrated database, its
+validated aggregate metrics, rankings, and generated answers remain available with warnings that
+the original audit rows and evidence are absent. A newly ingested database has different
+corpus-version UUIDs, so it cannot make the checked-in artifact deployment-native. Follow the full
+path to produce new lineage-valid evaluation artifacts when deployment-specific results are needed.
 
 ## 7. Full path: prepare evaluation corpora and ground truth
 
@@ -174,6 +176,11 @@ the same promoted retrieval default. Start with
 then preflight expected provider calls, run all configured prompt variations, validate the JSON
 artifact, inspect deterministic citation checks, and human-calibrate a stratified sample of judge
 verdicts.
+
+Use new output names such as `generation-v2.json` and `generation-v2.md`; evaluation commands refuse
+to overwrite an existing artifact. The current three-prompt set performs 288 answer-generation and
+288 judge calls for the 96 reviewed cases, plus shared retrieval work. After accepting a new run,
+point `GENERATION_EVALUATION_RESULT_PATH` at its JSON artifact before restarting the application.
 
 If the selected prompt is accepted, set `promoted_prompt_id` in `config/generation.json` to that
 eligible prompt ID and update `promotion_reason` with the artifact and human-review rationale. Do

@@ -75,6 +75,19 @@ Migrations are immutable and applied in filename order. The migrator records che
 `public.schema_migration`. A fresh database applies every numbered file; an existing database applies
 only missing versions.
 
+Running `uv run sec-rag-migrate` again is safe: applied files are verified by checksum and are not
+executed twice. On a blank deployment database, apply migrations before starting the API, sign in as
+the first configured administrator before enabling scheduled ingestion, and submit filing
+preparation normally. Retrying ingestion against the same database is safe; compatible ready
+corpora are reported as unchanged.
+
+Checked-in evaluation artifacts provide aggregate orientation before the deployment has its own
+audit rows and filing evidence. The API marks those resources unavailable rather than treating the
+recorded benchmark as a deployment-native run. To replace it, ingest the intended current and
+historical corpora, complete a new human review, run retrieval evaluation, and run generation
+evaluation with unique output filenames. These evaluation commands make billable provider calls
+and are not deployment bootstrap commands.
+
 Never edit an applied migration. A checksum mismatch means the file must be restored. Add the next
 numbered migration for a schema change, then test both a fresh application and an upgrade from the
 current baseline.

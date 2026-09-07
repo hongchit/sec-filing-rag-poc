@@ -7,9 +7,7 @@ def test_tracked_generation_prompts_resolve_under_config() -> None:
     config = load_generation_configuration(Path("config/generation.json"))
     expected_ids = {
         "basic-grounded-v1",
-        "structured-investor-v1",
         "basic-grounded-v2",
-        "structured-investor-v2",
         "guardrailed-10k-v3",
     }
 
@@ -18,4 +16,5 @@ def test_tracked_generation_prompts_resolve_under_config() -> None:
     for prompt_id in expected_ids:
         template, prompt_sha256 = config.prompt(prompt_id)
         assert all(field in template for field in ("{goal_instruction}", "{question}", "{context}"))
+        assert "in the citations field only" in template
         assert len(prompt_sha256) == 64

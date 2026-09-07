@@ -1,0 +1,164 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kestra
+spec:
+  selector:
+    app.kubernetes.io/name: sec-filing-rag-kestra
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: management
+      port: 8081
+      targetPort: management
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sec-filing-rag-kestra
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sec-filing-rag-kestra
+        app.kubernetes.io/part-of: sec-filing-rag-poc
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: load-flows
+          image: ghcr.io/hongchit/sec-filing-rag-poc-app:bootstrap
+          command: [sh, -c, "cp /app/workflows/*.yaml /flows/"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: flows
+              mountPath: /flows
+      containers:
+        - name: kestra
+          image: kestra/kestra@sha256:255108f21668d6cfdd7f4c1100e8636939022853e273d3ead50e7862ee622aa9
+          args: [server, standalone, --flow-path, /app/flows]
+          env:
+            - name: KESTRA_DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: sec-rag-kestra
+                  key: KESTRA_DATABASE_NAME
+            - name: KESTRA_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: sec-rag-kestra
+                  key: KESTRA_DATABASE_USER
+            - name: KESTRA_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sec-rag-kestra
+                  key: KESTRA_DATABASE_PASSWORD
+            - name: KESTRA_BASIC_AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sec-rag-kestra
+                  key: KESTRA_BASIC_AUTH_USERNAME
+            - name: KESTRA_BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sec-rag-kestra
+                  key: KESTRA_BASIC_AUTH_PASSWORD
+            - name: SECRET_INGESTION_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: sec-rag-kestra
+                  key: SECRET_INGESTION_API_TOKEN
+            - name: JAVA_OPTS
+              value: -Xms256m -Xmx1024m
+            - name: KESTRA_CONFIGURATION
+              value: |
+                datasources:
+                  postgres:
+                    url: jdbc:postgresql://postgres:5432/$(KESTRA_DATABASE_NAME)
+                    driverClassName: org.postgresql.Driver
+                    username: $(KESTRA_DATABASE_USER)
+                    password: $(KESTRA_DATABASE_PASSWORD)
+                kestra:
+                  server:
+                    basic-auth:
+                      username: $(KESTRA_BASIC_AUTH_USERNAME)
+                      password: $(KESTRA_BASIC_AUTH_PASSWORD)
+                  repository:
+                    type: postgres
+                  storage:
+                    type: local
+                    local:
+                      basePath: /app/storage
+                  queue:
+                    type: postgres
+                  tasks:
+                    tmpDir:
+                      path: /tmp/kestra-wd/tmp
+                  url: http://kestra:8080/
+                  secrets:
+                    type: env
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 8081
+          startupProbe:
+            tcpSocket:
+              port: http
+            failureThreshold: 60
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: management
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              cpu: "1"
+              memory: 1536Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /app/storage
+            - name: flows
+              mountPath: /app/flows
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp/kestra-wd
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: kestra-data
+        - name: flows
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

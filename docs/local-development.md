@@ -3,8 +3,8 @@
 The repository is designed to run inside its Dev Container. [Getting started](getting-started.md)
 owns cloning, initial configuration, workflow import, ingestion, evaluation, and first use. This
 guide covers ports and recurring development work after that setup. The container pins Python and
-Node dependencies, provides PostgreSQL and Kestra, shares package caches, and runs migration checks
-after startup.
+Node dependencies, includes Gitleaks, provides PostgreSQL and Kestra, shares package caches, and
+runs migration checks after startup.
 
 ## Prerequisites
 
@@ -68,6 +68,19 @@ curl --fail-with-body http://127.0.0.1:18082/api/v1/main/configs
 ```
 
 ## Daily development commands
+
+The post-create hook configures the tracked `.githooks/pre-commit` hook. Each commit scans staged
+changes with the project Gitleaks configuration and redacts detected values. Git's `--no-verify`
+option can bypass the hook for recovery, but it does not replace the complete-history check before
+pushing or publishing:
+
+```bash
+# Confirm the checksum-verified Gitleaks CLI installed with the Dev Container.
+gitleaks version
+
+# Scan complete Git history using the tracked rules without printing secret values.
+gitleaks git --config .gitleaks.toml --redact .
+```
 
 Format and fix code:
 

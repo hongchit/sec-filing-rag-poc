@@ -1913,6 +1913,11 @@ components:
           additionalProperties: true
           type: object
           title: Coverage
+        availability:
+          additionalProperties:
+            type: boolean
+          type: object
+          title: Availability
         warnings:
           items:
             additionalProperties: true
@@ -1941,6 +1946,7 @@ components:
       required:
       - run
       - coverage
+      - availability
       - warnings
       - selected_default_id
       - strategy_best
