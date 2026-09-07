@@ -31,8 +31,10 @@ fi
 container_id=$(docker container create "${image_ref}")
 docker container export --output "${rootfs_archive}" "${container_id}"
 tar -tf "${rootfs_archive}" >"${rootfs_listing}"
-if grep -Ei '(^|/)(\.env($|\.)|\.git(/|$)|id_rsa($|\.)|[^/]+\.(key|p12|pfx|jks|keystore)$|(private|secret|credential)[^/]*\.pem$)' "${rootfs_listing}" >/dev/null; then
+if forbidden_paths=$(grep -Ei '(^|/)(\.env($|\.)|\.git(/|$)|id_rsa($|\.)|[^/]+\.(key|p12|pfx|jks|keystore)$|(private|secret|credential)[^/]*\.pem$)' "${rootfs_listing}"); then
   echo "image filesystem contains a forbidden credential or metadata path" >&2
+  # Report matching paths only; never print credential file contents.
+  printf '%s\n' "${forbidden_paths}" >&2
   exit 1
 fi
 
