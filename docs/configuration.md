@@ -4,6 +4,9 @@ Configuration is divided between environment variables, which describe a deploym
 secrets, and tracked files, which define reproducible application behavior. Startup validates both
 before serving requests. Copy `.env.example` to untracked `.env`; never commit real values.
 
+For credential creation, follow [getting started: configure the environment](getting-started.md#3-configure-the-environment),
+including OpenAI project keys, Google Auth Platform, callback URLs, and generated internal secrets.
+
 ## Configuration model
 
 ```mermaid

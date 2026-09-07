@@ -31,13 +31,13 @@ Install:
 - Git;
 - Visual Studio Code with the Dev Containers extension;
 - Docker Desktop, or another Docker environment compatible with Dev Containers;
-- a Google OAuth web client for local sign-in;
-- an OpenAI account and API key with an approved spending limit;
+- access to Google Cloud console and an OpenAI Platform account;
 - a truthful SEC product/contact identity.
 
-Register `http://localhost:5173/api/auth/google/callback` as an exact authorized redirect URI in
-the Google OAuth web client. Corpus preparation, embeddings, ground-truth generation, answer
-generation, and judging use external services and may incur cost.
+Section 3 walks through creating the credentials; you do not need to have them already.
+
+Corpus preparation, embeddings, ground-truth generation, answer generation, and judging use
+external services and may incur cost.
 
 ## 2. Clone and open the development environment
 
@@ -48,7 +48,125 @@ the post-start hook waits for the application database and applies migrations.
 
 ## 3. Configure the environment
 
-From the repository root:
+### Choose where credentials belong
+
+Create provider credentials in your **host browser**, then edit `.env` in the
+**Dev Container / app repository root**. This guide runs the application locally at
+`http://localhost:5173`; keep `PUBLIC_BASE_URL` set to that value.
+
+| Setting | Where its value comes from |
+| --- | --- |
+| `OPENAI_API_KEY` | OpenAI Platform project key, created below |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Auth Platform web client, created below |
+| `GOOGLE_ADMIN_EMAILS` | Your chosen administrator's Google account email |
+| `EDGAR_IDENTITY` | Your truthful product name and contact email; this app does not require an SEC API key |
+| `SESSION_SECRET`, `INGESTION_API_TOKEN` | Random values you generate, not provider-issued API keys |
+| Database and Kestra passwords | Credentials you generate for your own services |
+
+### Create the OpenAI API key — Browser / OpenAI Platform
+
+1. Sign in to the [OpenAI Platform](https://platform.openai.com/). Select the organization and
+   project that should own this local app's usage.
+2. Check the organization's billing setup and the project's model access and usage controls before
+   starting ingestion. Review Usage and Limits with the account owner; an alert threshold should
+   not be assumed to stop requests. The application's lifetime allowances are separate controls.
+3. Open [API keys](https://platform.openai.com/api-keys) for the selected project and choose
+   **Create new secret key**. Name it `sec-rag-local` and store the generated value in your
+   password manager.
+4. Set `OPENAI_API_KEY` to that value in the runtime file described below. Use a project API key,
+   not an organization administration key. Keep it on the backend; do not use a `VITE_` variable.
+
+The code needs Embeddings and Responses access; the optional ground-truth generation path also
+uses Chat Completions. If restricting key permissions, allow those operations and the configured
+models. Keep the tracked model names and pricing configuration consistent when changing models.
+See [OpenAI's key setup](https://developers.openai.com/api/docs/quickstart) and
+[production guidance](https://developers.openai.com/api/docs/guides/production-best-practices).
+
+### Model budget: a quick heads-up
+
+Approximate **USD** costs with the default models (`text-embedding-3-small` and `gpt-5.4-mini`):
+
+| Major step | Ballpark cost (USD) |
+| --- | --- |
+| Ingest the latest filing for all 10 default companies | $0.01–$0.03 total |
+| Search/query embeddings, without generating an answer | Less than $0.01 for 100 short queries |
+| Generate a research answer | Around $0.01 per answer |
+| Generate ground-truth questions | Around $1 for a small run of roughly 100 model calls |
+| Evaluate answers and judge quality across 96 cases and three prompts | Around $1–$2 per run |
+| View checked-in showcase and evaluation results | $0 in new model usage |
+
+Allow **USD $1–$2 for an initial trial**, or **USD $5–$10 for the full evaluation journey with retries**.
+Actual cost varies with filing length, answer length, and reruns; these are estimates, not spending
+caps. Based on [tracked pricing](../config/model-pricing-v1.json),
+[historical evaluation usage](../evaluation/results/generation-v1.json), and OpenAI's
+[embedding](https://developers.openai.com/api/docs/models/text-embedding-3-small) and
+[generation](https://developers.openai.com/api/docs/models/gpt-5.4-mini) prices checked on 2026-09-07.
+
+### Set up Google Auth Platform — Browser / Google Cloud console
+
+This application uses Google's server-side OpenID Connect authorization-code flow. You need an
+**OAuth client ID and client secret**, not a Google API key, service-account JSON file, or Firebase
+configuration. The backend already implements login; no Google JavaScript SDK needs to be added.
+See [Google's OpenID Connect setup](https://developers.google.com/identity/openid-connect/openid-connect).
+
+1. Open the [Google Cloud console](https://console.cloud.google.com/), select or create the project
+   that will own sign-in, and open **Google Auth Platform**. Select **Get started** if prompted.
+2. Enter app name `SEC Filing RAG`, a monitored support email, and developer contact email.
+   Choose **External** for personal Google accounts or users outside your Workspace organization.
+   **Internal** is appropriate only for an organization-only Workspace application.
+3. In **Audience**, initially use Testing and add the administrator's Google account and intended
+   testers under **Test users**. This list controls Google-side testing access; it does not grant
+   this application's administrator role.
+4. In **Data Access**, configure only `openid`, email, and profile. The console may display the
+   latter two as `.../auth/userinfo.email` and `.../auth/userinfo.profile`. The code requests
+   `openid profile email`; it does not need Drive, Gmail, or Calendar access.
+
+These screens are documented in Google's
+[consent-screen setup](https://developers.google.com/workspace/guides/configure-oauth-consent).
+
+In **Branding**, keep the app name and contact details you entered above. For this local trial,
+use Testing mode; you do not need a public deployment domain. Do not add `localhost` as an
+Authorized domain—the local address belongs in the client's origin and redirect fields below.
+
+In **Clients → Create client**, select **Web application** and name it `SEC Filing RAG local`.
+Enter these values, then save:
+
+| Client field | Value |
+| --- | --- |
+| Authorized JavaScript origin | `http://localhost:5173` |
+| Authorized redirect URI | `http://localhost:5173/api/auth/google/callback` |
+
+Google's [client setup](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid)
+describes these fields.
+
+The redirect URI is mandatory for this backend flow; an authorized JavaScript origin alone does
+not configure login. Do not enter wildcards or port 8000 for the local client: Vite proxies `/api`
+from port 5173 to FastAPI. Use `localhost` consistently in the browser and `PUBLIC_BASE_URL`;
+`127.0.0.1` is a different origin and can break the OAuth handshake cookie.
+
+Save the client's **Client ID** and **Client secret** in your password manager. Copy the matching
+pair into `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Put your verified administrator email in
+`GOOGLE_ADMIN_EMAILS`; the first listed account must sign in once before scheduled ingestion.
+Keep the OAuth app in Testing mode while following this local guide.
+
+### Generate internal secrets and fill the runtime file
+
+Use your password manager to generate separate random values: at least 32 characters for
+`SESSION_SECRET`, at least 16 for `INGESTION_API_TOKEN`, and independent database and Kestra passwords.
+Kestra's configured password must contain at least eight non-whitespace characters, an uppercase
+letter, and a digit. Base64 encoding the ingestion token does not create a different credential.
+
+In a **Dev Container terminal**, this command encodes an existing token without echoing your input
+or placing it in shell history. It displays the encoded secret so you can copy it into the private
+runtime file; do not share the output.
+
+```bash
+# Encode the existing ingestion token for Kestra without adding a newline to the raw input.
+python -c 'import base64, getpass; print(base64.b64encode(getpass.getpass("Raw ingestion token: ").encode()).decode())'
+```
+
+From the **Dev Container / repository root**, copy the template only on first setup; preserve an
+existing populated `.env` when resuming:
 
 ```bash
 # Create the untracked local environment file from the documented template.
@@ -76,6 +194,7 @@ Open separate Dev Container terminals:
 ```bash
 # Apply migrations safely and start the FastAPI backend on port 8000.
 uv run sec-rag-migrate
+
 uv run sec-rag-api
 ```
 
@@ -88,7 +207,23 @@ Open the Kestra UI at <http://127.0.0.1:18082>, sign in with the configured Kest
 import `workflows/filing_batch.yaml` and `workflows/scheduled_filing_launcher.yaml`. Confirm namespace
 `sec_filings.ingestion` and flow IDs `filing_batch` and `scheduled_filing_launcher`. Then check
 <http://127.0.0.1:8000/api/health> and open
-<http://127.0.0.1:5173>.
+<http://localhost:5173>.
+
+### Confirm credential setup before ingestion
+
+Restart the backend after editing `.env`, then sign in at `http://localhost:5173` with the configured
+administrator account. Confirm `/admin` opens. The health endpoint checks application readiness;
+it does not prove the OpenAI key has usable quota or model access. The first bounded filing
+preparation and research request exercise embeddings and generation respectively.
+
+| Symptom | Check |
+| --- | --- |
+| Google `redirect_uri_mismatch` | Exact scheme, hostname, port, and callback path on the same client as `GOOGLE_CLIENT_ID` |
+| Google `invalid_client` | Client ID and secret belong to the same Web application client and environment |
+| Google access denied or audience restriction | Audience, test users, Workspace restrictions, and publication/verification status |
+| OAuth state/cookie error | Begin and finish on `localhost:5173`; restart login after correcting the origin |
+| Signed in but `/admin` denied | Verified account email matches `GOOGLE_ADMIN_EMAILS`, then restart after config changes |
+| OpenAI authentication/permission/quota failure | Key's selected project, permissions, billing, model access, and usage controls |
 
 ## 5. Sign in and prepare the first corpora
 
@@ -118,16 +253,16 @@ measured retrieval default in `config/retrieval.json` and a guarded generation p
 
 Use the platform at:
 
-- <http://127.0.0.1:5173/> for the public landing page and curated examples;
-- <http://127.0.0.1:5173/overview> for the plain-language RAG and SEC filing story;
-- <http://127.0.0.1:5173/how-it-works> for pipelines, architecture, course concepts, and the future-improvement roadmap;
-- <http://127.0.0.1:5173/research> to select a company and filing, choose a goal, ask a question,
+- <http://localhost:5173/> for the public landing page and curated examples;
+- <http://localhost:5173/overview> for the plain-language RAG and SEC filing story;
+- <http://localhost:5173/how-it-works> for pipelines, architecture, course concepts, and the future-improvement roadmap;
+- <http://localhost:5173/research> to select a company and filing, choose a goal, ask a question,
   and verify cited evidence;
-- <http://127.0.0.1:5173/corpus> to browse complete filing Items and historical corpora;
-- <http://127.0.0.1:5173/evaluation> to understand the public business value, measured baselines,
+- <http://localhost:5173/corpus> to browse complete filing Items and historical corpora;
+- <http://localhost:5173/evaluation> to understand the public business value, measured baselines,
   model roles, and benchmark limitations;
-- <http://127.0.0.1:5173/evaluation/evidence-search> to inspect aggregate retrieval metrics;
-- <http://127.0.0.1:5173/evaluation/answer-quality> to compare aggregate answer-quality results;
+- <http://localhost:5173/evaluation/evidence-search> to inspect aggregate retrieval metrics;
+- <http://localhost:5173/evaluation/answer-quality> to compare aggregate answer-quality results;
 - `/evaluation/evidence-search/questions` and `/evaluation/answer-quality/questions` after sign-in
   to inspect question-level outcomes;
 - `/research/history` to revisit stored work and `/admin` for authorized operational inspection.

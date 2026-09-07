@@ -151,7 +151,8 @@ The application fails fast when required settings, tracked configuration, pricin
 connectivity, or migration checksums are invalid. It does not probe SEC, OpenAI, or Kestra
 availability during startup.
 
-See [Getting started](docs/getting-started.md) for account setup, exact configuration, evaluation,
+See [Getting started](docs/getting-started.md#3-configure-the-environment) for OpenAI API-key creation,
+Google Auth Platform setup, exact configuration, evaluation,
 promotion, and acceptance guidance.
 
 ## Quick start

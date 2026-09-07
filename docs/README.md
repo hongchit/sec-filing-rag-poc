@@ -20,7 +20,7 @@ rules.
 
 | Topic | Authoritative document | Covers |
 | --- | --- | --- |
-| Setup and first use | [Getting started](getting-started.md) | Prerequisites, configuration, ingestion, evaluation, promotion, acceptance |
+| Setup and first use | [Getting started](getting-started.md) | Prerequisites, OpenAI keys, Google Auth Platform, configuration, ingestion, evaluation, promotion, acceptance |
 | Commands | [Command reference](commands.md) | Application CLIs, frontend scripts, checks, and authoritative workflow links |
 | System design | [Architecture](architecture.md) | Components, boundaries, layers, invariants, trust model |
 | API behavior | [API](api.md) | Routes, authentication, errors, idempotency, SSE, generated contracts |
