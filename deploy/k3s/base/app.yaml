@@ -18,8 +18,10 @@ spec:
   replicas: 1
   # Release the old pod before replacement to stay within the single-node quota.
   strategy:
-    type: Recreate
-    rollingUpdate: null
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: sec-filing-rag-app

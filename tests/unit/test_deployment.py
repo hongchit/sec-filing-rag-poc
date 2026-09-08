@@ -105,4 +105,7 @@ def test_single_replica_deployments_do_not_surge_against_quota() -> None:
         documents = yaml.safe_load_all(Path(f"deploy/k3s/base/{name}.yaml").read_text())
         deployment = next(doc for doc in documents if doc["kind"] == "Deployment")
         assert deployment["spec"]["replicas"] == 1
-        assert deployment["spec"]["strategy"] == {"type": "Recreate", "rollingUpdate": None}
+        assert deployment["spec"]["strategy"] == {
+            "type": "RollingUpdate",
+            "rollingUpdate": {"maxSurge": 0, "maxUnavailable": 1},
+        }
