@@ -25,6 +25,8 @@ spec:
         app.kubernetes.io/name: sec-filing-rag-app
         app.kubernetes.io/part-of: sec-filing-rag-poc
     spec:
+      # Use DNS discovery; injected APP_PORT service links conflict with Settings.
+      enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001

@@ -92,3 +92,9 @@ def test_postgres_entrypoint_can_prepare_volume_and_drop_privileges() -> None:
     }
     assert not security.get("privileged", False)
     assert pod["volumes"][0]["persistentVolumeClaim"]["claimName"] == "postgres-data"
+
+
+def test_app_disables_service_links_for_migration_settings() -> None:
+    documents = list(yaml.safe_load_all(Path("deploy/k3s/base/app.yaml").read_text()))
+    app = next(document for document in documents if document["kind"] == "Deployment")
+    assert app["spec"]["template"]["spec"]["enableServiceLinks"] is False
