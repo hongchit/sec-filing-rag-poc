@@ -71,3 +71,24 @@ def test_secret_scanning_workflow_runs_only_for_pull_requests() -> None:
     assert "gitleaks/gitleaks-action" in workflow
     assert "# v3.0.0" in workflow
     assert not re.search(r"uses:\s+[^\s]+@(v|main|master)(?:\s|$)", workflow)
+
+
+def test_postgres_entrypoint_can_prepare_volume_and_drop_privileges() -> None:
+    documents = list(yaml.safe_load_all(Path("deploy/k3s/base/postgres.yaml").read_text()))
+    statefulset = next(document for document in documents if document["kind"] == "StatefulSet")
+    pod = statefulset["spec"]["template"]["spec"]
+    container = pod["containers"][0]
+    security = container["securityContext"]
+    assert security["runAsUser"] == 0
+    assert security["runAsGroup"] == 0
+    assert security["allowPrivilegeEscalation"] is False
+    assert security["capabilities"]["drop"] == ["ALL"]
+    assert set(security["capabilities"]["add"]) == {
+        "CHOWN",
+        "FOWNER",
+        "DAC_OVERRIDE",
+        "SETUID",
+        "SETGID",
+    }
+    assert not security.get("privileged", False)
+    assert pod["volumes"][0]["persistentVolumeClaim"]["claimName"] == "postgres-data"

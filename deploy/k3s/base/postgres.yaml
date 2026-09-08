@@ -96,9 +96,13 @@ spec:
               cpu: 750m
               memory: 768Mi
           securityContext:
+            # The entrypoint fixes volume ownership, then drops to the postgres user.
+            runAsUser: 0
+            runAsGroup: 0
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
+              add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID]
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql

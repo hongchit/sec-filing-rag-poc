@@ -7,6 +7,12 @@ before serving requests. Copy `.env.example` to untracked `.env`; never commit r
 For credential creation, follow [getting started: configure the environment](getting-started.md#3-configure-the-environment),
 including OpenAI project keys, Google Auth Platform, callback URLs, and generated internal secrets.
 
+For production, copy `deploy/k3s/secrets/production.env.example` to ignored `.env.prod`, fill raw
+credentials, then run `python3 scripts/prepare-deployment-secrets.py`. It generates the three
+`.deploy-secrets/` files, including URL/base64 encoding, for the existing Kubernetes Secrets.
+The source file uses literal values without shell quotes; it is not loaded by the application.
+Existing outputs require `--overwrite` to regenerate. Database password rotation is a separate operation.
+
 ## Configuration model
 
 ```mermaid

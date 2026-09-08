@@ -151,27 +151,38 @@ Keep the OAuth app in Testing mode while following this local guide.
 
 ### Generate internal secrets and fill the runtime file
 
-Use your password manager to generate separate random values: at least 32 characters for
-`SESSION_SECRET`, at least 16 for `INGESTION_API_TOKEN`, and independent database and Kestra passwords.
-Kestra's configured password must contain at least eight non-whitespace characters, an uppercase
-letter, and a digit. Base64 encoding the ingestion token does not create a different credential.
-
-In a **Dev Container terminal**, this command encodes an existing token without echoing your input
-or placing it in shell history. It displays the encoded secret so you can copy it into the private
-runtime file; do not share the output.
+First create the file in the **Dev Container / repository root**. Preserve an existing `.env`
+when resuming; do not replace passwords for a database that has already been initialized.
 
 ```bash
-# Encode the existing ingestion token for Kestra without adding a newline to the raw input.
+# Create the private local environment file only if it does not already exist.
+if [ ! -e .env ]; then
+  install -m 0600 .env.example .env
+fi
+```
+
+Fill in provider credentials, then generate and save raw values in `.env`: `POSTGRES_PASSWORD`,
+`SESSION_SECRET` (at least 32 characters), `INGESTION_API_TOKEN` (at least 16 characters), and the
+Kestra login password (at least eight characters including an uppercase letter and digit).
+Use your password manager. For Kestra values substituted into configuration, start with a letter
+and use letters, digits, `_`, or `-`.
+
+**After saving the raw values**, derive these two values in a Dev Container terminal. Paste the
+same raw value at each hidden prompt. The output is still secret; copy it only into `.env`.
+
+```bash
+# URL-encode the saved POSTGRES_PASSWORD for the password portion of DATABASE_URL.
+python -c 'from getpass import getpass; from urllib.parse import quote; print(quote(getpass("Raw POSTGRES_PASSWORD: "), safe=""))'
+
+# Base64-encode the saved INGESTION_API_TOKEN for SECRET_INGESTION_API_TOKEN.
 python -c 'import base64, getpass; print(base64.b64encode(getpass.getpass("Raw ingestion token: ").encode()).decode())'
 ```
 
-From the **Dev Container / repository root**, copy the template only on first setup; preserve an
-existing populated `.env` when resuming:
-
-```bash
-# Create the untracked local environment file from the documented template.
-cp .env.example .env
-```
+Keep `POSTGRES_PASSWORD` raw; put its encoded form between `sec_filings:` and `@db:5432/sec_filings`
+in `DATABASE_URL`. For example, `$` becomes `%24` in the URL but stays `$` in `POSTGRES_PASSWORD`.
+Do not add backslash escapes or shell quotes to the raw values. Base64-encoding the token does not
+change which credential it represents. This local setup uses `POSTGRES_PASSWORD`; the separate
+production setup uses `APP_DATABASE_PASSWORD` for the application database account.
 
 Replace every placeholder in `.env`. At minimum, verify:
 
