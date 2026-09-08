@@ -98,3 +98,11 @@ def test_app_disables_service_links_for_migration_settings() -> None:
     documents = list(yaml.safe_load_all(Path("deploy/k3s/base/app.yaml").read_text()))
     app = next(document for document in documents if document["kind"] == "Deployment")
     assert app["spec"]["template"]["spec"]["enableServiceLinks"] is False
+
+
+def test_single_replica_deployments_do_not_surge_against_quota() -> None:
+    for name in ("app", "kestra"):
+        documents = yaml.safe_load_all(Path(f"deploy/k3s/base/{name}.yaml").read_text())
+        deployment = next(doc for doc in documents if doc["kind"] == "Deployment")
+        assert deployment["spec"]["replicas"] == 1
+        assert deployment["spec"]["strategy"] == {"type": "Recreate", "rollingUpdate": None}
