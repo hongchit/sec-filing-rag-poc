@@ -9,13 +9,12 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal, Protocol, cast
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 from ..core.pricing import PricingConfiguration
 from ..domain.filings import SUPPORTED_ITEMS, safe_error, sha256_bytes
 from ..retrieval.service import RetrievalQuery, RetrievalResult, RetrievalService
 
-ROOT = Path(__file__).resolve().parents[3]
 LEGACY_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 ResearchGoal = Literal[
     "business", "key_risks", "management_analysis", "market_risk", "legal_regulatory_risk"
@@ -125,6 +124,7 @@ class PromptEntry(BaseModel):
 
 class GenerationConfiguration(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    _prompt_root: Path = PrivateAttr(default_factory=Path.cwd)
     version: str
     promoted_prompt_id: str | None
     promotion_reason: str | None = None
@@ -149,7 +149,7 @@ class GenerationConfiguration(BaseModel):
         entry = next((value for value in self.prompts if value.id == prompt_id), None)
         if entry is None:
             raise ValueError("unknown prompt")
-        path = entry.path if entry.path.is_absolute() else ROOT / entry.path
+        path = entry.path if entry.path.is_absolute() else self._prompt_root / entry.path
         content = path.read_text(encoding="utf-8")
         return content, sha256_bytes(content.encode())
 
@@ -158,7 +158,10 @@ class GenerationConfiguration(BaseModel):
 
 
 def load_generation_configuration(path: Path) -> GenerationConfiguration:
-    return GenerationConfiguration.model_validate_json(path.read_text(encoding="utf-8"))
+    configuration = GenerationConfiguration.model_validate_json(path.read_text(encoding="utf-8"))
+    # Prompt paths include config/ and are relative to its containing deployment root.
+    configuration._prompt_root = path.resolve().parent.parent
+    return configuration
 
 
 @dataclass(frozen=True)
