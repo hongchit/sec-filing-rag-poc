@@ -38,6 +38,8 @@ COPY --chown=app:app workflows/ workflows/
 COPY --from=frontend-build --chown=app:app /build/frontend/dist/ frontend/
 
 USER 10001:10001
+# Verify packaged runtime assets as the application user without contacting providers or a database.
+RUN python -c 'from pathlib import Path; from sec_filing_rag.generation.service import load_generation_configuration; from sec_filing_rag.repositories.corpus import migration_files; config = load_generation_configuration(Path("config/generation.json")); [config.prompt(entry.id) for entry in config.prompts]; [path.read_bytes() for path in migration_files()]'
 EXPOSE 8000
 CMD ["sec-rag-api"]
 

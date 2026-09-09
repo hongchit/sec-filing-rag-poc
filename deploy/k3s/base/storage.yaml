@@ -25,3 +25,18 @@ spec:
   resources:
     requests:
       storage: 5Gi
+---
+# Retains the single active production evaluation release across app restarts.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: evaluation-data
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

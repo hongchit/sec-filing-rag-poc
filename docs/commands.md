@@ -66,6 +66,19 @@ validator makes no provider calls and performs no database writes. Neither comma
 prompt automatically. Live progress is enabled by default; use `--no-progress` when an automation
 consumer needs only the final JSON record on `stdout`.
 
+## Production evaluation release
+
+| Command | Purpose | Details |
+| --- | --- | --- |
+| `sec-rag-production-evaluation initialize` | Copy image evaluation assets to the empty persistent release volume | [Operations](operations.md#production-evaluation-release) |
+| `sec-rag-production-evaluation create-run RUN_ID` | Create an isolated writable copy of the active release | [Operations](operations.md#production-evaluation-release) |
+| `sec-rag-production-evaluation accept-retrieval RUN_ID` | Promote the reviewed retrieval winner inside a working run | [Operations](operations.md#production-evaluation-release) |
+| `sec-rag-production-evaluation publish RUN_ID` | Validate and atomically replace the active release | [Operations](operations.md#production-evaluation-release) |
+| `sec-rag-production-evaluation status` | Report active release identity and required-artifact availability | [Operations](operations.md#production-evaluation-release) |
+
+These commands run inside the deployed app container through `kubectl exec`; they do not call
+providers. Use `--root PATH` only for an explicitly selected release volume.
+
 ## Generated API contracts
 
 | Command | Purpose | Details |

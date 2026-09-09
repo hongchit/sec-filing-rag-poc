@@ -88,6 +88,19 @@ historical corpora, complete a new human review, run retrieval evaluation, and r
 evaluation with unique output filenames. These evaluation commands make billable provider calls
 and are not deployment bootstrap commands.
 
+## Production evaluation release
+
+Production stores one active evaluation release on a persistent volume. An idempotent init
+container seeds the volume from checked-in image assets on first deployment. Operators create an
+isolated working run, use the existing ground-truth and evaluation commands there, accept the
+reviewed retrieval winner before full-RAG evaluation, and publish only after reviewing generation
+results. Publication validates artifact and configuration identities before atomically replacing
+the active release; it makes no provider calls or database writes.
+
+Run only one operator evaluation at a time. It shares the deployed app container's CPU and memory
+limits. A failed publication leaves the current active release unchanged, while a successful
+publication removes it rather than retaining rollback history.
+
 Never edit an applied migration. A checksum mismatch means the file must be restored. Add the next
 numbered migration for a schema change, then test both a fresh application and an upgrade from the
 current baseline.

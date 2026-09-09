@@ -41,6 +41,23 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
+        - name: initialize-evaluation
+          image: ghcr.io/hongchit/sec-filing-rag-poc-app:bootstrap
+          command: [sec-rag-production-evaluation, initialize]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: evaluation-data
+              mountPath: /app/evaluation-data
         - name: migrate
           image: ghcr.io/hongchit/sec-filing-rag-poc-app:bootstrap
           command: [sec-rag-migrate]
@@ -88,6 +105,18 @@ spec:
               value: "4"
             - name: LOG_LEVEL
               value: INFO
+            - name: RETRIEVAL_CONFIG_PATH
+              value: /app/evaluation-data/active/config/retrieval.json
+            - name: RETRIEVAL_EVALUATION_RESULT_PATH
+              value: /app/evaluation-data/active/evaluation/results/retrieval-v1.json
+            - name: RETRIEVAL_EVALUATION_DATASET_PATH
+              value: /app/evaluation-data/active/evaluation/retrieval-v1.jsonl
+            - name: RETRIEVAL_EVALUATION_MANIFEST_PATH
+              value: /app/evaluation-data/active/evaluation/retrieval-v1-manifest.json
+            - name: GENERATION_CONFIG_PATH
+              value: /app/evaluation-data/active/config/generation.json
+            - name: GENERATION_EVALUATION_RESULT_PATH
+              value: /app/evaluation-data/active/evaluation/results/generation-v1.json
           ports:
             - name: http
               containerPort: 8000
@@ -109,7 +138,7 @@ spec:
               memory: 256Mi
             limits:
               cpu: 750m
-              memory: 512Mi
+              memory: 750Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -118,6 +147,11 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: evaluation-data
+              mountPath: /app/evaluation-data
       volumes:
         - name: tmp
           emptyDir: {}
+        - name: evaluation-data
+          persistentVolumeClaim:
+            claimName: evaluation-data

@@ -629,8 +629,15 @@ class IngestionRepository:
 
 
 def migration_files() -> list[Path]:
-    root = Path(__file__).resolve().parents[3] / "migrations" / "versions"
-    return sorted(root.glob("*.sql"))
+    # Both the source checkout and runtime image keep assets in the working directory.
+    root = Path.cwd() / "migrations" / "versions"
+    paths = sorted(root.glob("*.sql"))
+    if not paths:
+        raise RuntimeError(
+            "No migration SQL files found; run from the application root containing "
+            "migrations/versions (the container uses /app)."
+        )
+    return paths
 
 
 class AppliedMigrationChangedError(RuntimeError):
@@ -649,12 +656,13 @@ class AppliedMigrationChangedError(RuntimeError):
 
 
 def apply_migrations(database_url: str) -> None:
+    paths = migration_files()
     with psycopg.connect(database_url) as connection:
         connection.execute(
             "CREATE TABLE IF NOT EXISTS public.schema_migration "
             "(name text PRIMARY KEY, sha256 char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())"
         )
-        for path in migration_files():
+        for path in paths:
             body = path.read_bytes()
             digest = sha256_bytes(body)
             existing = connection.execute(

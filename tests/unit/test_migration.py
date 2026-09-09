@@ -89,3 +89,32 @@ def test_execution_accounting_migration_adds_direct_lineage_and_pricing_snapshot
 def test_scheduled_ingestion_migration_adds_unique_launcher_correlation() -> None:
     migration = Path("migrations/versions/0006_scheduled_ingestion.sql").read_text(encoding="utf-8")
     assert "ADD COLUMN launcher_execution_id text UNIQUE" in migration
+
+
+def test_migrations_resolve_from_runtime_working_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sec_filing_rag.repositories.corpus import migration_files
+
+    directory = tmp_path / "migrations" / "versions"
+    directory.mkdir(parents=True)
+    for name in ("0002_second.sql", "0001_first.sql"):
+        (directory / name).write_text("SELECT 1;")
+    monkeypatch.chdir(tmp_path)
+    assert [path.name for path in migration_files()] == ["0001_first.sql", "0002_second.sql"]
+    assert all(path.parent == directory for path in migration_files())
+
+
+def test_missing_migrations_fail_before_database_access(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sec_filing_rag.repositories import corpus
+
+    monkeypatch.chdir(tmp_path)
+
+    def unexpected_connection(*args: object, **kwargs: object) -> None:
+        pytest.fail("must validate migration assets before connecting")
+
+    monkeypatch.setattr(corpus.psycopg, "connect", unexpected_connection)
+    with pytest.raises(RuntimeError, match="No migration SQL files found"):
+        corpus.apply_migrations("unused")
