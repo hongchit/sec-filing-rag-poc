@@ -121,7 +121,9 @@ class WorkflowRepository:
                 (execution_id, batch_id),
             )
 
-    def submission_failed(self, batch_id: uuid.UUID, error: str) -> None:
+    def submission_failed(
+        self, batch_id: uuid.UUID, error: str, *, release_reservation: bool
+    ) -> None:
         with self.database.transaction() as connection:
             connection.execute(
                 "UPDATE public.filing_batch SET status='failed',safe_error=%s,finished_at=now(),updated_at=now() "
@@ -133,6 +135,8 @@ class WorkflowRepository:
                 "WHERE batch_id=%s AND status='pending'",
                 (safe_error(error), batch_id),
             )
+            if release_reservation:
+                self._reconcile_batch(connection, batch_id)
 
     def item_context(self, item_id: uuid.UUID, *, lock: bool = False) -> dict[str, Any]:
         suffix = " FOR UPDATE" if lock else ""

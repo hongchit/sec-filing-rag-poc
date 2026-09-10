@@ -99,12 +99,6 @@ spec:
               value: sec_filings.ingestion
             - name: KESTRA_BATCH_FLOW_ID
               value: filing_batch
-            - name: DATABASE_POOL_MIN_SIZE
-              value: "1"
-            - name: DATABASE_POOL_MAX_SIZE
-              value: "4"
-            - name: LOG_LEVEL
-              value: INFO
             - name: RETRIEVAL_CONFIG_PATH
               value: /app/evaluation-data/active/config/retrieval.json
             - name: RETRIEVAL_EVALUATION_RESULT_PATH

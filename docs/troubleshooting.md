@@ -19,6 +19,8 @@ Startup never echoes supplied values. [Configuration](configuration.md) lists va
 
 | Symptom | Inspection | Remediation |
 | --- | --- | --- |
+| Query preparation returns `502`; failed batch shows Kestra `401` | App and Kestra basic-auth Secrets and Pod restart times | Generate both credentials from the same source, apply both Secrets, restart Kestra and then the app |
+| Definite Kestra rejection still shows `$reserved` | App version and migration `0007_reconcile_failed_batch_reservations.sql` | Deploy the fix; definite HTTP rejections reconcile to zero and the migration repairs the older `401` failures |
 | Batch remains `submitted` | FastAPI submission log and Kestra availability | Restore Kestra, then resubmit; failed submission marks pending items safely |
 | Daily launcher returns `scheduled_ingestion_owner_unavailable` | First configured administrator has not signed in or is disabled | Sign in once with the first `GOOGLE_ADMIN_EMAILS` address or reactivate that account |
 | Daily launcher fails before `filing_batch` starts | Launcher HTTP/subflow attempts and batch safe error | Restore the dependency and rerun the launcher; its execution ID prevents duplicate batch creation |

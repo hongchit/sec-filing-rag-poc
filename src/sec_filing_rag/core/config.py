@@ -104,7 +104,7 @@ class Settings(BaseSettings):
     session_lifetime_days: int = Field(default=7, ge=1, le=30)
     default_user_lifetime_budget_usd: Decimal = Field(default=Decimal("1.00"), ge=0)
     research_cost_reservation_usd: Decimal = Field(default=Decimal("0.10"), gt=0)
-    corpus_preparation_cost_reservation_usd: Decimal = Field(default=Decimal("0.50"), gt=0)
+    corpus_preparation_cost_reservation_usd: Decimal = Field(default=Decimal("0.05"), gt=0)
 
     @property
     def admin_emails(self) -> frozenset[str]:

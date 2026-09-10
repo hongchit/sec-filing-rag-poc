@@ -8,6 +8,7 @@ import { Help } from './components/Help';
 import { EvaluationTerm } from './components/EvaluationTerm';
 import { normalizedRoute } from './analytics';
 import { safeLocalReturnTo } from './returnTo';
+import { preparationSubmissionMessage } from './preparationErrors';
 
 class ResizeObserverMock {
   observe() {}
@@ -21,6 +22,21 @@ const renderApp = () =>
       <App />
     </ThemeProvider>,
   );
+
+test('explains filing-preparation submission failures', async () => {
+  const response = (status: number, detail: object) => ({
+    status,
+    json: () => Promise.resolve({ detail }),
+  });
+
+  await expect(
+    preparationSubmissionMessage(response(403, { code: 'quota_exceeded' })),
+  ).resolves.toMatch(/allowance is too low/);
+  await expect(
+    preparationSubmissionMessage(response(403, { code: 'invalid_csrf' })),
+  ).resolves.toMatch(/Sign out, sign in/);
+  await expect(preparationSubmissionMessage(response(502, {}))).resolves.toMatch(/Kestra/);
+});
 
 test('renders the public landing page at the root route', async () => {
   vi.stubGlobal(

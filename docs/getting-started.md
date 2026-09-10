@@ -164,8 +164,8 @@ fi
 Fill in provider credentials, then generate and save raw values in `.env`: `POSTGRES_PASSWORD`,
 `SESSION_SECRET` (at least 32 characters), `INGESTION_API_TOKEN` (at least 16 characters), and the
 Kestra login password (at least eight characters including an uppercase letter and digit).
-Use your password manager. For Kestra values substituted into configuration, start with a letter
-and use letters, digits, `_`, or `-`.
+The Kestra login username requires an email address. Kestra database and login-password values substituted into configuration must start
+with a letter and use letters, digits, `_`, or `-`.
 
 **After saving the raw values**, derive these two values in a Dev Container terminal. Paste the
 same raw value at each hidden prompt. The output is still secret; copy it only into `.env`.
@@ -238,17 +238,28 @@ preparation and research request exercise embeddings and generation respectively
 
 ## 5. Sign in and prepare the first corpora
 
-Select **Sign in with Google**. On a fresh database, the Research page explains that no searchable
-corpus exists and offers **Prepare latest filings**. This submits one authenticated latest-mode
-batch for all enabled companies. It can take several minutes and incurs embedding cost. The UI
-retains the batch ID so polling can resume after a refresh or closed tab.
+Initial ingestion uses the frontend rather than a command-line ingestion command:
+
+1. Open the frontend and select **Sign in with Google**.
+2. Sign in with an active account that has at least the displayed preparation reservation
+   available. Use the configured administrator account for the initial production ingestion.
+3. Open **Query**. On a fresh database, the page says that no searchable filing is ready.
+4. Click **Prepare latest filings** once. Do not click repeatedly: each accepted batch reserves
+   part of the account's lifetime allowance while it runs.
+5. Wait for the page to report progress. If **Check latest batch** appears, use it to resume polling
+   the saved batch after a refresh or closed tab.
+6. Inspect the corresponding Kestra execution when troubleshooting, then confirm at least one
+   company appears as ready in Query or Library.
+
+The button submits one authenticated latest-mode batch for all enabled companies. It can take
+several minutes and incurs embedding cost.
 
 The first address in `GOOGLE_ADMIN_EMAILS` must complete this sign-in once before the daily launcher
 runs. Kestra checks all enabled companies at 06:08 UTC and attributes any resulting embedding cost
 to that administrator. A compatible unchanged filing is recorded without an OpenAI request.
 
 Wait for at least one company to have a ready active corpus. Inspect the Kestra execution for task
-progress and use the Research or Corpus Reader company selectors to confirm readiness. Partial
+progress and use the Query or Library company selectors to confirm readiness. Partial
 failure preserves successful and previously ready corpora; correct the reported cause and submit a
 new batch rather than editing lifecycle rows.
 

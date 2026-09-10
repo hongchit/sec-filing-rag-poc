@@ -9,7 +9,9 @@ from ..domain.filings import safe_error
 
 
 class KestraSubmissionError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, definitely_rejected: bool) -> None:
+        super().__init__(message)
+        self.definitely_rejected = definitely_rejected
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,12 @@ class KestraGateway:
                     break
                 time.sleep(min(2**attempt, 4))
         assert last_error is not None
+        definitely_rejected = (
+            isinstance(last_error, httpx.HTTPStatusError)
+            and 400 <= last_error.response.status_code < 500
+            and last_error.response.status_code != 429
+        )
         raise KestraSubmissionError(
-            safe_error(last_error, (self.username, self.password))
+            safe_error(last_error, (self.username, self.password)),
+            definitely_rejected=definitely_rejected,
         ) from None

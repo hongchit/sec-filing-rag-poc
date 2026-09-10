@@ -42,3 +42,16 @@ def test_kestra_errors_are_sanitized() -> None:
     with pytest.raises(KestraSubmissionError) as caught:
         gateway().submit_batch(batch_id="batch-1")
     assert "server-password" not in str(caught.value)
+    assert caught.value.definitely_rejected is False
+
+
+@respx.mock
+def test_kestra_authentication_rejection_is_definitive() -> None:
+    respx.post("http://kestra:8080/api/v1/main/executions/sec_filings.ingestion/filing_batch").mock(
+        return_value=httpx.Response(401)
+    )
+
+    with pytest.raises(KestraSubmissionError) as caught:
+        gateway().submit_batch(batch_id="batch-1")
+
+    assert caught.value.definitely_rejected is True

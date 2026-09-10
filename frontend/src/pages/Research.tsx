@@ -22,6 +22,7 @@ import { useAccount } from '../account';
 import { goalEntries, goals, type ResearchGoal } from '../goals';
 import { streamResearch, recoverResearch } from '../researchApi';
 import type { Company, CompanyStatus, Evidence, Research as ResearchValue } from '../researchTypes';
+import { preparationSubmissionMessage } from '../preparationErrors';
 
 const items = ['1', '1A', '3', '7', '7A', '8'];
 export function Research() {
@@ -208,7 +209,7 @@ export function Research() {
       body: JSON.stringify({ fiscal_year: year }),
     });
     if (!response.ok) {
-      setPreparation('Preparation could not be submitted.');
+      setPreparation(await preparationSubmissionMessage(response));
       return;
     }
     const body = (await response.json()) as { batch_id: string };
@@ -223,7 +224,7 @@ export function Research() {
       body: JSON.stringify({}),
     });
     if (!response.ok) {
-      setLatestPreparation('Latest filing preparation could not be submitted.');
+      setLatestPreparation(await preparationSubmissionMessage(response));
       return;
     }
     const body = (await response.json()) as { batch_id: string };

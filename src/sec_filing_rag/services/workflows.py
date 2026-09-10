@@ -8,7 +8,7 @@ from ..core.config import Settings, load_companies
 from ..core.errors import UpstreamServiceError
 from ..core.pricing import PricingConfiguration
 from ..domain.filings import safe_error
-from ..integrations.kestra import KestraGateway
+from ..integrations.kestra import KestraGateway, KestraSubmissionError
 from ..integrations.sec import EdgarGateway
 from ..repositories.corpus import IngestionRepository
 from ..repositories.workflows import WorkflowRepository
@@ -100,7 +100,12 @@ class FilingBatchService:
             execution = self.kestra.submit_batch(batch_id=str(batch_id))
         except Exception as exc:
             error = safe_error(exc, (self.settings.kestra_basic_auth_password,))
-            self.repository.submission_failed(batch_id, error)
+            self.repository.submission_failed(
+                batch_id,
+                error,
+                release_reservation=isinstance(exc, KestraSubmissionError)
+                and exc.definitely_rejected,
+            )
             raise UpstreamServiceError(
                 error, public_detail="workflow submission failed", code="kestra_submission_failure"
             ) from exc

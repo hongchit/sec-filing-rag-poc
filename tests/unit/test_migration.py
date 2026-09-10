@@ -91,6 +91,19 @@ def test_scheduled_ingestion_migration_adds_unique_launcher_correlation() -> Non
     assert "ADD COLUMN launcher_execution_id text UNIQUE" in migration
 
 
+def test_failed_batch_reservation_repair_is_narrow_and_idempotent() -> None:
+    migration = Path("migrations/versions/0007_reconcile_failed_batch_reservations.sql").read_text(
+        encoding="utf-8"
+    )
+    assert "action.status = 'reserved'" in migration
+    assert "batch.status = 'failed'" in migration
+    assert "batch.kestra_execution_id IS NULL" in migration
+    assert "401 Unauthorized" in migration
+    assert "NOT EXISTS" in migration
+    assert "usage.ingestion_run_id = item.ingestion_run_id" in migration
+    assert "charged_usd = 0" in migration
+
+
 def test_migrations_resolve_from_runtime_working_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

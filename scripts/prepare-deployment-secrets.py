@@ -3,14 +3,16 @@
 
 import argparse
 import base64
+import math
 import os
 import re
 import sys
 import tempfile
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from urllib.parse import quote
 
-FIELDS = (
+SECRET_FIELDS = (
     "EDGAR_IDENTITY",
     "OPENAI_API_KEY",
     "GOOGLE_CLIENT_ID",
@@ -24,6 +26,89 @@ FIELDS = (
     "KESTRA_BASIC_AUTH_USERNAME",
     "KESTRA_BASIC_AUTH_PASSWORD",
 )
+OPERATOR_FIELDS = (
+    "DATABASE_POOL_MIN_SIZE",
+    "DATABASE_POOL_MAX_SIZE",
+    "DATABASE_POOL_TIMEOUT_SECONDS",
+    "DATABASE_STARTUP_TIMEOUT_SECONDS",
+    "LOG_LEVEL",
+    "EDGAR_RATE_LIMIT_PER_SEC",
+    "EDGAR_ACCESS_MODE",
+    "MAX_FILING_DOCUMENT_BYTES",
+    "MAX_FILING_NARRATIVE_CHARS",
+    "KESTRA_TIMEOUT_SECONDS",
+    "KESTRA_MAX_RETRIES",
+    "OPENAI_EMBEDDING_MODEL",
+    "OPENAI_EMBEDDING_DIMENSIONS",
+    "OPENAI_CHAT_MODEL",
+    "OPENAI_JUDGE_MODEL",
+    "OPENAI_TIMEOUT_SECONDS",
+    "CHUNK_SIZE_CHARS",
+    "CHUNK_OVERLAP_CHARS",
+    "PARSER_VERSION",
+    "CHUNKING_VERSION",
+    "INDEX_VERSION",
+    "SESSION_LIFETIME_DAYS",
+    "DEFAULT_USER_LIFETIME_BUDGET_USD",
+    "RESEARCH_COST_RESERVATION_USD",
+    "CORPUS_PREPARATION_COST_RESERVATION_USD",
+)
+FIELDS = SECRET_FIELDS + OPERATOR_FIELDS
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+YAML_PLAIN_WORDS = {"true", "false", "null", "yes", "no", "on", "off"}
+INTEGER_RANGES = {
+    "DATABASE_POOL_MIN_SIZE": (1, None),
+    "DATABASE_POOL_MAX_SIZE": (1, None),
+    "EDGAR_RATE_LIMIT_PER_SEC": (1, 10),
+    "MAX_FILING_DOCUMENT_BYTES": (1_000_000, 100_000_000),
+    "MAX_FILING_NARRATIVE_CHARS": (500_000, 50_000_000),
+    "KESTRA_MAX_RETRIES": (0, 5),
+    "OPENAI_EMBEDDING_DIMENSIONS": (1, None),
+    "CHUNK_SIZE_CHARS": (500, 8_000),
+    "CHUNK_OVERLAP_CHARS": (0, 1_000),
+    "SESSION_LIFETIME_DAYS": (1, 30),
+}
+FLOAT_RANGES = {
+    "DATABASE_POOL_TIMEOUT_SECONDS": (0, 60),
+    "DATABASE_STARTUP_TIMEOUT_SECONDS": (0, 60),
+    "KESTRA_TIMEOUT_SECONDS": (0, 60),
+    "OPENAI_TIMEOUT_SECONDS": (0, 120),
+}
+DECIMAL_FIELDS = {
+    "DEFAULT_USER_LIFETIME_BUDGET_USD": True,
+    "RESEARCH_COST_RESERVATION_USD": False,
+    "CORPUS_PREPARATION_COST_RESERVATION_USD": False,
+}
+
+
+def validate_operator_values(values):
+    for key, (minimum, maximum) in INTEGER_RANGES.items():
+        try:
+            value = int(values[key])
+        except ValueError:
+            raise ValueError(f"{key} must be an integer") from None
+        if value < minimum or (maximum is not None and value > maximum):
+            raise ValueError(f"{key} is outside its allowed range")
+    if int(values["DATABASE_POOL_MAX_SIZE"]) < int(values["DATABASE_POOL_MIN_SIZE"]):
+        raise ValueError("DATABASE_POOL_MAX_SIZE must be at least DATABASE_POOL_MIN_SIZE")
+    for key, (minimum, maximum) in FLOAT_RANGES.items():
+        try:
+            value = float(values[key])
+        except ValueError:
+            raise ValueError(f"{key} must be a number") from None
+        if not math.isfinite(value) or value <= minimum or value > maximum:
+            raise ValueError(f"{key} is outside its allowed range")
+    for key, allow_zero in DECIMAL_FIELDS.items():
+        try:
+            value = Decimal(values[key])
+        except InvalidOperation:
+            raise ValueError(f"{key} must be a decimal amount") from None
+        if not value.is_finite() or value < 0 or (not allow_zero and value == 0):
+            raise ValueError(f"{key} must be {'nonnegative' if allow_zero else 'positive'}")
+    if values["LOG_LEVEL"] not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+        raise ValueError("LOG_LEVEL is invalid")
+    if values["EDGAR_ACCESS_MODE"] != "CAUTION":
+        raise ValueError("EDGAR_ACCESS_MODE must be CAUTION")
 
 
 def read_input(path):
@@ -56,28 +141,23 @@ def read_input(path):
     ):
         if len(values[key]) < minimum:
             raise ValueError(f"{key} must contain at least {minimum} characters")
-    # These values are inserted into unquoted YAML by the existing Kestra manifest.
+    username = values["KESTRA_BASIC_AUTH_USERNAME"]
+    if not EMAIL_RE.fullmatch(username):
+        raise ValueError("KESTRA_BASIC_AUTH_USERNAME must be a valid email address")
+    # These values are substituted into unquoted Kestra YAML at runtime.
     for key in (
         "KESTRA_DATABASE_PASSWORD",
-        "KESTRA_BASIC_AUTH_USERNAME",
         "KESTRA_BASIC_AUTH_PASSWORD",
     ):
         value = values[key]
-        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", value) or value.lower() in {
-            "true",
-            "false",
-            "null",
-            "yes",
-            "no",
-            "on",
-            "off",
-        }:
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", value) or value.lower() in YAML_PLAIN_WORDS:
             raise ValueError(
                 f"{key} must start with a letter or underscore and use letters, digits, _ or -; avoid YAML boolean/null words"
             )
     password = values["KESTRA_BASIC_AUTH_PASSWORD"]
     if not re.search(r"[A-Z]", password) or not re.search(r"[0-9]", password):
         raise ValueError("KESTRA_BASIC_AUTH_PASSWORD requires an uppercase letter and digit")
+    validate_operator_values(values)
     return values
 
 
@@ -96,6 +176,7 @@ def render(values):
             "KESTRA_BASIC_AUTH_PASSWORD",
         )
     }
+    app.update({key: values[key] for key in OPERATOR_FIELDS})
     app["DATABASE_URL"] = (
         "postgresql://sec_filings:"
         + quote(values["APP_DATABASE_PASSWORD"], safe="")

@@ -90,11 +90,17 @@ The registered callback must exactly equal `PUBLIC_BASE_URL` plus `/api/auth/goo
 | `SESSION_LIFETIME_DAYS` | Absolute server-side session lifetime, 1–30 days; default 7. |
 | `DEFAULT_USER_LIFETIME_BUDGET_USD` | Lifetime allowance used when an account has no database override. |
 | `RESEARCH_COST_RESERVATION_USD` | Amount reserved atomically before starting one research request. |
-| `CORPUS_PREPARATION_COST_RESERVATION_USD` | Amount reserved before submitting one filing workflow. |
+| `CORPUS_PREPARATION_COST_RESERVATION_USD` | Amount reserved before submitting one filing workflow; default `$0.05`. |
 
 Reservations must conservatively cover configured provider limits. Reported usage reconciles to the
 pricing snapshot; missing usage retains the reservation for administrator review. Google profile
 data is stored for account administration and is never substituted for `EDGAR_IDENTITY`.
+
+The production preparation input makes operator-controlled budgets, reservations, sessions,
+provider settings, timeouts, retries, pooling, logging, and corpus-compatibility values explicit.
+Regenerate and apply `sec-rag-app`, then restart the app Deployment after changing them. Changes to
+embedding, parsing, chunking, or indexing compatibility require new ingestion. Cluster addresses,
+ports, workflow identities, and persistent artifact paths remain deployment-manifest settings.
 
 ## Optional analytics and cookie consent
 
@@ -132,7 +138,7 @@ initialization credentials match.
 
 | Variable | Default/example | Rule and effect |
 | --- | --- | --- |
-| `KESTRA_BASIC_AUTH_USERNAME` | required | FastAPI-to-Kestra user |
+| `KESTRA_BASIC_AUTH_USERNAME` | required | FastAPI-to-Kestra user; production secret helper requires an email address |
 | `KESTRA_BASIC_AUTH_PASSWORD` | required | Secret satisfying Kestra password policy |
 | `KESTRA_API_URL` | `http://kestra:8080/api/v1/main` | In-container API base |
 | `KESTRA_NAMESPACE` | `sec_filings.ingestion` | Flow namespace |
