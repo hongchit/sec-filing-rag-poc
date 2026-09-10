@@ -7,7 +7,7 @@ resources:
 images:
   - name: ghcr.io/hongchit/sec-filing-rag-poc-app
     newName: ghcr.io/hongchit/sec-filing-rag-poc-app
-    digest: sha256:600267f27ad22f6b3b730bf21c713562a961fec9ffd3476752651a3cc2fda606
+    digest: sha256:ff621fe9c203665de651f6b9c9856cd28b5fd9b57327b7e83555ff73f830f333
   - name: ghcr.io/hongchit/sec-filing-rag-poc-postgres
     newName: ghcr.io/hongchit/sec-filing-rag-poc-postgres
     digest: sha256:d24f69d5405177c33e19874af63820e0f9b7e79ce4148bf6ff4eae6ff6fac016
