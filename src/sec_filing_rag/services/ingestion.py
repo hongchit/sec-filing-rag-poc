@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import time
 import uuid
+from array import array
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -20,6 +22,8 @@ from ..domain.filings import (
 )
 from ..integrations.sec import AcquiredFiling
 from ..repositories.corpus import IngestionRepository
+
+EMBEDDING_BATCH_SIZE = 32
 
 
 @dataclass(frozen=True)
@@ -41,6 +45,82 @@ class IngestionPipeline:
 
     def __init__(self, settings: Settings, store: IngestionRepository, openai: OpenAI) -> None:
         self.settings, self.store, self.openai = settings, store, openai
+
+    def _embed(self, run_id: uuid.UUID, chunks: Sequence[Chunk]) -> tuple[list[array[float]], str]:
+        """Embed in bounded requests and retain only compact single-precision vectors."""
+        started = time.monotonic()
+        provider_started_at = datetime.now(UTC)
+        vectors: list[array[float]] = []
+        input_tokens = 0
+        total_tokens = 0
+        input_usage_complete = True
+        total_usage_complete = True
+        saw_response = False
+        try:
+            for start in range(0, len(chunks), EMBEDDING_BATCH_SIZE):
+                batch = chunks[start : start + EMBEDDING_BATCH_SIZE]
+                response = self.openai.embeddings.create(
+                    model=self.settings.openai_embedding_model,
+                    input=[chunk.text for chunk in batch],
+                    dimensions=self.settings.openai_embedding_dimensions,
+                )
+                saw_response = True
+                usage_object = getattr(response, "usage", None)
+                batch_input_tokens = getattr(usage_object, "prompt_tokens", None)
+                batch_total_tokens = getattr(usage_object, "total_tokens", None)
+                if batch_input_tokens is None:
+                    input_usage_complete = False
+                else:
+                    input_tokens += int(batch_input_tokens)
+                if batch_total_tokens is None:
+                    total_usage_complete = False
+                else:
+                    total_tokens += int(batch_total_tokens)
+
+                data = response.data
+                if len(data) != len(batch):
+                    raise ValueError("embedding response dimension or count mismatch")
+                ordered: list[array[float] | None] = [None] * len(batch)
+                for entry in data:
+                    index = getattr(entry, "index", None)
+                    if type(index) is not int or not 0 <= index < len(batch):
+                        raise ValueError("embedding response index mismatch")
+                    if ordered[index] is not None:
+                        raise ValueError("embedding response index mismatch")
+                    vector = array("f", entry.embedding)
+                    if len(vector) != self.settings.openai_embedding_dimensions:
+                        raise ValueError("embedding response dimension or count mismatch")
+                    ordered[index] = vector
+                if any(vector is None for vector in ordered):
+                    raise ValueError("embedding response index mismatch")
+                vectors.extend(vector for vector in ordered if vector is not None)
+                del data
+                del response
+        except Exception as provider_error:
+            finished_at = datetime.now(UTC)
+            self.store.record_embedding_usage(
+                run_id,
+                self.settings.openai_embedding_model,
+                input_tokens=input_tokens if saw_response and input_usage_complete else None,
+                total_tokens=total_tokens if saw_response and total_usage_complete else None,
+                latency_ms=int((time.monotonic() - started) * 1000),
+                provider_started_at=provider_started_at,
+                provider_finished_at=finished_at,
+                error=safe_error(provider_error, (self.settings.openai_api_key,)),
+            )
+            raise
+        finished_at = datetime.now(UTC)
+        reported = saw_response and input_usage_complete and total_usage_complete
+        self.store.record_embedding_usage(
+            run_id,
+            self.settings.openai_embedding_model,
+            input_tokens=input_tokens if reported else None,
+            total_tokens=total_tokens if reported else None,
+            latency_ms=int((time.monotonic() - started) * 1000),
+            provider_started_at=provider_started_at,
+            provider_finished_at=finished_at,
+        )
+        return vectors, "reported" if reported else "unavailable"
 
     def process_acquisition(
         self,
@@ -137,49 +217,8 @@ class IngestionPipeline:
             if not flat_chunks:
                 raise ValueError("corpus has no present sections to embed")
             self.store.stage(run_id, stage, "running", input_count=len(flat_chunks))
-            started = time.monotonic()
-            provider_started_at = datetime.now(UTC)
-            try:
-                response = self.openai.embeddings.create(
-                    model=self.settings.openai_embedding_model,
-                    input=[chunk.text for chunk in flat_chunks],
-                    dimensions=self.settings.openai_embedding_dimensions,
-                )
-            except Exception as provider_error:
-                finished_at = datetime.now(UTC)
-                self.store.record_embedding_usage(
-                    run_id,
-                    self.settings.openai_embedding_model,
-                    input_tokens=None,
-                    total_tokens=None,
-                    latency_ms=int((time.monotonic() - started) * 1000),
-                    provider_started_at=provider_started_at,
-                    provider_finished_at=finished_at,
-                    error=safe_error(provider_error, (self.settings.openai_api_key,)),
-                )
-                raise
-            finished_at = datetime.now(UTC)
-            usage_object = getattr(response, "usage", None)
-            prompt_tokens, total_tokens = (
-                getattr(usage_object, "prompt_tokens", None),
-                getattr(usage_object, "total_tokens", None),
-            )
-            usage_status = "reported" if total_tokens is not None else "unavailable"
-            self.store.record_embedding_usage(
-                run_id,
-                self.settings.openai_embedding_model,
-                input_tokens=prompt_tokens,
-                total_tokens=total_tokens,
-                latency_ms=int((time.monotonic() - started) * 1000),
-                provider_started_at=provider_started_at,
-                provider_finished_at=finished_at,
-            )
-            vectors = [entry.embedding for entry in response.data]
-            if len(vectors) != len(flat_chunks) or any(
-                len(vector) != self.settings.openai_embedding_dimensions for vector in vectors
-            ):
-                raise ValueError("embedding response dimension or count mismatch")
-            embeddings: dict[str, list[list[float]]] = {}
+            vectors, usage_status = self._embed(run_id, flat_chunks)
+            embeddings: dict[str, list[array[float]]] = {}
             cursor = 0
             for item in REQUIRED_ITEMS:
                 embeddings[item] = vectors[cursor : cursor + len(chunks[item])]

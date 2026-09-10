@@ -15,9 +15,11 @@ tasks:
       connectTimeout: PT10S
       readTimeout: PT30M
     retry:
-      type: constant
-      interval: PT5S
-      maxAttempts: 3
+      type: exponential
+      interval: PT10S
+      maxInterval: PT1M
+      delayFactor: 2
+      maxAttempts: 5
   - id: execute_items
     type: io.kestra.plugin.core.flow.ForEach
     concurrencyLimit: 1
@@ -35,9 +37,11 @@ tasks:
           connectTimeout: PT10S
           readTimeout: PT30M
         retry:
-          type: constant
-          interval: PT5S
-          maxAttempts: 3
+          type: exponential
+          interval: PT10S
+          maxInterval: PT1M
+          delayFactor: 2
+          maxAttempts: 5
       - id: if_selected
         type: io.kestra.plugin.core.flow.If
         condition: "{{ outputs.select[taskrun.value].body | jq('.status') | first == 'selected' }}"
@@ -54,9 +58,11 @@ tasks:
               connectTimeout: PT10S
               readTimeout: PT30M
             retry:
-              type: constant
-              interval: PT5S
-              maxAttempts: 3
+              type: exponential
+              interval: PT10S
+              maxInterval: PT1M
+              delayFactor: 2
+              maxAttempts: 5
           - id: process
             type: io.kestra.plugin.core.http.Request
             uri: "http://app:8000/internal/corpus-executions/{{ parent.taskrun.value }}"
@@ -69,9 +75,11 @@ tasks:
               connectTimeout: PT10S
               readTimeout: PT30M
             retry:
-              type: constant
-              interval: PT5S
-              maxAttempts: 3
+              type: exponential
+              interval: PT10S
+              maxInterval: PT1M
+              delayFactor: 2
+              maxAttempts: 5
     errors:
       - id: fail_item
         type: io.kestra.plugin.core.http.Request
@@ -86,9 +94,11 @@ tasks:
           readTimeout: PT30M
         allowFailure: true
         retry:
-          type: constant
-          interval: PT5S
-          maxAttempts: 3
+          type: exponential
+          interval: PT10S
+          maxInterval: PT1M
+          delayFactor: 2
+          maxAttempts: 5
 finally:
   - id: finalize_batch
     type: io.kestra.plugin.core.http.Request
@@ -102,7 +112,9 @@ finally:
       connectTimeout: PT10S
       readTimeout: PT30M
     retry:
-      type: constant
-      interval: PT5S
-      maxAttempts: 3
+      type: exponential
+      interval: PT10S
+      maxInterval: PT1M
+      delayFactor: 2
+      maxAttempts: 5
     allowFailure: true

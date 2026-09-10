@@ -89,7 +89,7 @@ class IngestionRepository:
         provider_finished_at: Any,
         error: str | None = None,
     ) -> None:
-        status = "reported" if total_tokens is not None else ("failed" if error else "unavailable")
+        status = "failed" if error else ("reported" if total_tokens is not None else "unavailable")
         with self.connect() as connection:
             connection.execute(
                 "INSERT INTO public.llm_usage"

@@ -136,12 +136,20 @@ def sanitize_filing_html(body: bytes, *, max_chars: int) -> str:
             tag.decompose()
     for comment in soup.find_all(string=lambda value: isinstance(value, Comment)):
         comment.extract()
-    narrative = unicodedata.normalize("NFKC", soup.get_text("\n", strip=True))
-    narrative = "".join(
-        character
-        for character in narrative
-        if character in {"\n", "\t"} or unicodedata.category(character) not in {"Cc", "Cf"}
-    )
+    visible_text = soup.get_text("\n", strip=True)
+    soup.decompose()
+    del soup
+    narrative = unicodedata.normalize("NFKC", visible_text)
+    del visible_text
+    # A translation table proportional to distinct control characters avoids the
+    # temporary per-character pointer list built by str.join over a generator.
+    controls = {
+        ord(character): None
+        for character in set(narrative)
+        if character not in {"\n", "\t"} and unicodedata.category(character) in {"Cc", "Cf"}
+    }
+    if controls:
+        narrative = narrative.translate(controls)
     narrative = re.sub(r"[ \t]+", " ", narrative)
     narrative = re.sub(r"\n[ \t]*\n+", "\n", narrative).strip()
     if len(narrative) > max_chars:

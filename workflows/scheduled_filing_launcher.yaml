@@ -28,9 +28,11 @@ tasks:
       connectTimeout: PT10S
       readTimeout: PT30S
     retry:
-      type: constant
-      interval: PT5S
-      maxAttempts: 3
+      type: exponential
+      interval: PT10S
+      maxInterval: PT1M
+      delayFactor: 2
+      maxAttempts: 5
   - id: process_batch
     type: io.kestra.plugin.core.flow.Subflow
     namespace: sec_filings.ingestion
@@ -40,9 +42,11 @@ tasks:
     wait: true
     transmitFailed: true
     retry:
-      type: constant
-      interval: PT5S
-      maxAttempts: 3
+      type: exponential
+      interval: PT10S
+      maxInterval: PT1M
+      delayFactor: 2
+      maxAttempts: 5
 errors:
   - id: fail_unlaunched_batch
     type: io.kestra.plugin.core.http.Request
@@ -57,9 +61,11 @@ errors:
       connectTimeout: PT10S
       readTimeout: PT30S
     retry:
-      type: constant
-      interval: PT5S
-      maxAttempts: 3
+      type: exponential
+      interval: PT10S
+      maxInterval: PT1M
+      delayFactor: 2
+      maxAttempts: 5
     allowFailure: true
 triggers:
   - id: daily_latest_filings

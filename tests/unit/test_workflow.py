@@ -30,10 +30,36 @@ def test_batch_flow_has_retry_continue_and_lifecycle_finalization() -> None:
     assert each["errors"][0]["allowFailure"] is True
     assert flow["finally"][0]["id"] == "finalize_batch"
     assert "errors" not in flow
-    assert each["errors"][0]["retry"]["maxAttempts"] == 3
-    assert flow["finally"][0]["retry"]["maxAttempts"] == 3
-    assert retry["maxAttempts"] == 3
+    assert each["errors"][0]["retry"]["maxAttempts"] == 5
+    assert flow["finally"][0]["retry"]["maxAttempts"] == 5
+    assert retry["maxAttempts"] == 5
     assert "maxAttempt" not in retry
+
+
+def test_every_workflow_retry_uses_the_exact_exponential_policy() -> None:
+    expected = {
+        "type": "exponential",
+        "interval": "PT10S",
+        "maxInterval": "PT1M",
+        "delayFactor": 2,
+        "maxAttempts": 5,
+    }
+
+    def retries(value):  # type: ignore[no-untyped-def]
+        if isinstance(value, dict):
+            if "retry" in value:
+                yield value["retry"]
+            for child in value.values():
+                yield from retries(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from retries(child)
+
+    for path in Path("workflows").glob("*.yaml"):
+        policies = list(retries(yaml.safe_load(path.read_text())))
+        assert policies, f"{path} has no retry policies"
+        assert all(policy == expected for policy in policies)
+        assert "type: constant" not in path.read_text()
 
 
 def test_batch_flow_resolves_dynamic_outputs_and_nested_loop_values() -> None:

@@ -6,7 +6,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from ..core.errors import UpstreamServiceError
 from ..domain.filings import FilingCandidate, sha256_bytes
@@ -100,14 +100,9 @@ class _SdkFacade:
         return self._company(cik)
 
     def filings(self, company: Any, *, full: bool) -> Iterable[Any]:
-        filings = company.get_filings(form="10-K", amendments=False, trigger_full_load=full)
-        # to_pandas() yields primitive metadata without fetching every filing document.
-        rows = filings.to_pandas().to_dict(orient="records")
-        accessions = {_text(row.get("accession_number") or row.get("accession")) for row in rows}
-        return (
-            filing
-            for filing in filings
-            if _text(getattr(filing, "accession_number", None)) in accessions
+        return cast(
+            Iterable[Any],
+            company.get_filings(form="10-K", amendments=False, trigger_full_load=full),
         )
 
 
@@ -133,12 +128,10 @@ def configure_edgartools(
 class EdgarGateway:
     def __init__(self, *, facade: EdgarFacade) -> None:
         self._facade = facade
-        # Operation-local caches prevent duplicate provider resolution and discovery work.
-        self._companies: dict[str, tuple[EdgarCompanySnapshot, Any]] = {}
-        self._filings: dict[
-            tuple[str, bool, str | None], list[tuple[EdgarFilingMetadata, Any]]
-        ] = {}
-        self._candidates: dict[str, list[FilingCandidate]] = {}
+        # Cross-request caches contain only immutable primitive snapshots. EdgarTools
+        # company, filing, Arrow, and Pandas objects remain scoped to one operation.
+        self._companies: dict[str, EdgarCompanySnapshot] = {}
+        self._candidates: dict[tuple[str, bool], list[FilingCandidate]] = {}
 
     @staticmethod
     def _upstream(message: str, exc: BaseException | None = None) -> UpstreamServiceError:
@@ -153,6 +146,19 @@ class EdgarGateway:
 
     def resolve(self, ticker: str) -> EdgarCompanySnapshot:
         normalized = ticker.strip().upper()
+        if normalized in self._companies:
+            return self._companies[normalized]
+        snapshot, _ = self._resolve_with_company(normalized)
+        return snapshot
+
+    def _resolve_with_company(self, ticker: str) -> tuple[EdgarCompanySnapshot, Any]:
+        normalized = ticker.strip().upper()
+        cached = self._companies.get(normalized)
+        if cached is not None:
+            try:
+                return cached, self._facade.company(int(cached.cik))
+            except Exception as exc:
+                raise self._upstream("EdgarTools company lookup failed", exc) from exc
         matches: dict[str, Mapping[str, Any]] = {}
         try:
             for row in self._facade.ticker_rows():
@@ -166,8 +172,6 @@ class EdgarGateway:
         if len(matches) != 1:
             raise self._upstream("ticker maps to multiple distinct CIKs")
         cik, row = next(iter(matches.items()))
-        if cik in self._companies:
-            return self._companies[cik][0]
         try:
             company = self._facade.company(int(cik))
             snapshot = EdgarCompanySnapshot(
@@ -189,15 +193,30 @@ class EdgarGateway:
             )
         except Exception as exc:
             raise self._upstream("EdgarTools company lookup failed", exc) from exc
-        self._companies[cik] = (snapshot, company)
-        return snapshot
+        self._companies[normalized] = snapshot
+        return snapshot, company
 
-    def discover_candidates(self, ticker: str) -> tuple[str, str, list[FilingCandidate]]:
-        company = self.resolve(ticker)
-        if company.cik in self._candidates:
-            return company.cik, company.name, self._candidates[company.cik]
+    def discover_candidates(
+        self, ticker: str, *, fiscal_year: int | None = None
+    ) -> tuple[str, str, list[FilingCandidate]]:
+        company, sdk_company = self._resolve_with_company(ticker)
+        filings = self._candidate_values(company, sdk_company, full=False)
+        if fiscal_year is not None and not any(
+            candidate.fiscal_year == fiscal_year for candidate in filings
+        ):
+            filings = self._candidate_values(company, sdk_company, full=True)
+        if not filings:
+            raise self._upstream("company has no original 10-K filing")
+        return company.cik, company.name, filings
+
+    def _candidate_values(
+        self, company: EdgarCompanySnapshot, sdk_company: Any, *, full: bool
+    ) -> list[FilingCandidate]:
+        key = (company.cik, full)
+        if key in self._candidates:
+            return self._candidates[key]
         try:
-            values = self._facade.filings(self._companies[company.cik][1], full=True)
+            values = self._facade.filings(sdk_company, full=full)
             candidates = [
                 self._candidate(value)
                 for value in values
@@ -221,23 +240,23 @@ class EdgarGateway:
             ),
             reverse=True,
         )
-        if not filings:
-            raise self._upstream("company has no original 10-K filing")
-        self._candidates[company.cik] = filings
-        return company.cik, company.name, filings
+        self._candidates[key] = filings
+        return filings
 
     def acquire(
         self, ticker: str, *, accession: str | None = None, max_bytes: int
     ) -> AcquiredFiling:
-        company = self.resolve(ticker)
-        pairs = self._load(company, full=accession is not None, accession=accession)
+        if accession is not None and not _ACCESSION.fullmatch(accession):
+            raise ValueError("requested accession is malformed")
+        company, sdk_company = self._resolve_with_company(ticker)
+        pairs = self._load(sdk_company, full=False, accession=accession)
+        if accession is not None and not pairs:
+            pairs = self._load(sdk_company, full=True, accession=accession)
         if accession is None:
             if not pairs:
                 raise self._upstream("company has no original 10-K filing")
             metadata, sdk = max(pairs, key=lambda pair: (pair[0].filing_date, pair[0].accession))
         else:
-            if not _ACCESSION.fullmatch(accession):
-                raise ValueError("requested accession is malformed")
             selected = [pair for pair in pairs if pair[0].accession == accession]
             if not selected:
                 raise ValueError("requested accession is not an original 10-K")
@@ -275,13 +294,10 @@ class EdgarGateway:
         )
 
     def _load(
-        self, company: EdgarCompanySnapshot, *, full: bool, accession: str | None
+        self, sdk_company: Any, *, full: bool, accession: str | None
     ) -> list[tuple[EdgarFilingMetadata, Any]]:
-        key = (company.cik, full, accession)
-        if key in self._filings:
-            return self._filings[key]
         try:
-            values = self._facade.filings(self._companies[company.cik][1], full=full)
+            values = self._facade.filings(sdk_company, full=full)
             # Filter a requested accession before enrichment so malformed unrelated history
             # cannot prevent acquisition of the explicitly selected filing.
             normalized = [
@@ -305,7 +321,6 @@ class EdgarGateway:
             key=lambda pair: (pair[0].report_date, pair[0].filing_date, pair[0].accession),
             reverse=True,
         )
-        self._filings[key] = result
         return result
 
     @staticmethod

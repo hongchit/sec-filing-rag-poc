@@ -12,9 +12,15 @@ from sec_filing_rag.integrations.sec import EdgarGateway
 
 
 class FakeFacade:
-    def __init__(self, rows: list[dict[str, Any]], filings: list[Any] | None = None) -> None:
+    def __init__(
+        self,
+        rows: list[dict[str, Any]],
+        filings: list[Any] | None = None,
+        full_filings: list[Any] | None = None,
+    ) -> None:
         self.rows = rows
         self.values = filings or []
+        self.full_values = self.values if full_filings is None else full_filings
         self.company_calls = 0
         self.filing_calls: list[bool] = []
         self.company_value = SimpleNamespace(
@@ -37,7 +43,7 @@ class FakeFacade:
 
     def filings(self, company: Any, *, full: bool):  # type: ignore[no-untyped-def]
         self.filing_calls.append(full)
-        return self.values
+        return self.full_values if full else self.values
 
 
 def filing(
@@ -71,9 +77,15 @@ def filing(
 
 
 def gateway(
-    rows: list[dict[str, Any]] | None = None, filings: list[Any] | None = None
+    rows: list[dict[str, Any]] | None = None,
+    filings: list[Any] | None = None,
+    full_filings: list[Any] | None = None,
 ) -> tuple[EdgarGateway, FakeFacade]:
-    facade = FakeFacade(rows or [{"ticker": "EX", "cik": 1, "company": "Example Corp"}], filings)
+    facade = FakeFacade(
+        rows or [{"ticker": "EX", "cik": 1, "company": "Example Corp"}],
+        filings,
+        full_filings,
+    )
     return EdgarGateway(facade=facade), facade
 
 
@@ -113,7 +125,55 @@ def test_original_filter_latest_historical_order_dedup_and_cache() -> None:
         old.accession_number,
     ]
     value.discover_candidates("EX")
-    assert facade.filing_calls == [True]
+    assert facade.filing_calls == [False]
+
+
+def test_exact_year_discovery_loads_full_history_only_when_recent_filings_miss_year() -> None:
+    recent = filing("0000000001-26-000001")
+    old = filing(
+        "0000000001-20-000001", filing_date=date(2020, 2, 1), report_date=date(2019, 12, 31)
+    )
+    value, facade = gateway(filings=[recent], full_filings=[recent, old])
+
+    _, _, current = value.discover_candidates("EX", fiscal_year=2025)
+    assert [candidate.accession for candidate in current] == [recent.accession_number]
+    assert facade.filing_calls == [False]
+
+    _, _, historical = value.discover_candidates("EX", fiscal_year=2019)
+    assert [candidate.accession for candidate in historical] == [
+        recent.accession_number,
+        old.accession_number,
+    ]
+    assert facade.filing_calls == [False, True]
+
+
+def test_acquisition_tries_recent_filings_before_full_history() -> None:
+    recent = filing("0000000001-26-000001")
+    old = filing(
+        "0000000001-20-000001", filing_date=date(2020, 2, 1), report_date=date(2019, 12, 31)
+    )
+    current, current_facade = gateway(filings=[recent], full_filings=[recent, old])
+    assert current.acquire("EX", accession=recent.accession_number, max_bytes=1000).filing.accession
+    assert current_facade.filing_calls == [False]
+
+    historical, historical_facade = gateway(filings=[recent], full_filings=[recent, old])
+    assert historical.acquire("EX", accession=old.accession_number, max_bytes=1000).filing.accession
+    assert historical_facade.filing_calls == [False, True]
+
+
+def test_gateway_caches_only_primitive_snapshots_and_candidates() -> None:
+    value, _ = gateway(filings=[filing()])
+    value.discover_candidates("EX")
+    assert all(
+        snapshot.__class__.__name__ == "EdgarCompanySnapshot"
+        for snapshot in value._companies.values()
+    )
+    assert all(
+        candidate.__class__.__name__ == "FilingCandidate"
+        for candidates in value._candidates.values()
+        for candidate in candidates
+    )
+    assert not hasattr(value, "_filings")
 
 
 def test_accession_is_revalidated_and_metadata_is_normalized() -> None:
@@ -166,6 +226,7 @@ def test_acquisition_source_has_no_alternate_transport() -> None:
         "urlopen",
     )
     assert not any(value in source for value in forbidden)
+    assert ".to_pandas()" not in source
 
 
 def test_bundled_edgartools_ticker_contract_maps_xom_without_network() -> None:

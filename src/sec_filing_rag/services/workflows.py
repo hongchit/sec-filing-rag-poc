@@ -162,7 +162,9 @@ class FilingExecutionService:
         if context["status"] in {"skipped", "succeeded"}:
             return context["selected_accession"], context["fiscal_year"]
         self.repository.transition(item_id, "selecting", execution_id=execution_id)
-        _, _, candidates = self.provider.discover_candidates(context["ticker"])
+        _, _, candidates = self.provider.discover_candidates(
+            context["ticker"], fiscal_year=context["fiscal_year"]
+        )
         if context["mode"] == "latest":
             selected = max(
                 (candidate for candidate in candidates if candidate.report_date is not None),
