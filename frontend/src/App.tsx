@@ -20,6 +20,7 @@ import { Privacy, Terms } from './pages/Policies';
 import { Overview } from './pages/Overview';
 import { HowItWorks } from './pages/HowItWorks';
 import { SignIn } from './pages/SignIn';
+import { Profile } from './pages/Profile';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { trackPageView } from './analytics';
@@ -43,6 +44,7 @@ export function App({ authenticate = false }: { authenticate?: boolean }) {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/sign-in" element={<SignIn />} />
+          <Route path="/profile" element={protectedPage(<Profile />)} />
           <Route path="/research" element={protectedPage(<Research />)} />
           <Route path="/research/history" element={protectedPage(<ResearchHistory />)} />
           <Route path="/research/:id" element={protectedPage(<ResearchResult />)} />

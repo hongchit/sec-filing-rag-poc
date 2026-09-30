@@ -12,10 +12,13 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Link as RouterLink } from 'react-router-dom';
 import { Figure } from '../components/Figure';
 import { PublicOrAppLayout } from '../components/PublicOrAppLayout';
@@ -64,6 +67,8 @@ const improvements = [
   ],
 ];
 export function HowItWorks() {
+  const theme = useTheme();
+  const compact = useMediaQuery(theme.breakpoints.down('sm'));
   return (
     <PublicOrAppLayout>
       <Grid container spacing={4}>
@@ -119,6 +124,7 @@ export function HowItWorks() {
               <Typography variant="h2">Two connected pipelines</Typography>
               <Figure
                 src="/diagrams/rag-loop.svg"
+                narrowSrc="/diagrams/rag-loop-mobile.svg"
                 alt="A filing preparation pipeline feeds an index used by a question-time retrieval and answer pipeline."
                 caption="The same prepared index supports many questions; the language model receives only the retrieved passages for the current request."
               />
@@ -161,6 +167,7 @@ export function HowItWorks() {
               </Typography>
               <Figure
                 src="/diagrams/medallion-data-layers.svg"
+                narrowSrc="/diagrams/medallion-data-layers-mobile.svg"
                 alt="Bronze preserves the original filing, silver organizes trusted versioned content, and gold makes it fast to search."
                 caption="Each layer adds a focused capability without replacing the evidence held by the layer before it."
               />
@@ -270,24 +277,56 @@ export function HowItWorks() {
                 extensions can build on it incrementally while preserving source lineage and
                 citation checks.
               </Typography>
-              <Table sx={{ mt: 2 }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Improvement</TableCell>
-                    <TableCell>What it adds</TableCell>
-                    <TableCell>Expected benefit</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {improvements.map((row) => (
-                    <TableRow key={row[0]}>
-                      {row.map((cell) => (
-                        <TableCell key={cell}>{cell}</TableCell>
-                      ))}
-                    </TableRow>
+              {compact ? (
+                <Stack spacing={1.5} mt={2}>
+                  {improvements.map(([improvement, addition, benefit]) => (
+                    <Card key={improvement} variant="outlined">
+                      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                        <Typography variant="h3">{improvement}</Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                          mt={1.5}
+                        >
+                          What it adds
+                        </Typography>
+                        <Typography>{addition}</Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                          mt={1.5}
+                        >
+                          Expected benefit
+                        </Typography>
+                        <Typography>{benefit}</Typography>
+                      </CardContent>
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
+                </Stack>
+              ) : (
+                <TableContainer sx={{ mt: 2 }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Improvement</TableCell>
+                        <TableCell>What it adds</TableCell>
+                        <TableCell>Expected benefit</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {improvements.map((row) => (
+                        <TableRow key={row[0]}>
+                          {row.map((cell) => (
+                            <TableCell key={cell}>{cell}</TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
               <Typography mt={2}>
                 These are future capabilities, not features of the current POC. Its layered
                 architecture allows these to be added and tested without compromising the original

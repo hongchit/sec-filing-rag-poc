@@ -258,7 +258,7 @@ function ResultColumn({
                 {result.judge?.explanation || 'LLM-as-a-judge did not produce an assessment.'}
               </Typography>
             </Box>
-            <Box display="grid" gridTemplateColumns="repeat(2,1fr)" gap={1}>
+            <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: 'repeat(2,1fr)' }} gap={1}>
               <SmallMetric
                 label="Valid citations"
                 value={`${result.citation_audit.valid_citation_handles}/${result.citation_audit.citation_handles}`}

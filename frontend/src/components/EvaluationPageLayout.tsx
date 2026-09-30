@@ -27,11 +27,13 @@ export function EvaluationPageLayout({ children }: { children: ReactNode }) {
     };
   });
   return (
-    <Grid container spacing={4}>
+    <Grid container spacing={{ xs: 2.5, md: 4 }}>
       <Grid size={{ xs: 12, md: 3 }}>
         <SectionNavigation label="Evaluation" items={items} />
       </Grid>
-      <Grid size={{ xs: 12, md: 9 }}>{children}</Grid>
+      <Grid size={{ xs: 12, md: 9 }} sx={{ minWidth: 0 }}>
+        {children}
+      </Grid>
     </Grid>
   );
 }

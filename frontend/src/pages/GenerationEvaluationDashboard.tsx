@@ -197,16 +197,21 @@ export function GenerationQuestionResults() {
               onChange={(event) => setFilter('q', event.target.value)}
             />
           </Box>
-          <Box height={650}>
-            <DataGrid
-              aria-label="Question by prompt verdict matrix"
-              rows={filtered}
-              columns={columns}
-              onCellClick={clickCell}
-              pageSizeOptions={[10, 25, 50]}
-              initialState={{ pagination: { paginationModel: { pageSize: 25, page: 0 } } }}
-              sx={{ '& .MuiDataGrid-cell:not([data-field="question"])': { cursor: 'pointer' } }}
-            />
+          <Typography variant="body2" color="text.secondary" sx={{ display: { sm: 'none' } }}>
+            Swipe the comparison table horizontally to review every prompt.
+          </Typography>
+          <Box sx={{ width: '100%', maxWidth: '100%', overflowX: 'auto' }}>
+            <Box height={650} sx={{ minWidth: { xs: 780, sm: 0 } }}>
+              <DataGrid
+                aria-label="Question by prompt verdict matrix"
+                rows={filtered}
+                columns={columns}
+                onCellClick={clickCell}
+                pageSizeOptions={[10, 25, 50]}
+                initialState={{ pagination: { paginationModel: { pageSize: 25, page: 0 } } }}
+                sx={{ '& .MuiDataGrid-cell:not([data-field="question"])': { cursor: 'pointer' } }}
+              />
+            </Box>
           </Box>
           <Paper component="section" variant="outlined" sx={{ p: 2 }}>
             <Typography variant="h2">Prompt source</Typography>

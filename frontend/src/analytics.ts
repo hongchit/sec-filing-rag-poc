@@ -35,6 +35,7 @@ export function normalizedRoute(pathname = window.location.pathname): string {
     '/',
     '/research',
     '/research/history',
+    '/profile',
     '/corpus',
     '/overview',
     '/how-it-works',

@@ -302,17 +302,29 @@ export function EvidenceReview({
           sx={{ gridColumn: '1 / -1', borderColor: 'primary.main' }}
         >
           <CardContent>
-            <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: 1,
+                minWidth: 0,
+              }}
+            >
               <Typography
                 component="h2"
                 variant="h5"
                 ref={heading}
                 tabIndex={-1}
-                sx={{ fontWeight: 700 }}
+                sx={{ fontWeight: 700, minWidth: 0, overflowWrap: 'anywhere' }}
               >
                 Selected chunk: {full.citation || full.chunk_id}
               </Typography>
-              <IconButton aria-label="Close full-text inspector" onClick={close}>
+              <IconButton
+                aria-label="Close full-text inspector"
+                onClick={close}
+                sx={{ flexShrink: 0 }}
+              >
                 <CloseIcon />
               </IconButton>
             </Stack>
@@ -335,7 +347,9 @@ export function EvidenceReview({
                 Open in filing reader
               </Button>
             )}
-            <Typography sx={{ my: 2, whiteSpace: 'pre-wrap' }}>{full.text}</Typography>
+            <Typography sx={{ my: 2, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              {full.text}
+            </Typography>
             <Accordion>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 Technical provenance

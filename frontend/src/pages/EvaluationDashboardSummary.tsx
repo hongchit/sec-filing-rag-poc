@@ -11,6 +11,8 @@ import {
   Typography,
 } from '@mui/material';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
+import { useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { errorMessage, getJson } from '../api';
@@ -20,6 +22,8 @@ import { PublicOrAppLayout } from '../components/PublicOrAppLayout';
 import { labels, type Config, type Summary } from '../types';
 
 export function EvaluationDashboard() {
+  const theme = useTheme();
+  const compact = useMediaQuery(theme.breakpoints.down('sm'));
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
@@ -95,7 +99,7 @@ export function EvaluationDashboard() {
               </Typography>
             </Box>
             {winner && (
-              <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3,1fr)' }} gap={2}>
+              <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: 'repeat(3,1fr)' }} gap={2}>
                 {[
                   ['Selected strategy', labels[winner.strategy] || winner.strategy],
                   ['Hit Rate', `${(winner.hit_rate * 100).toFixed(1)}%`],
@@ -127,17 +131,52 @@ export function EvaluationDashboard() {
                 <EvaluationTerm term="mrr">MRR</EvaluationTerm> ·{' '}
                 <EvaluationTerm term="latency">Latency</EvaluationTerm>
               </Typography>
-              <Box height={Math.min(640, 112 + summary.configurations.length * 36)} minHeight={260}>
-                <DataGrid
-                  rows={summary.configurations}
-                  columns={columns}
-                  density="compact"
-                  disableRowSelectionOnClick
-                />
-              </Box>
+              {compact ? (
+                <Stack spacing={1.5} aria-label="Configuration comparison">
+                  {summary.configurations.map((configuration) => (
+                    <Card key={configuration.id} variant="outlined">
+                      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                        <Stack spacing={1}>
+                          <Stack direction="row" justifyContent="space-between" gap={1}>
+                            <Typography fontWeight={750}>
+                              {labels[configuration.strategy] || configuration.strategy}
+                            </Typography>
+                            <Chip label={`Rank ${configuration.official_rank}`} />
+                          </Stack>
+                          <Typography variant="body2" color="text.secondary">
+                            {configuration.candidate_count} candidates · top-{configuration.top_k}
+                          </Typography>
+                          <Typography variant="body2">
+                            Hit Rate {(configuration.hit_rate * 100).toFixed(1)}% · MRR{' '}
+                            {configuration.mrr.toFixed(3)} ·{' '}
+                            {configuration.median_latency_ms.toFixed(1)} ms
+                          </Typography>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Stack>
+              ) : (
+                <Box
+                  height={Math.min(640, 112 + summary.configurations.length * 36)}
+                  minHeight={260}
+                  minWidth={0}
+                >
+                  <DataGrid
+                    rows={summary.configurations}
+                    columns={columns}
+                    density="compact"
+                    disableRowSelectionOnClick
+                  />
+                </Box>
+              )}
             </Box>
             <Alert
               severity="info"
+              sx={{
+                flexDirection: { xs: 'column', sm: 'row' },
+                '& .MuiAlert-action': { ml: { xs: 0, sm: 'auto' }, mt: { xs: 1, sm: 0 } },
+              }}
               action={
                 <Button
                   component={RouterLink}

@@ -327,7 +327,7 @@ export function CorpusReader() {
     </Link>
   );
   const traversal = (
-    <Stack direction="row" justifyContent="space-between">
+    <Stack direction="row" justifyContent="space-between" gap={1}>
       <Button
         disabled={selectedIndex <= 0}
         onClick={() => goItem(corpusItems[selectedIndex - 1])}
@@ -350,13 +350,20 @@ export function CorpusReader() {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: '260px minmax(0, 1fr)' },
-          gap: 4,
+          gap: { xs: 2.5, md: 4 },
         }}
       >
         <Stack
           component="aside"
           spacing={2}
-          sx={{ alignSelf: 'start', position: { md: 'sticky' }, top: 16 }}
+          direction={{ xs: 'column', sm: 'row', md: 'column' }}
+          sx={{
+            alignSelf: 'start',
+            position: { md: 'sticky' },
+            top: 16,
+            width: '100%',
+            '& > .MuiFormControl-root': { minWidth: 0, flex: 1 },
+          }}
         >
           <FormControl fullWidth>
             <InputLabel>Company</InputLabel>
@@ -396,7 +403,22 @@ export function CorpusReader() {
               )}
             </Select>
           </FormControl>
-          <Paper variant="outlined">
+          <FormControl fullWidth sx={{ display: { md: 'none' } }}>
+            <InputLabel id="filing-item-label">Filing Item</InputLabel>
+            <Select
+              labelId="filing-item-label"
+              label="Filing Item"
+              value={item}
+              onChange={(event) => goItem(event.target.value as CorpusItem)}
+            >
+              {version.items.map((entry) => (
+                <MenuItem key={entry.item} value={entry.item}>
+                  Item {entry.item} — {itemTitles[entry.item]}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Paper variant="outlined" sx={{ display: { xs: 'none', md: 'block' } }}>
             <List aria-label="Filing Items" disablePadding>
               {version.items.map((entry) => (
                 <ListItemButton
@@ -415,7 +437,10 @@ export function CorpusReader() {
           </Paper>
         </Stack>
         <Box sx={{ minWidth: 0 }}>
-          <Breadcrumbs aria-label="Breadcrumb" sx={{ mb: 2 }}>
+          <Breadcrumbs
+            aria-label="Breadcrumb"
+            sx={{ mb: 2, '& .MuiBreadcrumbs-li': { minWidth: 0, overflowWrap: 'anywhere' } }}
+          >
             {originCrumb}
             <Link component={RouterLink} to="/corpus">
               Library
@@ -435,11 +460,11 @@ export function CorpusReader() {
             </Alert>
           )}
           <Paper sx={{ p: 2, mb: 2, position: 'sticky', top: 0, zIndex: 2 }}>
-            <Typography variant="h2">
+            <Typography variant="h2" sx={{ overflowWrap: 'anywhere' }}>
               {version.ticker} · 10-K FY{version.report_date.slice(0, 4)} · Item {item} —{' '}
               {itemTitles[item as CorpusItem]}
             </Typography>
-            <Typography color="text.secondary">
+            <Typography color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
               Paragraph {visible} · filed {version.filing_date} · accession {version.accession}
             </Typography>
             <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 1 }}>
@@ -523,7 +548,13 @@ export function CorpusReader() {
                       <Stack
                         className="paragraph-actions"
                         direction="row"
-                        sx={{ opacity: { xs: 1, md: 0 }, transition: 'opacity .15s', mb: 1 }}
+                        sx={{
+                          opacity: { xs: 1, md: 0 },
+                          transition: 'opacity .15s',
+                          mb: 1,
+                          flexWrap: 'wrap',
+                          gap: 0.5,
+                        }}
                       >
                         <Button
                           size="small"

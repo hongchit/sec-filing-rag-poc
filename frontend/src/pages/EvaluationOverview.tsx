@@ -12,7 +12,9 @@ import {
   Skeleton,
   Stack,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { errorMessage, getJson } from '../api';
@@ -66,6 +68,8 @@ const stageDetails: Record<
 };
 
 function OverviewContent() {
+  const theme = useTheme();
+  const compact = useMediaQuery(theme.breakpoints.down('sm'));
   const [value, setValue] = useState<EvaluationOverviewValue | null>(null);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -155,7 +159,11 @@ function OverviewContent() {
         </Paper>
       )}
 
-      <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(4,1fr)' }} gap={2}>
+      <Box
+        display="grid"
+        gridTemplateColumns={{ xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(4,1fr)' }}
+        gap={2}
+      >
         <ProofCard
           title="Finds the supporting passage"
           value={`${value.retrieval.hit_count} of ${value.retrieval.question_count}`}
@@ -189,43 +197,83 @@ function OverviewContent() {
           Where the supporting passage appeared
         </Typography>
         <Typography variant="h2">Most useful evidence arrives first</Typography>
-        <Box
-          mt={2}
-          display="flex"
-          height={34}
-          borderRadius={2}
-          overflow="hidden"
-          aria-label={`Rank distribution: ${value.retrieval.rank_buckets.rank_one} at rank one, ${value.retrieval.rank_buckets.rank_two_three} at ranks two to three, ${value.retrieval.rank_buckets.rank_four_ten} at ranks four to ten, ${value.retrieval.rank_buckets.not_found} not found`}
-        >
-          {buckets.map(([key, label, color]) => {
-            const count = value.retrieval.rank_buckets[key];
-            return count ? (
-              <Box
-                key={key}
-                bgcolor={color}
-                color="white"
-                width={`${(count / value.retrieval.question_count) * 100}%`}
-                display="grid"
-                sx={{ placeItems: 'center', minWidth: count ? 22 : 0 }}
-                title={`${label}: ${count}`}
-              >
-                <Typography variant="caption" fontWeight={750}>
-                  {count}
-                </Typography>
-              </Box>
-            ) : null;
-          })}
-        </Box>
-        <Stack direction="row" gap={2} flexWrap="wrap" mt={1.5}>
-          {buckets.map(([key, label, color]) => (
-            <Stack direction="row" gap={0.75} alignItems="center" key={key}>
-              <Box width={10} height={10} borderRadius="50%" bgcolor={color} />
-              <Typography variant="caption">
-                {label}: {value.retrieval.rank_buckets[key]}
-              </Typography>
+        {compact ? (
+          <Stack
+            mt={2}
+            gap={1.5}
+            role="img"
+            aria-label={`Rank distribution: ${value.retrieval.rank_buckets.rank_one} at rank one, ${value.retrieval.rank_buckets.rank_two_three} at ranks two to three, ${value.retrieval.rank_buckets.rank_four_ten} at ranks four to ten, ${value.retrieval.rank_buckets.not_found} not found`}
+          >
+            {buckets.map(([key, label, color]) => {
+              const count = value.retrieval.rank_buckets[key];
+              const percentage = value.retrieval.question_count
+                ? count / value.retrieval.question_count
+                : 0;
+              return (
+                <Box key={key} aria-hidden="true">
+                  <Stack direction="row" justifyContent="space-between" gap={2} mb={0.5}>
+                    <Typography variant="body2" fontWeight={750}>
+                      {label}
+                    </Typography>
+                    <Typography variant="body2">
+                      {count} · {pct(percentage)}
+                    </Typography>
+                  </Stack>
+                  <Box height={10} borderRadius={5} bgcolor="action.hover" overflow="hidden">
+                    <Box
+                      height="100%"
+                      width={`${percentage * 100}%`}
+                      minWidth={count ? 3 : 0}
+                      borderRadius={5}
+                      bgcolor={color}
+                    />
+                  </Box>
+                </Box>
+              );
+            })}
+          </Stack>
+        ) : (
+          <>
+            <Box
+              mt={2}
+              display="flex"
+              height={34}
+              borderRadius={2}
+              overflow="hidden"
+              role="img"
+              aria-label={`Rank distribution: ${value.retrieval.rank_buckets.rank_one} at rank one, ${value.retrieval.rank_buckets.rank_two_three} at ranks two to three, ${value.retrieval.rank_buckets.rank_four_ten} at ranks four to ten, ${value.retrieval.rank_buckets.not_found} not found`}
+            >
+              {buckets.map(([key, label, color]) => {
+                const count = value.retrieval.rank_buckets[key];
+                return count ? (
+                  <Box
+                    key={key}
+                    bgcolor={color}
+                    color="white"
+                    width={`${(count / value.retrieval.question_count) * 100}%`}
+                    display="grid"
+                    sx={{ placeItems: 'center', minWidth: count ? 22 : 0 }}
+                    title={`${label}: ${count}`}
+                  >
+                    <Typography variant="caption" fontWeight={750}>
+                      {count}
+                    </Typography>
+                  </Box>
+                ) : null;
+              })}
+            </Box>
+            <Stack direction="row" gap={2} flexWrap="wrap" mt={1.5} aria-hidden="true">
+              {buckets.map(([key, label, color]) => (
+                <Stack direction="row" gap={0.75} alignItems="center" key={key}>
+                  <Box width={10} height={10} borderRadius="50%" bgcolor={color} />
+                  <Typography variant="caption">
+                    {label}: {value.retrieval.rank_buckets[key]}
+                  </Typography>
+                </Stack>
+              ))}
             </Stack>
-          ))}
-        </Stack>
+          </>
+        )}
       </Paper>
 
       <section>
@@ -233,7 +281,12 @@ function OverviewContent() {
           Models across the process
         </Typography>
         <Typography variant="h2">Different models handle different stages</Typography>
-        <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3,1fr)' }} gap={2} mt={2}>
+        <Box
+          display="grid"
+          gridTemplateColumns={{ xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(3,1fr)' }}
+          gap={2}
+          mt={2}
+        >
           {value.models.map((model, index) => {
             const detail = stageDetails[model.stage] || {
               title: model.role,

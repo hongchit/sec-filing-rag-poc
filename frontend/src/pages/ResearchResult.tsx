@@ -190,9 +190,9 @@ export function ResearchResult() {
                   Weighted hybrid, α=0.25 — selected by MRR
                 </Link>
               </Typography>
-              <pre style={{ whiteSpace: 'pre-wrap' }}>
+              <Box component="pre" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', m: 0 }}>
                 {JSON.stringify(value.run_details, null, 2)}
-              </pre>
+              </Box>
             </Paper>
           </Collapse>
         </Box>

@@ -39,7 +39,7 @@ export function Overview() {
           <Typography variant="h2">Why add retrieval?</Typography>
           <Grid container spacing={2} mt={1}>
             {benefits.map(([title, body]) => (
-              <Grid size={{ xs: 12, md: 4 }} key={title}>
+              <Grid size={{ xs: 12, sm: 4 }} key={title}>
                 <Card sx={{ height: '100%' }}>
                   <CardContent>
                     <Typography variant="h3">{title}</Typography>
@@ -77,7 +77,7 @@ export function Overview() {
                 ],
               ],
             ].map(([title, points]) => (
-              <Grid size={{ xs: 12, md: 6 }} key={title as string}>
+              <Grid size={{ xs: 12, sm: 6 }} key={title as string}>
                 <Card sx={{ height: '100%' }}>
                   <CardContent>
                     <Typography variant="h3">{title as string}</Typography>

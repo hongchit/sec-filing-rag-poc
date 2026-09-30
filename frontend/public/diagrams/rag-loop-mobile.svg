@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 1450" role="img" aria-labelledby="title desc">
+  <title id="title">The prepare-time and question-time RAG loop</title>
+  <desc id="desc">A filing is cleaned, split into chunks, embedded and indexed. A question searches that index, then relevant passages are placed in a prompt for a language model that returns a cited answer.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#53605b"/></marker>
+    <style>.lane{fill:#f4f6f4;stroke:#d9dfdc;stroke-width:2}.box{fill:#fff;stroke:#174c3c;stroke-width:2}.accent{fill:#dcebe5;stroke:#174c3c;stroke-width:2}.label{font:700 20px system-ui,sans-serif;fill:#17221e}.body{font:16px system-ui,sans-serif;fill:#53605b}.arrow{stroke:#53605b;stroke-width:2.5;fill:none;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect class="lane" x="20" y="20" width="560" height="690" rx="16"/>
+  <text class="label" x="45" y="58">Prepare once per filing</text>
+  <g transform="translate(145 85)"><rect class="box" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">Form 10-K</text><text class="body" x="155" y="62" text-anchor="middle">source filing</text></g>
+  <path class="arrow" d="M300 175 V205"/>
+  <g transform="translate(145 210)"><rect class="box" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">Clean text</text><text class="body" x="155" y="62" text-anchor="middle">extract Items</text></g>
+  <path class="arrow" d="M300 300 V330"/>
+  <g transform="translate(145 335)"><rect class="box" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">Chunks</text><text class="body" x="155" y="62" text-anchor="middle">small passages</text></g>
+  <path class="arrow" d="M300 425 V455"/>
+  <g transform="translate(145 460)"><rect class="box" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">Embeddings</text><text class="body" x="155" y="62" text-anchor="middle">meaning as numbers</text></g>
+  <path class="arrow" d="M300 550 V580"/>
+  <g transform="translate(145 585)"><rect class="accent" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">Search index</text><text class="body" x="155" y="62" text-anchor="middle">keyword + vector</text></g>
+
+  <rect class="lane" x="20" y="740" width="560" height="690" rx="16"/>
+  <text class="label" x="45" y="778">Answer every question</text>
+  <g transform="translate(145 805)"><rect class="box" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">Question</text><text class="body" x="155" y="62" text-anchor="middle">company + goal</text></g>
+  <path class="arrow" d="M300 895 V925"/>
+  <g transform="translate(145 930)"><rect class="accent" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">Retrieve top-k</text><text class="body" x="155" y="62" text-anchor="middle">best passages</text></g>
+  <path class="arrow" d="M300 1020 V1050"/>
+  <g transform="translate(145 1055)"><rect class="box" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">Build prompt</text><text class="body" x="155" y="62" text-anchor="middle">question + evidence</text></g>
+  <path class="arrow" d="M300 1145 V1175"/>
+  <g transform="translate(145 1180)"><rect class="box" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">LLM</text><text class="body" x="155" y="62" text-anchor="middle">draft answer</text></g>
+  <path class="arrow" d="M300 1270 V1300"/>
+  <g transform="translate(145 1305)"><rect class="accent" width="310" height="85" rx="10"/><text class="label" x="155" y="35" text-anchor="middle">Cited answer</text><text class="body" x="155" y="62" text-anchor="middle">check the source</text></g>
+
+  <path class="arrow" stroke-dasharray="8 7" d="M460 628 C555 628 555 972 460 972"/>
+  <text class="body" x="548" y="800" text-anchor="middle" transform="rotate(90 548 800)">index supplies passages at question time</text>
+</svg>

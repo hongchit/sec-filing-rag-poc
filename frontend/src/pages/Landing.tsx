@@ -206,7 +206,7 @@ function LandingContent({ authenticated }: { authenticated: boolean }) {
             'Ask questions about up-to-date filing evidence using an LLM without retraining the model.',
           ],
         ].map(([title, body]) => (
-          <Grid size={{ xs: 12, md: 4 }} key={title}>
+          <Grid size={{ xs: 12, sm: 4 }} key={title}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="h3">{title}</Typography>

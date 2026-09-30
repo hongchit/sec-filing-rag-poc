@@ -199,10 +199,12 @@ export function RetrievalQuestionResults() {
                   sx={{
                     p: 2,
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: { xs: 'flex-start', sm: 'center' },
                     gap: 2,
                     textDecoration: 'none',
                     color: 'text.primary',
+                    minWidth: 0,
                   }}
                 >
                   <Chip
@@ -215,8 +217,10 @@ export function RetrievalQuestionResults() {
                     }
                     label={labels[value.outcome]}
                   />
-                  <Box flex={1}>
-                    <Typography fontWeight={700}>{value.question}</Typography>
+                  <Box flex={1} minWidth={0}>
+                    <Typography fontWeight={700} sx={{ overflowWrap: 'anywhere' }}>
+                      {value.question}
+                    </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {value.ticker} · Item {value.items.join(', ')} ·{' '}
                       {value.goal.replaceAll('_', ' ')} · {value.query_type.replaceAll('_', ' ')}
@@ -230,7 +234,13 @@ export function RetrievalQuestionResults() {
             )}
           </Stack>
           <Stack alignItems="center" gap={1}>
-            <Pagination count={pages} page={currentPage} onChange={(_, value) => setPage(value)} />
+            <Pagination
+              count={pages}
+              page={currentPage}
+              onChange={(_, value) => setPage(value)}
+              size="small"
+              siblingCount={0}
+            />
             <Typography variant="caption">
               Page {currentPage} of {pages} · {filtered.length} questions
             </Typography>

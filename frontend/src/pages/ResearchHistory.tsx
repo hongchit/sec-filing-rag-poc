@@ -26,7 +26,7 @@ export function ResearchHistory() {
             component={Link}
             to={`/research/${item.research_id}`}
             key={item.research_id}
-            sx={{ justifyContent: 'flex-start' }}
+            sx={{ justifyContent: 'flex-start', textAlign: 'left', overflowWrap: 'anywhere' }}
           >
             {item.ticker} · {item.question} · {item.status}
           </Button>

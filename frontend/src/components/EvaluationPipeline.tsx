@@ -13,18 +13,39 @@ export function EvaluationPipeline({ active = 'all' }: { active?: string }) {
       <Typography variant="overline" color="primary">
         How Query answers a question
       </Typography>
-      <Stack direction="row" gap={0.75} flexWrap="wrap" alignItems="center">
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        gap={0.75}
+        flexWrap={{ sm: 'wrap' }}
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+      >
         {stages.map(([id, label], index) => (
-          <Stack direction="row" gap={0.75} alignItems="center" key={id}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            gap={0.75}
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            key={id}
+          >
             {index > 0 && (
-              <Typography aria-hidden="true" color="text.secondary">
-                →
+              <Typography
+                aria-hidden="true"
+                color="text.secondary"
+                textAlign="center"
+                lineHeight={1}
+              >
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                  ↓
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  →
+                </Box>
               </Typography>
             )}
             <Chip
               label={label}
               color={active === 'all' || active === id ? 'primary' : 'default'}
               variant={active === 'all' || active === id ? 'filled' : 'outlined'}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
             />
           </Stack>
         ))}

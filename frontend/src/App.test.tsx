@@ -1,7 +1,8 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, vi, test, expect } from 'vitest';
 import { ThemeProvider } from '@mui/material/styles';
+import { MemoryRouter } from 'react-router-dom';
 import { App } from './App';
 import { theme } from './theme';
 import { Help } from './components/Help';
@@ -9,6 +10,7 @@ import { EvaluationTerm } from './components/EvaluationTerm';
 import { normalizedRoute } from './analytics';
 import { safeLocalReturnTo } from './returnTo';
 import { preparationSubmissionMessage } from './preparationErrors';
+import { SectionNavigation } from './components/SectionNavigation';
 
 class ResizeObserverMock {
   observe() {}
@@ -22,6 +24,88 @@ const renderApp = () =>
       <App />
     </ThemeProvider>,
   );
+
+test('updates secondary-navigation overflow cues and reveals the active destination', () => {
+  let notifyResize = () => {};
+  class NavigationResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      notifyResize = () => callback([], this);
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal('ResizeObserver', NavigationResizeObserver);
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+  const items = [
+    { label: 'Overview', to: '/evaluation', active: true },
+    { label: 'Retrieval evaluation', to: '/evaluation/retrieval' },
+    { label: 'Answer quality', to: '/evaluation/answers' },
+  ];
+  const view = render(
+    <ThemeProvider theme={theme}>
+      <MemoryRouter>
+        <SectionNavigation label="Evaluation" items={items} />
+      </MemoryRouter>
+    </ThemeProvider>,
+  );
+  const navigation = screen.getByRole('navigation', { name: 'Evaluation' });
+  const list = navigation.querySelector('ul');
+  if (!list) throw new Error('Expected navigation list');
+  const scrollBy = vi.fn();
+  const scrollTo = vi.fn();
+  Object.defineProperties(list, {
+    clientWidth: { configurable: true, value: 200 },
+    scrollWidth: { configurable: true, value: 600 },
+    scrollLeft: { configurable: true, writable: true, value: 0 },
+    scrollBy: { configurable: true, value: scrollBy },
+    scrollTo: { configurable: true, value: scrollTo },
+  });
+
+  act(() => notifyResize());
+  const rightButton = screen.getByRole('button', { name: 'Scroll Evaluation right' });
+  expect(screen.queryByRole('button', { name: 'Scroll Evaluation left' })).not.toBeInTheDocument();
+  fireEvent.click(rightButton);
+  expect(scrollBy).toHaveBeenCalledWith({ left: 180, behavior: 'smooth' });
+
+  list.scrollLeft = 400;
+  fireEvent.scroll(list);
+  expect(screen.getByRole('button', { name: 'Scroll Evaluation left' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Scroll Evaluation right' })).not.toBeInTheDocument();
+
+  list.scrollLeft = 0;
+  view.rerender(
+    <ThemeProvider theme={theme}>
+      <MemoryRouter>
+        <SectionNavigation
+          label="Evaluation"
+          items={items.map((item, index) => ({ ...item, active: index === 2 }))}
+        />
+      </MemoryRouter>
+    </ThemeProvider>,
+  );
+  const activeLink = screen.getByRole('link', { name: 'Answer quality' });
+  const activeListItem = activeLink.closest('li');
+  if (!activeListItem) throw new Error('Expected active navigation list item');
+  Object.defineProperties(activeListItem, {
+    offsetLeft: { configurable: true, value: 450 },
+    offsetWidth: { configurable: true, value: 100 },
+  });
+  act(() => notifyResize());
+  expect(scrollTo).toHaveBeenCalledWith({ left: 350, behavior: 'smooth' });
+});
 
 test('explains filing-preparation submission failures', async () => {
   const response = (status: number, detail: object) => ({
@@ -135,6 +219,57 @@ test('redirects an authenticated visitor away from the sign-in page', async () =
       name: 'Give a language model the evidence it needs, when it needs it.',
     }),
   ).toBeInTheDocument();
+});
+
+test('shows the signed-in identity and evaluation allowance on the profile page', async () => {
+  history.replaceState(null, '', '/profile');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            user_id: 'user-id',
+            email: 'analyst@example.com',
+            display_name: 'Ada Analyst',
+            is_admin: false,
+            budget: {
+              limit_usd: '10',
+              used_usd: '1.25',
+              reserved_usd: '0.50',
+              remaining_usd: '8.25',
+            },
+            action_reservations: { research_usd: '0.05', corpus_preparation_usd: '0.05' },
+          }),
+      }),
+    ),
+  );
+
+  render(
+    <ThemeProvider theme={theme}>
+      <App authenticate />
+    </ThemeProvider>,
+  );
+
+  expect(await screen.findByRole('heading', { name: 'Welcome, Ada Analyst.' })).toBeInTheDocument();
+  expect(screen.getByText('analyst@example.com')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Your evaluation budget' })).toBeInTheDocument();
+  expect(screen.getByText('$8.25')).toBeInTheDocument();
+  expect(screen.getByText('$1.25')).toBeInTheDocument();
+  expect(screen.getByText('$0.50')).toBeInTheDocument();
+  expect(screen.getByText('$10.00')).toBeInTheDocument();
+  expect(screen.getByText(/limited lifetime quota/i)).toBeInTheDocument();
+  expect(screen.getByText(/not an amount you will be billed/i)).toBeInTheDocument();
+  expect(
+    screen.getByRole('link', { name: 'View profile, 8.25 dollars budget left' }),
+  ).toHaveAttribute('href', '/profile');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open application navigation' }));
+  expect(await screen.findByRole('menuitem', { name: '$8.25 left' })).toHaveAttribute(
+    'href',
+    '/profile',
+  );
 });
 
 test('redirects a guest Data route before requesting evaluation data', async () => {
@@ -252,6 +387,15 @@ test('bootstraps latest filings when a fresh installation has no active filing c
       .getByRole('link', { name: 'How it works' })
       .querySelector('[data-testid="AccountTreeOutlinedIcon"]'),
   ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Open application navigation' }));
+  expect(await screen.findByRole('menu')).toHaveTextContent('$10.00 left');
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Why RAG' }));
+  expect(
+    await screen.findByRole('heading', {
+      name: 'Give a language model the evidence it needs, when it needs it.',
+    }),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 });
 
 test('keeps successful filing collections available when latest bootstrap partially fails', async () => {
@@ -363,6 +507,7 @@ test('normalizes sensitive route values before analytics', () => {
   expect(normalizedRoute('/unknown/private-value')).toBe('/other');
   expect(normalizedRoute('/overview')).toBe('/overview');
   expect(normalizedRoute('/how-it-works')).toBe('/how-it-works');
+  expect(normalizedRoute('/profile')).toBe('/profile');
   expect(normalizedRoute('/sign-in')).toBe('/sign-in');
   expect(normalizedRoute('/evaluation/evidence-search/questions')).toBe(
     '/evaluation/evidence-search/questions',
@@ -396,15 +541,25 @@ test('shows the RAG loop and trusted data layers only on How It Works', async ()
     vi.fn(() => Promise.resolve({ ok: false })),
   );
   renderApp();
-  expect(
-    await screen.findByRole('img', { name: /filing preparation pipeline feeds an index/i }),
-  ).toHaveAttribute('src', '/diagrams/rag-loop.svg');
+  const ragFigure = await screen.findByRole('img', {
+    name: /filing preparation pipeline feeds an index/i,
+  });
+  expect(ragFigure).toHaveAttribute('src', '/diagrams/rag-loop.svg');
+  expect(ragFigure.closest('picture')?.querySelector('source')).toHaveAttribute(
+    'srcset',
+    '/diagrams/rag-loop-mobile.svg',
+  );
   expect(
     screen.getByRole('heading', { name: 'Three data layers, each with one clear job.' }),
   ).toBeInTheDocument();
-  expect(
-    screen.getByRole('img', { name: /bronze preserves the original filing/i }),
-  ).toHaveAttribute('src', '/diagrams/medallion-data-layers.svg');
+  const layersFigure = screen.getByRole('img', {
+    name: /bronze preserves the original filing/i,
+  });
+  expect(layersFigure).toHaveAttribute('src', '/diagrams/medallion-data-layers.svg');
+  expect(layersFigure.closest('picture')?.querySelector('source')).toHaveAttribute(
+    'srcset',
+    '/diagrams/medallion-data-layers-mobile.svg',
+  );
   expect(screen.getByRole('heading', { name: 'Bronze — Preserve the source' })).toBeInTheDocument();
   expect(
     screen.getByRole('heading', { name: 'Silver — Build trusted knowledge' }),
@@ -667,6 +822,86 @@ test('shows interpretation paragraphs before filing facts while preserving group
   expect(screen.queryByText('Filing fact')).not.toBeInTheDocument();
 });
 
+test('uses the compact filing Item selector to navigate the reader', async () => {
+  const corpusId = '7ea094c5-79b5-4c75-a0a1-5715db1a4e48';
+  history.replaceState(null, '', `/corpus/AAPL/1?corpus=${corpusId}`);
+  vi.stubGlobal('scrollTo', vi.fn());
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    let body: unknown;
+    if (url === '/api/auth/me')
+      body = {
+        user_id: 'user-id',
+        email: 'user@example.com',
+        is_admin: false,
+        budget: { limit_usd: '10', used_usd: '0', reserved_usd: '0', remaining_usd: '10' },
+        action_reservations: { research_usd: '0.05', corpus_preparation_usd: '0.05' },
+      };
+    else if (url === '/api/companies')
+      body = [{ ticker: 'AAPL', name: 'Apple', enabled: true, corpus_status: 'ready' }];
+    else if (url === '/api/companies/AAPL/status')
+      body = {
+        ticker: 'AAPL',
+        active_corpus: {
+          corpus_version_id: corpusId,
+          accession: '0000320193-25-000079',
+          report_date: '2025-09-27',
+          filing_date: '2025-10-31',
+        },
+        historical_corpora: [],
+      };
+    else if (url === `/api/corpus/versions/${corpusId}`)
+      body = {
+        corpus_version_id: corpusId,
+        ticker: 'AAPL',
+        company_name: 'Apple',
+        accession: '0000320193-25-000079',
+        form: '10-K',
+        filing_date: '2025-10-31',
+        report_date: '2025-09-27',
+        source_url: 'https://www.sec.gov/Archives/example.htm',
+        ready_at: '2026-01-01T00:00:00Z',
+        is_active: true,
+        active_corpus_version_id: corpusId,
+        items: ['1', '1A'].map((item) => ({
+          item,
+          coverage_status: 'present',
+          safe_error: null,
+          paragraph_count: 1,
+          character_count: 20,
+          chunk_count: 1,
+        })),
+      };
+    else
+      body = {
+        corpus_version_id: corpusId,
+        ticker: 'AAPL',
+        item: url.endsWith('/1A') ? '1A' : '1',
+        coverage_status: 'present',
+        safe_error: null,
+        source_url: 'https://www.sec.gov/Archives/example.htm',
+        paragraphs: [
+          { index: 1, start: 0, end: 20, text: 'Readable filing text.', is_furniture: false },
+        ],
+        highlight: null,
+      };
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  renderApp();
+
+  await waitFor(() =>
+    expect(fetchMock).toHaveBeenCalledWith(`/api/corpus/versions/${corpusId}/items/1`),
+  );
+  expect(await screen.findByText('Readable filing text.')).toBeInTheDocument();
+  const itemSelect = await screen.findByLabelText('Filing Item');
+  fireEvent.mouseDown(itemSelect);
+  fireEvent.click(await screen.findByRole('option', { name: 'Item 1A — Risk Factors' }));
+  await waitFor(() => expect(window.location.pathname).toBe('/corpus/AAPL/1A'));
+  expect(window.location.search).toBe(`?corpus=${corpusId}`);
+});
+
 test('links administrators to research results in a user activity record', async () => {
   const userId = '3ea094c5-79b5-4c75-a0a1-5715db1a4e48';
   const researchId = '4ea094c5-79b5-4c75-a0a1-5715db1a4e48';
@@ -819,6 +1054,19 @@ afterEach(() => {
 
 test('renders the public retrieval summary without fetching question evidence', async () => {
   history.replaceState(null, '', '/evaluation/evidence-search?outcome=miss');
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({
+      matches: query.includes('max-width:599.95px'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
   const summary = {
     run: { status: 'succeeded', question_count: 1, finished_at: '2026-01-01T00:00:00Z' },
     coverage: { accepted_questions: 1 },
@@ -897,6 +1145,9 @@ test('renders the public retrieval summary without fetching question evidence', 
   expect(
     await screen.findByRole('heading', { name: 'Which search strategy finds the right passage?' }),
   ).toBeInTheDocument();
+  expect(screen.getByLabelText('Configuration comparison')).toBeInTheDocument();
+  expect(screen.getByText('Rank 1')).toBeInTheDocument();
+  expect(screen.queryByRole('grid')).not.toBeInTheDocument();
   expect(screen.queryByText('What is the business?')).not.toBeInTheDocument();
   expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/cases'));
   fireEvent.click(screen.getByRole('button', { name: 'Help: Top-k' }));
@@ -916,6 +1167,19 @@ test('renders the public retrieval summary without fetching question evidence', 
 
 test('renders the public benefit-led evaluation with model provenance and measured baselines', async () => {
   history.replaceState(null, '', '/evaluation');
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({
+      matches: query.includes('max-width:599.95px'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
   const overview = {
     benchmark: {
       question_count: 96,
@@ -1024,6 +1288,13 @@ test('renders the public benefit-led evaluation with model provenance and measur
     }),
   ).toBeInTheDocument();
   expect(screen.getByText('90 of 96')).toBeInTheDocument();
+  expect(
+    screen.getByRole('img', {
+      name: 'Rank distribution: 90 at rank one, 5 at ranks two to three, 0 at ranks four to ten, 1 not found',
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText('0 · 0.0%')).toBeInTheDocument();
+  expect(screen.getByText('1 · 1.0%')).toBeInTheDocument();
   expect(
     screen.getByRole('heading', { name: 'Different models handle different stages' }),
   ).toBeInTheDocument();

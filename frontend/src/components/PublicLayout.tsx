@@ -29,10 +29,20 @@ export function Brand({ destination = '/' }: { destination?: string }) {
       spacing={1.25}
       alignItems="center"
       color="inherit"
-      sx={{ textDecoration: 'none' }}
+      aria-label="SEC Filing Research home"
+      sx={{ textDecoration: 'none', minWidth: 0 }}
     >
-      <Box component="img" src="/app-logo.svg" alt="" sx={{ width: 42, height: 42 }} />
-      <Typography variant="h6" fontWeight={750}>
+      <Box
+        component="img"
+        src="/app-logo.svg"
+        alt=""
+        sx={{ width: { xs: 36, sm: 42 }, height: { xs: 36, sm: 42 }, flexShrink: 0 }}
+      />
+      <Typography
+        variant="h6"
+        fontWeight={750}
+        sx={{ display: { xs: 'none', sm: 'block' }, whiteSpace: 'nowrap' }}
+      >
         SEC Filing Research
       </Typography>
     </Stack>
@@ -51,7 +61,7 @@ export function PublicHeader({ signIn = true }: { signIn?: boolean }) {
           direction="row"
           alignItems="center"
           justifyContent="space-between"
-          sx={{ minHeight: 72 }}
+          sx={{ minHeight: { xs: 64, sm: 72 }, gap: 1 }}
         >
           <Brand />
           <Stack direction="row" gap={1} alignItems="center">
@@ -73,12 +83,19 @@ export function PublicHeader({ signIn = true }: { signIn?: boolean }) {
             </Stack>
             <IconButton
               aria-label="Open navigation"
+              aria-controls={anchor ? 'public-navigation-menu' : undefined}
+              aria-expanded={Boolean(anchor)}
               onClick={(event) => setAnchor(event.currentTarget)}
               sx={{ display: { md: 'none' } }}
             >
               <MenuIcon />
             </IconButton>
-            <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+            <Menu
+              id="public-navigation-menu"
+              anchorEl={anchor}
+              open={Boolean(anchor)}
+              onClose={() => setAnchor(null)}
+            >
               {[
                 ['Why RAG', '/overview'],
                 ['How it works', '/how-it-works'],
@@ -114,7 +131,7 @@ export function SiteFooter() {
           <Typography variant="body2" color="text.secondary">
             SEC Filing Research · Not investment advice
           </Typography>
-          <Stack direction="row" spacing={2.5} flexWrap="wrap">
+          <Stack direction="row" spacing={2.5} flexWrap="wrap" useFlexGap>
             <Link
               href="https://github.com/hongchit/sec-filing-rag-poc"
               target="_blank"
@@ -155,7 +172,7 @@ export function PublicLayout({
   signIn?: boolean;
 }) {
   return (
-    <Stack minHeight="100vh">
+    <Stack minHeight="100vh" sx={{ overflowWrap: 'anywhere' }}>
       <PublicHeader signIn={signIn} />
       {children}
       <SiteFooter />
