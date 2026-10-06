@@ -12,6 +12,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
+import { trackProductEvent } from '../analytics';
 import type { Research } from '../researchTypes';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -47,11 +48,12 @@ export function ResearchResult() {
     node?.focus();
   }
   async function save() {
-    await fetch('/api/feedback', {
+    const response = await fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ result_type: 'research_answer', result_id: id, rating, comment }),
     });
+    if (response.ok && rating) trackProductEvent({ name: 'feedback_submitted', rating });
   }
   if (error)
     return (
@@ -127,7 +129,12 @@ export function ResearchResult() {
           <Stack spacing={2}>
             {paragraphs.map((paragraph, index) => (
               <Paper key={index} sx={{ p: 3 }}>
-                {paragraph.kind === 'interpretation' && <Chip size="small" label="TL;DR" />}
+                <Chip
+                  size="small"
+                  label={
+                    paragraph.kind === 'filing_fact' ? 'What the company reported' : 'What it means'
+                  }
+                />
                 <Typography sx={{ my: 1 }}>{paragraph.text}</Typography>
                 {paragraph.citations.map((handle) => (
                   <Button key={handle} size="small" onClick={() => cite(handle)}>

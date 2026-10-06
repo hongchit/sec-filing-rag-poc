@@ -47,6 +47,7 @@ def source(tmp_path: Path) -> Path:
         DEFAULT_USER_LIFETIME_BUDGET_USD="1.00",
         RESEARCH_COST_RESERVATION_USD="0.10",
         CORPUS_PREPARATION_COST_RESERVATION_USD="0.05",
+        VITE_GA4_MEASUREMENT_ID="G-TEST123456",
     )
     path = tmp_path / "input.env"
     path.write_text("".join(f"{k}={v}\n" for k, v in values.items()))
@@ -71,6 +72,7 @@ def test_round_trip_and_permissions(source: Path, tmp_path: Path) -> None:
     assert kestra["KESTRA_BASIC_AUTH_PASSWORD"] == app["KESTRA_BASIC_AUTH_PASSWORD"]
     assert app["CORPUS_PREPARATION_COST_RESERVATION_USD"] == "0.05"
     assert app["DATABASE_POOL_MAX_SIZE"] == "4"
+    assert app["VITE_GA4_MEASUREMENT_ID"] == "G-TEST123456"
     settings = Settings(  # type: ignore[arg-type]
         _env_file=None, **{key.lower(): value for key, value in app.items()}
     )
@@ -100,6 +102,8 @@ def test_round_trip_and_permissions(source: Path, tmp_path: Path) -> None:
         "operator",
         "quoted",
         "unknown",
+        "analytics",
+        "analytics_both",
     ],
 )
 def test_invalid_input_writes_nothing_and_does_not_echo_secrets(
@@ -131,6 +135,10 @@ def test_invalid_input_writes_nothing_and_does_not_echo_secrets(
         text = text.replace("KESTRA_MAX_RETRIES=2", "KESTRA_MAX_RETRIES=200")
     elif change == "quoted":
         text = text.replace("OPENAI_API_KEY=ExampleValue42", 'OPENAI_API_KEY="SensitiveQuoted"')
+    elif change == "analytics":
+        text = text.replace("G-TEST123456", "not-a-measurement-id")
+    elif change == "analytics_both":
+        text += "VITE_GTM_CONTAINER_ID=GTM-TEST123\n"
     else:
         text += "SensitiveUnknown=SensitiveValue\n"
     source.write_text(text)

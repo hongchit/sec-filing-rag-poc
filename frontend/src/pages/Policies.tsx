@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { PublicLayout } from '../components/PublicLayout';
 
-const effectiveDate = 'August 29, 2026';
+const effectiveDate = 'October 6, 2026';
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
@@ -70,80 +70,50 @@ export function Privacy() {
     <PolicyPage
       title="Privacy Policy"
       links={[
-        ['information', 'Information we use'],
-        ['sharing', 'How data moves'],
+        ['information', 'Information we collect'],
+        ['sharing', 'Service providers'],
         ['cookies', 'Cookies and analytics'],
-        ['retention', 'Retention and control'],
-        ['rights', 'Your rights'],
+        ['retention', 'Retention and security'],
+        ['rights', 'Choices and rights'],
       ]}
     >
-      <Section id="information" title="Information we use">
-        <Typography paragraph>
-          Google supplies your verified name, email address, identity issuer, and account identifier
-          when you sign in. We use them to create your account, manage a secure session, apply
-          lifetime allowances, and administer access. Sessions expire and may be revoked when you
-          sign out, your account is suspended, or an administrator responds to abuse.
-        </Typography>
+      <Section id="information" title="Information we collect and use">
         <Typography>
-          We retain questions, query settings, generated answers, feedback, cost records, audit
-          events, and operational metadata needed to provide and protect the service. Administrators
-          may review these records for operations, support, security, and abuse prevention.
+          We collect basic account information when you sign in, information you submit while using
+          the service, and records created through that use. We use this information to provide the
+          service, manage access, understand performance, address problems, and protect the project
+          from misuse.
         </Typography>
       </Section>
-      <Section id="sharing" title="How data moves">
-        <Typography paragraph>
-          Your verified name and email remain within this application and are not sent to SEC EDGAR.
-          Public filing requests are made to SEC services without your profile.
-        </Typography>
+      <Section id="sharing" title="Service providers">
         <Typography>
-          Your questions and selected public filing passages are sent to the configured model
-          provider to generate an answer. Infrastructure, identity, model, and filing providers
-          process data under their own terms. Do not submit confidential, personal, or sensitive
-          information in a query.
+          This project relies on third-party services for sign-in, public filing access, AI-powered
+          answers, analytics, and hosting. Information needed to provide a feature may be processed
+          by the relevant provider under its own terms. Do not submit confidential, personal, or
+          sensitive information in a research question.
         </Typography>
       </Section>
       <Section id="cookies" title="Cookies and analytics">
-        <Typography paragraph>
-          <strong>Necessary cookies</strong> operate authentication, OAuth state, CSRF protection,
-          security, and cookie preferences. Session and CSRF cookies typically last for the
-          configured account-session period; OAuth state is short-lived; the first-party consent
-          preference lasts 180 days.
-        </Typography>
-        <Typography paragraph>
-          <strong>Preference cookies</strong> remember choices such as optional-cookie consent.{' '}
-          <strong>Analytics cookies</strong> are optional Google cookies (commonly <code>_ga</code>,
-          up to two years, and shorter-lived <code>_gid</code>/<code>_gat</code>) used only after
-          opt-in.
-        </Typography>
-        <Typography paragraph>
-          When configured, Google Analytics 4 is loaded directly or through Google Tag Manager—not
-          both—and Google processes analytics data. Before consent, no Google analytics or
-          tag-manager script is loaded. You may reject or later withdraw analytics in Cookie
-          settings without affecting sign-in, research, or filing access; known Google analytics
-          cookies are then cleared.
-        </Typography>
         <Typography>
-          We send normalized route names and basic page views or explicitly approved product events.
-          We do not send URLs with query strings, research or filing identifiers, questions,
-          tickers, email addresses, user IDs, or research content. Advertising features, Google
-          Signals, ad personalization, marketing tags, and cross-service enrichment are disabled.
+          We use necessary cookies to operate the service securely and remember your choices. With
+          your permission, optional analytics help us understand general traffic and feature usage.
+          Analytics is not used for advertising and is configured to avoid sending account details
+          or research content. You may decline or withdraw analytics consent without affecting the
+          core service.
         </Typography>
       </Section>
-      <Section id="retention" title="Retention, security, and control">
+      <Section id="retention" title="Retention and security">
         <Typography>
-          Records are retained for the operational life of this proof of concept unless an
-          administrator deletes them, legal or security needs require longer retention, or technical
-          backups expire on their normal schedule. We use access controls, secure cookies, request
-          forgery protection, and audit records, but no online service can promise absolute
-          security.
+          We retain information for as long as reasonably needed to operate this portfolio project,
+          resolve problems, and meet security or legal obligations. We use reasonable safeguards,
+          but no online service can guarantee absolute security.
         </Typography>
       </Section>
-      <Section id="rights" title="Your rights and contact">
+      <Section id="rights" title="Your choices and rights">
         <Typography>
-          Depending on your location, you may request access, correction, deletion, restriction,
-          portability, or object to processing, withdraw consent, and complain to a data-protection
-          authority. Direct requests and privacy questions to the application administrator.
-          Identity verification may be required. See also the{' '}
+          You may manage optional cookies through Cookie settings and contact the application
+          administrator with privacy questions or requests concerning your information. Additional
+          rights may apply depending on your location. See also the{' '}
           <Link component={RouterLink} to="/terms">
             Terms of Service
           </Link>

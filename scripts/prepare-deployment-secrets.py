@@ -53,7 +53,12 @@ OPERATOR_FIELDS = (
     "RESEARCH_COST_RESERVATION_USD",
     "CORPUS_PREPARATION_COST_RESERVATION_USD",
 )
+OPTIONAL_PUBLIC_FIELDS = (
+    "VITE_GTM_CONTAINER_ID",
+    "VITE_GA4_MEASUREMENT_ID",
+)
 FIELDS = SECRET_FIELDS + OPERATOR_FIELDS
+ALLOWED_FIELDS = FIELDS + OPTIONAL_PUBLIC_FIELDS
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 YAML_PLAIN_WORDS = {"true", "false", "null", "yes", "no", "on", "off"}
 INTEGER_RANGES = {
@@ -117,7 +122,7 @@ def read_input(path):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         key, separator, value = line.partition("=")
-        if not separator or key not in FIELDS:
+        if not separator or key not in ALLOWED_FIELDS:
             raise ValueError(f"Unknown field or malformed assignment on line {number}")
         if key in values:
             raise ValueError(f"Duplicate field: {key}")
@@ -158,6 +163,14 @@ def read_input(path):
     if not re.search(r"[A-Z]", password) or not re.search(r"[0-9]", password):
         raise ValueError("KESTRA_BASIC_AUTH_PASSWORD requires an uppercase letter and digit")
     validate_operator_values(values)
+    gtm_id = values.get("VITE_GTM_CONTAINER_ID")
+    ga4_id = values.get("VITE_GA4_MEASUREMENT_ID")
+    if gtm_id and not re.fullmatch(r"GTM-[A-Z0-9]+", gtm_id):
+        raise ValueError("VITE_GTM_CONTAINER_ID is invalid")
+    if ga4_id and not re.fullmatch(r"G-[A-Z0-9]+", ga4_id):
+        raise ValueError("VITE_GA4_MEASUREMENT_ID is invalid")
+    if gtm_id and ga4_id:
+        raise ValueError("Configure at most one analytics mechanism")
     return values
 
 
@@ -177,6 +190,7 @@ def render(values):
         )
     }
     app.update({key: values[key] for key in OPERATOR_FIELDS})
+    app.update({key: values[key] for key in OPTIONAL_PUBLIC_FIELDS if key in values})
     app["DATABASE_URL"] = (
         "postgresql://sec_filings:"
         + quote(values["APP_DATABASE_PASSWORD"], safe="")

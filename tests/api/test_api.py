@@ -258,7 +258,10 @@ def test_production_frontend_serves_assets_and_spa_routes_without_hiding_missing
 ) -> None:
     frontend = tmp_path / "frontend"
     frontend.mkdir()
-    (frontend / "index.html").write_text("<main>SEC Filing RAG</main>", encoding="utf-8")
+    (frontend / "index.html").write_text(
+        '<meta name="sec-rag-analytics" content="" /><main>SEC Filing RAG</main>',
+        encoding="utf-8",
+    )
     (frontend / "app.js").write_text("console.log('app')", encoding="utf-8")
     company_file = tmp_path / "companies.yaml"
     company_file.write_text("companies:\n  - ticker: AAPL\n    enabled: true\n", encoding="utf-8")
@@ -268,12 +271,17 @@ def test_production_frontend_serves_assets_and_spa_routes_without_hiding_missing
         openai_api_key="key",
         company_config_path=company_file,
         frontend_dist_path=frontend,
+        vite_ga4_measurement_id="G-TEST123456",
     )
     api = ApiClient(create_app(config))
     api.app.dependency_overrides[system_repository] = FakeSystemRepository
 
-    assert api.get("/").text == "<main>SEC Filing RAG</main>"
-    assert api.get("/research/history").text == "<main>SEC Filing RAG</main>"
+    expected = (
+        '<meta name="sec-rag-analytics" content="ga4:G-TEST123456" /><main>SEC Filing RAG</main>'
+    )
+    assert api.get("/").text == expected
+    assert api.get("/research/history").text == expected
+    assert api.get("/index.html").text == expected
     assert api.get("/app.js").text == "console.log('app')"
     assert api.get("/missing.js").status_code == 404
     assert api.get("/api/missing").status_code == 404

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
@@ -9,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import Response
+from starlette.responses import HTMLResponse, Response
 from starlette.types import Scope
 
 from .api.dependencies import settings
@@ -26,7 +28,22 @@ ResourceFactory = Callable[[Settings], AppResources]
 class SPAStaticFiles(StaticFiles):
     """Serve index.html for client-side routes without hiding missing asset errors."""
 
+    _analytics_meta = re.compile(r'(<meta name="sec-rag-analytics" content=")[^"]*("\s*/>)')
+
+    def __init__(self, *, directory: Path, analytics_meta_value: str) -> None:
+        super().__init__(directory=directory, html=True)
+        index = (directory / "index.html").read_text(encoding="utf-8")
+        marker_present = self._analytics_meta.search(index) is not None
+        self.index = self._analytics_meta.sub(rf"\g<1>{analytics_meta_value}\g<2>", index, count=1)
+        if not marker_present and analytics_meta_value:
+            raise RuntimeError("frontend analytics configuration marker is missing")
+
+    def index_response(self) -> HTMLResponse:
+        return HTMLResponse(self.index, headers={"Cache-Control": "no-cache"})
+
     async def get_response(self, path: str, scope: Scope) -> Response:
+        if path.lstrip("/") in {"", ".", "index.html"}:
+            return self.index_response()
         try:
             return await super().get_response(path, scope)
         except StarletteHTTPException as exc:
@@ -34,7 +51,7 @@ class SPAStaticFiles(StaticFiles):
             reserved = normalized == "api" or normalized.startswith(("api/", "internal/"))
             if exc.status_code != 404 or reserved or "." in path.rsplit("/", 1)[-1]:
                 raise
-            return await super().get_response("index.html", scope)
+            return self.index_response()
 
 
 def create_app(
@@ -110,7 +127,14 @@ def create_app(
     app.include_router(internal_router)
     selected_frontend = middleware_config.frontend_dist_path
     if selected_frontend is not None:
-        app.mount("/", SPAStaticFiles(directory=selected_frontend, html=True), name="frontend")
+        app.mount(
+            "/",
+            SPAStaticFiles(
+                directory=selected_frontend,
+                analytics_meta_value=middleware_config.analytics_meta_value,
+            ),
+            name="frontend",
+        )
     return app
 
 

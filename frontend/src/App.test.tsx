@@ -818,8 +818,11 @@ test('shows interpretation paragraphs before filing facts while preserving group
     'Fact one',
     'Fact two',
   ]);
-  expect(screen.getAllByText('TL;DR')).toHaveLength(2);
+  expect(screen.getAllByText('What it means')).toHaveLength(2);
+  expect(screen.getAllByText('What the company reported')).toHaveLength(2);
+  expect(screen.queryByText('TL;DR')).not.toBeInTheDocument();
   expect(screen.queryByText('Filing fact')).not.toBeInTheDocument();
+  expect(screen.queryByText('Interpretation')).not.toBeInTheDocument();
 });
 
 test('uses the compact filing Item selector to navigate the reader', async () => {

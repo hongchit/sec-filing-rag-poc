@@ -5,13 +5,48 @@ import json
 import re
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 TICKER_RE = re.compile(r"^[A-Z][A-Z0-9.-]{0,9}$")
+GTM_CONTAINER_RE = re.compile(r"^GTM-[A-Z0-9]+$")
+GA4_MEASUREMENT_RE = re.compile(r"^G-[A-Z0-9]+$")
+
+
+class AnalyticsSettings(BaseModel):
+    vite_gtm_container_id: str | None = None
+    vite_ga4_measurement_id: str | None = None
+
+    @field_validator("vite_gtm_container_id", "vite_ga4_measurement_id", mode="before")
+    @classmethod
+    def normalize_analytics_id(cls, value: object) -> str | None:
+        normalized = str(value).strip() if value is not None else ""
+        return normalized or None
+
+    @model_validator(mode="after")
+    def valid_analytics_configuration(self) -> Self:
+        if self.vite_gtm_container_id and not GTM_CONTAINER_RE.fullmatch(
+            self.vite_gtm_container_id
+        ):
+            raise ValueError("VITE_GTM_CONTAINER_ID must be a valid GTM- identifier")
+        if self.vite_ga4_measurement_id and not GA4_MEASUREMENT_RE.fullmatch(
+            self.vite_ga4_measurement_id
+        ):
+            raise ValueError("VITE_GA4_MEASUREMENT_ID must be a valid G- identifier")
+        if self.vite_gtm_container_id and self.vite_ga4_measurement_id:
+            raise ValueError("configure at most one analytics mechanism")
+        return self
+
+    @property
+    def analytics_meta_value(self) -> str:
+        if self.vite_gtm_container_id:
+            return f"gtm:{self.vite_gtm_container_id}"
+        if self.vite_ga4_measurement_id:
+            return f"ga4:{self.vite_ga4_measurement_id}"
+        return ""
 
 
 class CompanyEntry(BaseModel):
@@ -50,7 +85,7 @@ def load_companies(path: Path) -> CompanyConfiguration:
     return CompanyConfiguration.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
 
 
-class Settings(BaseSettings):
+class Settings(AnalyticsSettings, BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     database_url: str = "postgresql://__required__:__required__@localhost/__required__"
     database_pool_min_size: int = Field(default=1, ge=1)
@@ -132,7 +167,7 @@ class Settings(BaseSettings):
         return value
 
 
-class SessionSettings(BaseSettings):
+class SessionSettings(AnalyticsSettings, BaseSettings):
     """Load middleware settings without requiring the complete application configuration."""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

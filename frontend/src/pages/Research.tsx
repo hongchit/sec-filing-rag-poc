@@ -23,8 +23,20 @@ import { goalEntries, goals, type ResearchGoal } from '../goals';
 import { streamResearch, recoverResearch } from '../researchApi';
 import type { Company, CompanyStatus, Evidence, Research as ResearchValue } from '../researchTypes';
 import { preparationSubmissionMessage } from '../preparationErrors';
+import { trackProductEvent, type ProductEvent } from '../analytics';
 
 const items = ['1', '1A', '3', '7', '7A', '8'];
+
+function researchOutcome(
+  result: ResearchValue,
+): Extract<ProductEvent, { name: 'research_completed' }>['outcome'] {
+  if (result.status === 'failed') return 'failed';
+  if (result.disposition === 'investment_advice' || result.disposition === 'out_of_scope')
+    return 'rejected';
+  if (result.insufficient_evidence) return 'insufficient_evidence';
+  return 'answered';
+}
+
 export function Research() {
   const location = useLocation();
   const prefill = useRef(() => {
@@ -213,6 +225,7 @@ export function Research() {
       return;
     }
     const body = (await response.json()) as { batch_id: string };
+    trackProductEvent({ name: 'filing_preparation_requested', mode: 'single' });
     localStorage.setItem(`research-preparation:${ticker}:${prepareYear}`, body.batch_id);
     void pollBatch(body.batch_id, ticker, prepareYear);
   }
@@ -228,6 +241,7 @@ export function Research() {
       return;
     }
     const body = (await response.json()) as { batch_id: string };
+    trackProductEvent({ name: 'filing_preparation_requested', mode: 'latest' });
     localStorage.setItem('research-preparation:latest', body.batch_id);
     void pollLatestBatch(body.batch_id);
   }
@@ -276,18 +290,28 @@ export function Research() {
       question,
       allowed_items: allowed.length ? allowed : null,
     };
+    trackProductEvent({ name: 'research_started' });
     try {
       const result = await streamResearch(body, key, (name, data) => {
         setStage(name);
         if (name === 'retrieved') setEvidence((data as { evidence: Evidence[] }).evidence);
+      });
+      trackProductEvent({
+        name: 'research_completed',
+        outcome: researchOutcome(result),
       });
       void navigate(`/research/${result.research_id}`);
     } catch (streamError) {
       const id = (streamError as { detail?: { research_id?: string } }).detail?.research_id;
       try {
         const result = await recoverResearch(body, key, id);
+        trackProductEvent({
+          name: 'research_completed',
+          outcome: researchOutcome(result),
+        });
         void navigate(`/research/${result.research_id}`);
       } catch {
+        trackProductEvent({ name: 'research_request_error' });
         setError(
           'The query could not be completed. You can safely retry; the same request will not create duplicate provider work.',
         );

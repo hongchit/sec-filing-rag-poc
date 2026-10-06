@@ -105,10 +105,25 @@ ports, workflow identities, and persistent artifact paths remain deployment-mani
 ## Optional analytics and cookie consent
 
 The browser uses CookieConsent v3 to keep necessary cookies enabled and analytics disabled until a
-visitor opts in. Configure exactly one public identifier in the root `.env`: prefer
-`VITE_GTM_CONTAINER_ID` for Google Tag Manager, or use `VITE_GA4_MEASUREMENT_ID` for direct Google
-Analytics 4. If neither or both are supplied, the build reports the condition and analytics fails
-closed without loading Google scripts. These identifiers are public configuration, not secrets.
+visitor opts in. Configure exactly one public identifier: use `VITE_GA4_MEASUREMENT_ID` for direct
+Google Analytics 4, or `VITE_GTM_CONTAINER_ID` for Google Tag Manager. Local Vite development reads
+the root `.env`; production preparation copies the selected value from `.env.prod` into the app
+environment. FastAPI inserts that validated public value into the initial HTML response, so the
+production image stays environment-neutral and the browser does not need another configuration
+request. If neither is supplied, analytics fails closed without loading Google scripts. Supplying
+both or a malformed identifier is rejected. These identifiers are public configuration, not
+secrets.
+
+This single-page application sends sanitized page views itself. For a direct GA4 stream, disable
+Enhanced Measurement so Google does not duplicate history-based page views or collect interactions
+outside the approved event set. The approved product events cover research starts and outcomes,
+terminal request errors, accepted filing-preparation requests, persisted feedback ratings, and
+outbound clicks grouped as SEC EDGAR, GitHub, or other external destinations. Application code
+restricts event parameters to bounded outcomes, modes, and destination categories; it does not send
+outbound URLs, query text, comments, identifiers, tickers, filing details, or user identity.
+To report by outbound category in GA4, create an event-scoped custom dimension named
+`Outbound destination` for the `destination` event parameter; the event count itself is available
+under `outbound_link_clicked`.
 
 Every analytics tag deployed in a GTM container must require the analytics consent category. Do
 not deploy advertising, remarketing, personalization, or marketing tags under that grant. The
