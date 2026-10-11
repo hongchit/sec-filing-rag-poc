@@ -6,7 +6,7 @@
   "runServices": ["app", "db", "kestra_postgres", "kestra"],
   "shutdownAction": "stopCompose",
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {"version": "22"},
+    "ghcr.io/devcontainers/features/node:2": {"version": "22"},
     "ghcr.io/devcontainers/features/rust:1": {"version": "latest"},
     "ghcr.io/devcontainers-extra/features/uv:1": {}
   },
